@@ -85,8 +85,8 @@ parts:
   # Transmission 4.1 wants gtkmm 4.11+; noble has 4.10, so build it into /opt.
   gtkmm:
     plugin: meson
-    source: vendor/gtkmm-4.12.0.tar.xz
-    source-type: tar
+    source: https://download.gnome.org/sources/gtkmm/4.12/gtkmm-4.12.0.tar.xz
+    source-checksum: sha256/fbc3e7618123345c0148ef71abb6548d421f52bb224fbda34875b677dc032c92
     meson-parameters:
       - --prefix=/opt/gtkmm-4.12
       - --libdir=lib

@@ -1942,6 +1942,37 @@ def database():
             except snapdb.DatabaseError as exc:
                 assert "freetube" in str(exc), str(exc)
 
+    @check("a project that has moved on since publishing is spotted")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home)
+            directory = a_project(root, "demo")
+            snap = db.Snap(name="demo", version="1.0", directory=str(directory))
+            published = root / "snap-db"
+            index, _ = snapdb.publish([snap], published)
+
+            same(snapdb.local_fingerprint(directory),
+                 index["snaps"]["demo"]["fingerprint"])
+
+            # An update edits the recipe, and the database never hears of it.
+            recipe = directory / "snap" / "snapcraft.yaml"
+            recipe.write_text(recipe.read_text().replace("1.0", "1.1"))
+            assert snapdb.local_fingerprint(directory) != \
+                index["snaps"]["demo"]["fingerprint"], "drift went unnoticed"
+
+    @check("publishing writes the page that says what the database is")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home)
+            snap = db.Snap(name="demo", version="1.0",
+                           directory=str(a_project(root, "demo")))
+            published = root / "snap-db"
+            snapdb.publish([snap], published)
+            readme = (published / "README.md").read_text()
+            same(readme.startswith("# snap-db"), True)
+            # Hand-written once and lost on the next publish, twice.
+            same("snapkit db pull" in readme, True)
+
     @check("a database written by a newer snapkit is refused, not misread")
     def _():
         with tempfile.TemporaryDirectory() as home:

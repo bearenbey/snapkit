@@ -20,6 +20,7 @@
           "sha256": "74aebca6efee2a627c3543951a2331d019735d500a095123ba822c7d2c3d8bae"
         }
       },
+      "fingerprint": "15108263ee51232bdda9cdb98f4cfc407515ef4a863b224e725989b7272042c9",
       "name": "btop",
       "pack": "pack.py",
       "record": {
@@ -62,6 +63,7 @@
           "sha256": "7548257b6a41610237a4c54ed9febec941a2b7be5b2e059aab763b0039f76405"
         }
       },
+      "fingerprint": "df7465c8e38bd26f959ea51f602d232794f86b61779f5a331b183bb0b0baa6a8",
       "name": "defold",
       "pack": "pack.py",
       "record": {
@@ -100,6 +102,7 @@
           "sha256": "e43fdccc2cdd93cdd2a44a4a56687dc1530e3234ee1b3eb956a9abae3541915f"
         }
       },
+      "fingerprint": "e2b09bb1a71b37e94cba58fc6606ecf87c38654ce0532bf9fd6d2f11fb3c310d",
       "name": "discord",
       "pack": "",
       "record": {
@@ -137,6 +140,7 @@
           "sha256": "6c9b679685ad2d0a6d568206555cbe79e30bd61e9341c18055216068d2810c9f"
         }
       },
+      "fingerprint": "a412b09e754e08b6474410e89e7384996a1d0dfd49c099ebd2a32f6ca5603195",
       "name": "emacs",
       "pack": "",
       "record": {
@@ -177,6 +181,7 @@
           "sha256": "657aec0b070b0aa072067fdf9c21e3564ff382f4cc06b78ea959adaa5c28e9a2"
         }
       },
+      "fingerprint": "bc2d4df05600eee5e4c41c0fd584b6ba895cfed58a424dcf647abfb03091042f",
       "name": "ffmpeg",
       "pack": "",
       "record": {
@@ -229,6 +234,7 @@
           "sha256": "0d52c303bc6212edbfc927b1ad510b967f97e6c99cb7abf5e53a1cd6a9ad5bd0"
         }
       },
+      "fingerprint": "d731d6828851934e7ceef53d7b1095d0198f067ce59b514b5fedc4602f6e9f03",
       "name": "floorp",
       "pack": "pack.py",
       "record": {
@@ -271,6 +277,7 @@
           "sha256": "843dd8ce89f92fcb12a038d5dbad6adf9e68aec0e71537842300d4c67b9b85b3"
         }
       },
+      "fingerprint": "fb1a9528ce83a3b0bb74b1748e02285a9061dc692668dd0277063e2062e8c2ab",
       "name": "freetube",
       "pack": "pack.py",
       "record": {
@@ -318,6 +325,7 @@
           "sha256": "418116b6916080fc104bc53c940843f42ce716321b764fc2985833cc96562a26"
         }
       },
+      "fingerprint": "5fcf6aeab35385e8728cd2e8074bda308806c3f09cc5e33120fb8d967d5d9ffe",
       "name": "godot",
       "pack": "pack.py",
       "record": {
@@ -365,6 +373,7 @@
           "sha256": "9116faf80d77bf54a9332f95ca4641417ad9eeb12386c37d24fdf79a471a7244"
         }
       },
+      "fingerprint": "185a25354dcd3d8625bb9c307e9083eb58574fe0ce54e98cde1e5dd589b5f686",
       "name": "helium",
       "pack": "pack.py",
       "record": {
@@ -399,6 +408,7 @@
           "sha256": "2cd6de3e6171276e25e1d5841bbde0905a344246e2f33830eff9952e9dd5b20c"
         }
       },
+      "fingerprint": "95299d0c41a13822aaed9dbae0dc04ecd06d22da7ccf503d2eaa50d53a809922",
       "name": "irssi",
       "pack": "",
       "record": {
@@ -432,6 +442,7 @@
           "sha256": "61d3c2b2c9d41d282703d719dd9b4c1224f356ab91ae2fef51add996ee28a13b"
         }
       },
+      "fingerprint": "4619138a2b1b5ab0f4b7cc49dd43612de9fe3a4a7f52ef087350c09a7d34f6db",
       "name": "mpv",
       "pack": "",
       "record": {
@@ -475,6 +486,7 @@
           "sha256": "297d7806c2cbe3a98c6e443f414549f408d47c1052611825073d5e146e1a1e1c"
         }
       },
+      "fingerprint": "3ef01e88e17b250235415c4e359d655ba7ac98f18447818003ec23aa0ec4591e",
       "name": "nvim",
       "pack": "pack.py",
       "record": {
@@ -513,6 +525,7 @@
           "sha256": "8627ffec9c337e61b6a59918befce89810107681f1a9f52d10966b27f85da9ac"
         }
       },
+      "fingerprint": "27ad5fafd3f63431158de9e84efa75d3d2fba337dd648d09380eb395dfe272c4",
       "name": "ollama",
       "pack": "",
       "record": {
@@ -557,6 +570,7 @@
           "sha256": "7d02c249a5c2324a4561d10f9b2e5c307a7f5c8b1dba98ec9ceba1e290d85d3b"
         }
       },
+      "fingerprint": "6a8c5a21d209a40735c5f28d02e70faaa08bd7cd59342b8ff67be592ba07fe5c",
       "name": "retroarch",
       "pack": "",
       "record": {
@@ -604,6 +618,7 @@
           "sha256": "970ee5650ae70bea49f95eeaff1448d9c6d70217075962c7eedb2c2edef727a8"
         }
       },
+      "fingerprint": "d3f7cece0f2fc640ccba74a4b7a748e74d1bd99b498f25418aa2ac8f91ea32ac",
       "name": "signal-desktop",
       "pack": "",
       "record": {
@@ -638,6 +653,7 @@
           "sha256": "e87461f150e10e86f1dc1d93208983cf6a587065be2dc49a86245fac77053179"
         }
       },
+      "fingerprint": "850a783443871adba29636a5c8f55579f7fa834623dcc420763c62bd4543f370",
       "name": "spotube",
       "pack": "",
       "record": {
@@ -675,6 +691,7 @@
           "sha256": "6fbbd85886deb64f95bf28c3df67e86222062183b50d88121c0dfaf6b2f38c3f"
         }
       },
+      "fingerprint": "5409adfdb4e9de3abead8a399f0f84e4af31065fac814ed3cb8a91c32adf0342",
       "name": "sublime-text",
       "pack": "",
       "record": {
@@ -700,7 +717,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "c26e64c03a81024144489d327af7b4fe5f2ce9207b584de690f1326b464c26ff"
+          "sha256": "3f95a16512c900966dc98d0dacd4651667fc283edafaf9ec4b7928f7ec6d366e"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -716,12 +733,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "06a75e574c836c6476cd2998a1d99af2d115adebb938aedc53267d6a1b21a3b0"
+          "sha256": "2331b5a08ffe3e1501b84e730fc82327d14a5246f7d342bfcee1cb56d2a8619f"
         }
       },
-      "incomplete": [
-        "vendor/gtkmm-4.12.0.tar.xz"
-      ],
+      "fingerprint": "dda1b85aaae123ac531391fec1ee2e332b9cd99aa5e70c05b5f052cebb6f2b7e",
       "name": "transmission",
       "pack": "pack.py",
       "record": {
@@ -768,6 +783,7 @@
           "sha256": "0c845223cfc46037f4fb4a1bfd2d091281d9e000da352757744bc7484b17fb22"
         }
       },
+      "fingerprint": "e3c6023ad38ab3785268bd420f912ea8d891ce8682ba686d12f2d61eb46d1261",
       "name": "ungoogled-chromium",
       "pack": "pack.py",
       "record": {
@@ -806,6 +822,7 @@
           "sha256": "2de56caff8fb81e891284b53b6a1ff9e5d0ec77cdc1e268baf177e5908333b63"
         }
       },
+      "fingerprint": "836f911197485d075ff81abc11c076831e872142a37024e6282837d94999ee3e",
       "name": "unityhub",
       "pack": "pack.py",
       "record": {
@@ -856,6 +873,7 @@
           "sha256": "8086f296a13f5c1d61b4bea509865dc238f5f7a712114df07ec3cd487b5a3de6"
         }
       },
+      "fingerprint": "fb7fb82f829b2b6a6000c12650afe54816635dad90f08dc4872d54781ce83025",
       "name": "zen",
       "pack": "pack.py",
       "record": {

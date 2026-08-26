@@ -48,8 +48,8 @@ list, `enter` shows a record in full, and `q` is the only thing that quits.
 ### Building from the dashboard
 
 `b` builds the selected project without the dashboard going anywhere. The
-build's own output -- ten minutes of snapcraft, most of it -- is piped into
-the log pane a line at a time rather than being written to the terminal, so
+build's own output, ten minutes of snapcraft in most cases, is piped into the
+log pane a line at a time rather than being written to the terminal, so
 the list, the inspector and the status line keep working throughout and
 `q`/Escape still stop the build. Cancelling kills the build rather than
 waiting for it to finish.
@@ -99,7 +99,7 @@ the desktop entry that names it is somewhere else again. The file has to be
 downloaded to build anyway, so it is opened first and the recipe is written
 from what is in it rather than from a template with a hole in it.
 
-A `.deb` is read here rather than shelled out to -- it is an `ar` archive
+A `.deb` is read here rather than shelled out to, since it is an `ar` archive
 whose interesting member is a tar, and Python reads both. `dpkg-deb` is only
 needed for the zstd-compressed ones.
 
@@ -148,14 +148,14 @@ $ snapkit create ~/Downloads/freetube_0.25.2_amd64.deb
 ```
 
 Everything that happens for a release asset happens here, minus the download.
-The file is copied in beside the recipe that names it -- by name, not by
-path, so the project can be moved somewhere else and still build -- and no
+The file is copied in beside the recipe that names it. It is named rather
+than pointed at, so the project can be moved somewhere else and still build. No
 `source-checksum` is written, because there is no upstream to have published
 one and a checksum of a file against itself only restates that it has not
 changed.
 
 Give it a folder rather than a file and it looks in there. With nothing named
-at all it asks, which is the case this exists for -- the answer to "I
+at all it asks, which is the case this exists for. The answer to "I
 downloaded this, can you package it" should not be "first find me a URL":
 
 ```
@@ -198,9 +198,9 @@ snapkit db publish <dir>      write the database out of the projects here
 In the dashboard, `g` reads the database, says how many of its snaps are not
 registered here, and asks before writing anything.
 
-A snap is more than its `snapcraft.yaml` -- three of the twenty-one build from
+A snap is more than its `snapcraft.yaml`. Three of the twenty-one build from
 the recipe alone, and the rest also need a launcher, an overlay tree, a
-`pack.py` or a hook -- so a project is published whole, minus the release it
+`pack.py` or a hook, so a project is published whole, minus the release it
 was built from, the `.snap` it produced and any build tree. `index.json`
 carries the file list, a sha256 and an executable bit for each, and the record
 fields a project cannot tell you about itself: where its release comes from
@@ -216,7 +216,7 @@ and refused by name, rather than pulled and left to fail at build time.
 
 ## The register
 
-A directory, not a file — `~/.local/share/snapkit/`, or
+A directory, not a file. It lives at `~/.local/share/snapkit/`, or
 `$SNAP_USER_COMMON/` inside the snap, or wherever `SNAPKIT_HOME` points:
 
 ```
@@ -226,9 +226,9 @@ icons/btop.svg         lifted out of the payload when it was made
 ```
 
 It began as one JSON file holding all of it, which is the obvious thing and
-does not last. Recipes are most of the weight — at sixteen snaps they were
-78% of the file — so every record carried several kilobytes almost nothing
-reads, and a change to any field rewrote the lot. At a thousand snaps that is
+does not last. Recipes are most of the weight. At sixteen snaps they were 78%
+of the file, so every record carried several kilobytes almost nothing reads,
+and a change to any field rewrote the lot. At a thousand snaps that is
 5.5 MB reparsed by every command and rewritten by every `add`, which a create
 does three times: about 130 ms of JSON per create, before any work.
 
@@ -240,8 +240,8 @@ Split up, at a thousand snaps:
 | change one snap | 27.7 ms | 0.1 ms |
 | on disk, read to list | 5.5 MB | 0.95 MB |
 
-Reading costs slightly more — a thousand small opens rather than one big
-parse — and changing one snap no longer costs anything at all, because it
+Reading costs slightly more, a thousand small opens rather than one big
+parse. In exchange, changing one snap no longer costs anything at all: it
 writes one small file however many there are. The recipe is read only when
 something asks for it, so listing a thousand snaps reads none of them.
 
@@ -251,9 +251,9 @@ changed is migrated on first use, and the old file is kept beside it as
 `snapkit.json.migrated` rather than deleted.
 
 Because it is meant to be edited, a record that cannot be read is set aside
-rather than taken as the end of the register — one typo costs that record,
-not the other nine hundred and ninety nine — and every command says which
-one it was until it is fixed.
+rather than taken as the end of the register. One typo costs that record and
+not the other nine hundred and ninety nine, and every command says which one
+it was until it is fixed.
 
 The register holds everything needed to rebuild:
 
@@ -262,9 +262,9 @@ The register holds everything needed to rebuild:
   a second copy of it
 - removing a snap removes its record, its recipe and its icon
 
-Two repositories whose names collapse to the same snap name -- and there are
-a great many repositories called `bat` -- are refused rather than one
-replacing the other. Pass `--name` to keep both; the dashboard picks a free
+Two repositories whose names collapse to the same snap name are refused
+rather than one replacing the other. There are a great many repositories
+called `bat`. Pass `--name` to keep both; the dashboard picks a free
 name and says so, rather than throwing away a build it has already made.
 
 It is meant to be opened in an editor. So is the generated `snapcraft.yaml`:
@@ -284,7 +284,7 @@ at a release. Pass `--repo owner/name` to confirm one and have that project
 checked. `seed.py` holds those confirmations for the projects here.
 
 A project registered this way keeps its own build. Eleven of the twenty-one
-assemble their tree themselves rather than leaving it to snapcraft -- a
+assemble their tree themselves rather than leaving it to snapcraft, which is a
 core24 snap needs an LXD or Multipass backend, and a project whose whole
 content is an upstream binary being restaged does not need a build container
 to begin with. Their records name a `pack.py`, and `snapkit build` imports it
@@ -308,9 +308,9 @@ imports nothing: everything it can use is on the `project` it is handed,
 including `say`, `download` and a `module()` for a build that runs to more
 than one file.
 
-Six of them are not a GitHub release at all -- Discord's download redirect,
+Six of them are not a GitHub release at all. Discord's download redirect,
 Emacs on ftp.gnu.org, ffmpeg.org, and the apt repositories Signal, Sublime
-Text and Unity publish through -- and two more build from the archive GitHub
+Text and Unity publish through, and two more build from the archive GitHub
 rolls out of a tag rather than from anything attached to the release. Those
 are shapes rather than exceptions, and the shape is in the record:
 
@@ -319,7 +319,7 @@ are shapes rather than exceptions, and the shape is in the record:
              "package": "signal-desktop", "index": "..."}
 ```
 
-`sources.py` holds five -- `apt`, `index`, `redirect`, `tag-archive`, and
+`sources.py` holds five of them: `apt`, `index`, `redirect`, `tag-archive` and
 `local` for a snap made from a file, which watches the folder that file is in
 -- and a record with no `upstream` is an ordinary GitHub release. So every
 one of them is checked against its real upstream rather than reported as `not
@@ -368,7 +368,7 @@ $ snapkit create https://github.com/aristocratos/btop
 `snapkit check` asks every registered repository what it has now. `snapkit
 update <name>` moves that snap onto it and rebuilds.
 
-Upstreams rename their assets -- btop's musl build went from `.tbz` to
+Upstreams rename their assets. btop's musl build went from `.tbz` to
 `.tar.gz` in a patch release. When the stored pattern stops matching, the
 best asset of the same kind is taken instead and you are told that it
 happened, rather than the update failing or quietly packaging something else.
@@ -379,14 +379,14 @@ an update repoints that line, rewrites its checksum, and leaves every other
 edit in the file alone. The rest open a file that has to be sitting in the
 project directory before the build can start, so an update downloads it
 there, drops the superseded one, and replaces the version wherever the
-project spells it out -- the recipe, `overlay/meta/snap.yaml`, the README.
+project spells it out: the recipe, the overlay metadata, the README.
 Every line it rewrites is printed, because a bump should be reviewable
 without diffing afterwards, and that matters most when a version string turns
 up somewhere nobody expected it.
 
 Where upstream publishes no checksum, what the download is checked against is
 also in the record: a detached GPG signature for Emacs and ffmpeg, and for
-the tag archives a file that has to be inside the tarball -- a tag that does
+the tag archives a file that has to be inside the tarball. A tag that does
 not exist answers with GitHub's 404 page rather than an error, and a 404 page
 has no checksum to disagree with.
 
@@ -443,24 +443,24 @@ the tool does. The offline tests build their own `.deb` rather than
 downloading one, so the archive reader is checked against bytes the test file
 made and knows the shape of.
 
-One function per subject -- upstreams, recipes, register, payloads, projects,
-checking, dashboard, updater, from_a_file -- so a failure names the area
+One function per subject: upstreams, recipes, register, payloads, projects,
+checking, dashboard, updater, from_a_file. A failure names the area
 before it names the case.
 
 Several exist because of bugs that were in here:
 
 - a build's output was read as text, and Python's universal newlines split on
-  the `\r` a progress bar redraws itself with -- so every frame of every bar
+  the `\r` a progress bar redraws itself with, so every frame of every bar
   became its own line in the log pane and buried everything else
 - cancelling a build raised out of the reading loop, and `Popen.__exit__`
   closes the pipe and *waits*: stopping a ten-minute build took ten minutes.
   (The first version of that test raised `KeyboardInterrupt`, which
-  `Popen.__exit__` special-cases into giving up on its own -- so it passed
+  `Popen.__exit__` special-cases into giving up on its own, so it passed
   whether or not the child was killed. It raises an ordinary exception now.)
 
 - an asset name split on its separators turned `x86_64` into `x86` and `64`,
   so every 64-bit build read as 32-bit and lost to whatever named no
-  architecture at all -- on btop's release page, m68k
+  architecture at all, which on btop's release page is m68k
 - a top-level `icon:` was pointed inside the payload, where snapcraft never
   looks
 - every dashboard action set "busy" before asking a guard that refuses
@@ -482,7 +482,7 @@ Several exist because of bugs that were in here:
 - `select()` watches a file descriptor and `sys.stdin` is buffered, so
   reading one character of an arrow key pulled the rest into Python's buffer
   where `select` could not see it; the sequence read as a lone Escape, and
-  Escape quit -- so every arrow key closed the dashboard
+  Escape quit, so every arrow key closed the dashboard
 
 ## Building this
 
@@ -499,10 +499,10 @@ do neither.
 
 - The register scales; the *projects* do not, and that is the thing to watch.
   A thousand registered snaps is a megabyte. A thousand built snaps is
-  however large those snaps are — Electron apps run to a hundred megabytes
-  each — sitting in `projects/`. Nothing here prunes them.
+  however large those snaps are, and Electron apps run to a hundred megabytes
+  each, all sitting in `projects/`. Nothing here prunes them.
 
 - amd64 only, which is what the classifier looks for.
-- `grade: devel` on the generated recipes' sibling -- this tool is new.
+- `grade: devel` on the generated recipes' sibling, because this tool is new.
 - A snap built from someone else's release is not published or endorsed by
   them, and every recipe it writes says so in its description.

@@ -47,7 +47,6 @@ remove: `sudo snap remove transmission`.
 | `pack.py` | check the tarball's version, then run snapcraft |
 | `overlay/meta/gui/transmission.desktop` | desktop entry snapd exports to the host menu |
 | `overlay/bin/launcher` | GTK client entry point; fixes the gtkmm search order |
-| `vendor/gtkmm-4.12.0.tar.xz` | see below |
 
 `snap/command-chain/desktop-launch` and `hooks-configure-fonts` come from
 snapcraft's `gnome` extension, which the recipe asks for by name. They used to
@@ -59,14 +58,15 @@ be copied out of the installed `gnome-46-2404` snap at build time.
   cairomm, libsigc++, libcurl and the fonts come from `gnome-46-2404` at
   `$SNAP/gnome-platform`; OpenSSL comes from the base snap; graphics come from
   `mesa-2404` at `$SNAP/gpu-2404`.
-- **gtkmm 4.12 is built and shipped.** Transmission 4.1 requires
-  gtkmm ≥ 4.11.1 and noble — hence both the build root *and* the
-  `gnome-46-2404` runtime platform — only carries 4.10. (That version gap is
-  why Ubuntu 24.04 still packages Transmission 4.0.) Everything gtkmm 4.12
-  itself needs is already in noble, so `pack.py` builds just that one
-  library with meson and stages it in the snap. Its soname is identical to
-  the platform's 4.10, so `bin/launcher` prepends `$SNAP/usr/lib/$ARCH` to
-  `LD_LIBRARY_PATH` after `desktop-launch` has run, making ours win.
+- **gtkmm 4.12 is built and shipped.** Transmission 4.1 needs gtkmm 4.11.1 or
+  newer, and noble only carries 4.10. So does the `gnome-46-2404` platform,
+  which is built on noble. That gap is why Ubuntu 24.04 still ships
+  Transmission 4.0. Everything gtkmm 4.12 needs is already in noble, so the
+  recipe builds that one library with meson and stages it. The tarball comes
+  from download.gnome.org with its checksum pinned, so nothing has to be kept
+  in this repository. Its soname is the same as the platform's 4.10, so
+  `bin/launcher` puts `$SNAP/usr/lib/$ARCH` on `LD_LIBRARY_PATH` after
+  `desktop-launch` has run and ours is found first.
 - **Vendored third-party code is used as shipped.** The release tarball
   bundles libevent, libpsl, libdeflate, miniupnpc, libnatpmp, dht, libutp,
   fmt, rapidjson and friends, and `USE_SYSTEM_*` is forced `OFF` so the build
@@ -75,7 +75,7 @@ be copied out of the installed `gnome-46-2404` snap at build time.
 - **The web UI ships prebuilt** (`INSTALL_WEB=ON`, `REBUILD_WEB=OFF`), so no
   Node.js is needed. `TRANSMISSION_WEB_HOME` points the daemon at it.
 - **No systemd integration** (`WITH_SYSTEMD=OFF`) and the daemon is a plain
-  app, not a snap `daemon:` service — nothing starts in the background on
+  app, not a snap `daemon:` service. Nothing starts in the background on
   install. Run `transmission.daemon -f` yourself if you want it.
 - **Interfaces granted:** the GTK client gets desktop, desktop-legacy,
   gsettings, opengl, wayland, x11, unity7, network, network-bind, home,

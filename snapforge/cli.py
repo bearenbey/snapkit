@@ -567,16 +567,32 @@ def cmd_db(db, args, reporter):
 
     if action == "list":
         reporter.detail(f"{snapdb.base_url()}")
-        rows = [(s["name"], s["version"], s.get("summary", "")) for s in
-                sorted(snaps.values(), key=lambda s: s["name"])]
-        width = max((len(r[0]) for r in rows), default=4)
-        for name, version, summary in rows:
+        width = max((len(n) for n in snaps), default=4)
+        drifted, unpublished = [], []
+        for name in sorted(snaps):
+            published = snaps[name]
             here = db.snaps.get(name)
-            mark = "*" if here else " "
-            reporter.detail(f"{mark} {name:<{width}}  {version:<16}  {summary[:44]}")
+            mark = " "
+            if here:
+                mark = "*"
+                if Path(here.path).is_dir():
+                    if snapdb.local_fingerprint(here.path) != published.get("fingerprint"):
+                        mark, _ = "~", drifted.append(name)
+            reporter.detail(f"{mark} {name:<{width}}  {published['version']:<16}"
+                            f"  {published.get('summary', '')[:42]}")
+        for name in sorted(db.snaps):
+            if name not in snaps:
+                unpublished.append(name)
+                reporter.detail(f"+ {name:<{width}}  {db.snaps[name].version:<16}"
+                                f"  not in the database")
         reporter.detail("")
-        reporter.detail("* is already registered here.  "
-                        "snapkit db pull <name>  writes one out")
+        reporter.detail("*  registered here    ~  differs from the database"
+                        "    +  here but not published")
+        if drifted or unpublished:
+            reporter.warn(f"{len(drifted) + len(unpublished)} project(s) have "
+                          f"moved on: snapkit db publish <dir> writes them out")
+        else:
+            reporter.detail("the database matches the projects here")
         return 0
 
     wanted = rest or sorted(snaps)
