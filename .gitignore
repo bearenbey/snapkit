@@ -1,0 +1,15 @@
+__pycache__/
+*.py[co]
+
+# Build outputs and the releases a project is built from. snapkit fetches
+# these; snap-db deliberately carries neither.
+*.snap
+*.deb
+*.AppImage
+*.tar.*
+*.zip
+
+# snapcraft's lifecycle directories.
+parts/
+stage/
+prime/
