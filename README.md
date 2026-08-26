@@ -1,5 +1,13 @@
 # snapkit
 
+**Turn a GitHub release into a snap, and keep it that way.**
+
+![Linux](https://img.shields.io/badge/Linux-amd64-informational)
+![base](https://img.shields.io/badge/snap%20base-core24-informational)
+![confinement](https://img.shields.io/badge/confinement-classic-informational)
+![deps](https://img.shields.io/badge/python%20deps-rich-informational)
+
+> [!IMPORTANT]
 > **This project is co-authored with Claude, Anthropic's Opus 5 model, and
 > roughly a quarter of what you are reading was written by it.**
 >
@@ -27,7 +35,7 @@ files attached to it can actually be packaged, downloads that file, opens it
 to see where the program and its desktop entry and icon really are, writes a
 `snapcraft.yaml` around what it found, and builds the snap.
 
-```
+```console
 $ snapkit create aristocratos/btop
 ==> looking up aristocratos/btop
     newest release v1.4.7 (1.4.7), 11 files attached
@@ -45,10 +53,30 @@ $ snapkit create aristocratos/btop
 ==> built btop_1.4.7_amd64.snap (1 MB)
 ```
 
+## Contents
+
+| | |
+| --- | --- |
+| [The dashboard](#the-dashboard) | one screen for everything, and what the keys do |
+| [Why it opens the payload](#why-it-opens-the-payload) | why the file is read rather than guessed at |
+| [What it can package](#what-it-can-package) | debs, archives, AppImages, and what is refused |
+| [When there is no repository](#when-there-is-no-repository) | packaging a file you already have |
+| [The shared database](#the-shared-database) | recipes published for another machine to build |
+| [The register](#the-register) | where records live, and why it is a directory |
+| [Projects you already have](#snap-projects-you-already-have) | importing packaging that predates this |
+| [Packaging something again](#packaging-something-again) | rebuilding from the register alone |
+| [Updating](#updating) | how a new release reaches the packaging |
+| [Commands](#commands) | the whole interface, in one list |
+| [Tests](#tests) | what is covered, and the bugs behind it |
+| [Building this](#building-this) | making the snapkit snap itself |
+| [Caveats](#caveats) | what it does not do |
+
+## The dashboard
+
 Run it with no arguments for the dashboard. Up and down move through the
 list, `enter` shows a record in full, and `q` is the only thing that quits.
 
-```
+```text
 ╭──────────────────────────────────────────────────────────────────────────────────╮
 │ ◆ SNAPKIT   ▪ 21 registered  ● 18 current  ▲ 2 behind  ◐ 1 in flight             │
 ╰──────────────────────────────────────────────────────────────────────────────────╯
@@ -75,7 +103,7 @@ waiting for it to finish.
 
 When it is done, the dashboard asks whether to install what it made:
 
-```
+```text
 ╭─────────────────────────────── install ────────────────────────────────╮
 │ install btop_1.4.7_amd64.snap?  it is not signed, so this installs     │
 │ with --dangerous.  [y/N]                                               │
@@ -104,7 +132,7 @@ The box you type into is one box: it searches what you have already packaged
 as you type, highlighting the part that matched, and only goes upstream for
 something it does not recognise.
 
-```
+```text
 ▸ find or add  monitor
   ▸ btop                1.4.7             aristocratos/btop
   enter builds the highlighted one from the register -- no download, no lookup
@@ -151,7 +179,7 @@ Sublime Text publish into apt repositories of their own; and some are simply
 handed to you. In every one of those cases the file is already sitting in a
 folder, so point `create` at the file instead of at a repository:
 
-```
+```console
 $ snapkit create ~/Downloads/freetube_0.25.2_amd64.deb
 ==> opening freetube_0.25.2_amd64.deb
     chose freetube_0.25.2_amd64.deb -- a Debian package: carries its own
@@ -177,7 +205,7 @@ Give it a folder rather than a file and it looks in there. With nothing named
 at all it asks, which is the case this exists for. The answer to "I
 downloaded this, can you package it" should not be "first find me a URL":
 
-```
+```console
 $ snapkit create
 What should this snap be made from?
 
@@ -238,7 +266,7 @@ and refused by name, rather than pulled and left to fail at build time.
 A directory, not a file. It lives at `~/.local/share/snapkit/`, or
 `$SNAP_USER_COMMON/` inside the snap, or wherever `SNAPKIT_HOME` points:
 
-```
+```text
 snaps/btop.json        what it is, where it came from, what to fetch
 recipes/btop.yaml      the snapcraft.yaml, as text
 icons/btop.svg         lifted out of the payload when it was made
@@ -366,7 +394,7 @@ are shapes rather than exceptions, and the shape is in the record:
 one of them is checked against its real upstream rather than reported as `not
 tracked upstream`:
 
-```
+```console
 $ snapkit check
 NAME                 BUILT            UPSTREAM         STATUS
 btop                 1.4.7            1.4.7            up to date
@@ -385,7 +413,7 @@ no repository, no release lookup, nothing downloaded by this tool. snapcraft
 still fetches the source the recipe names and checks it against the checksum
 that was written in at the time.
 
-```
+```text
 snapkit search monitor         find it by name, repository or summary
 snapkit package btop           build it from the register
 ```
@@ -397,7 +425,7 @@ back out, `snapcraft.yaml` and icon and all.
 Giving `create` a repository it already knows does the same thing rather than
 telling you off:
 
-```
+```console
 $ snapkit create https://github.com/aristocratos/btop
     aristocratos/btop is already registered as btop (1.4.7) -- building it
       from the register
@@ -442,22 +470,26 @@ exactly what an update does.
 
 ## Commands
 
-```
-snapkit                          the dashboard
-snapkit create <repo>            make a snap from a repository
-snapkit create ./thing.deb       ... or from a file you already have
-snapkit create ~/Downloads       ... or from whichever of those is in there
-snapkit create                   ... and with nothing named, it asks
-snapkit package <name|repo>      build one already registered, from the register
-snapkit search <text>            find one by name, repository or summary
-snapkit list                     what is registered
-snapkit show <name>              one record, in full, including the recipe
-snapkit check [name ...]         what has a newer release upstream
-snapkit update <name> [...]      move onto that release and rebuild
-snapkit update <name> --force    redo it even if it is already current
-snapkit build <name>             hand the project to snapcraft
-snapkit remove <name>            forget a snap, and its recipe with it
-```
+| command | what it does |
+| --- | --- |
+| `snapkit` | the dashboard |
+| `snapkit create <repo>` | make a snap from a repository |
+| `snapkit create ./thing.deb` | or from a file you already have |
+| `snapkit create ~/Downloads` | or from whichever of those is in there |
+| `snapkit create` | and with nothing named, it asks |
+| `snapkit package <name\|repo>` | build one already registered, from the register |
+| `snapkit search <text>` | find one by name, repository or summary |
+| `snapkit list` | what is registered |
+| `snapkit show <name>` | one record, in full, including the recipe |
+| `snapkit check [name ...]` | what has a newer release upstream |
+| `snapkit update <name> [...]` | move onto that release and rebuild |
+| `snapkit update <name> --force` | redo it even if it is already current |
+| `snapkit build <name>` | hand the project to snapcraft |
+| `snapkit remove <name>` | forget a snap, and its recipe with it |
+| `snapkit db` | what the shared recipe database holds |
+| `snapkit db pull [name ...]` | write those projects here, or all of them |
+| `snapkit db publish <dir>` | write the database out of the projects here |
+| `snapkit install <name>` | fetch it, build it, and offer to install it |
 
 Removing asks first, in both the dashboard and the terminal. It forgets the
 record and the recipe stored with it; the project directory is left where it
@@ -474,7 +506,7 @@ somewhere specific, `--plain` to keep the dashboard from opening.
 
 ## Tests
 
-```
+```text
 ./tests.py            everything that needs no network
 ./tests.py --online   those, and the ones that talk to GitHub
 ```
@@ -527,7 +559,7 @@ Several exist because of bugs that were in here:
 
 ## Building this
 
-```
+```console
 ./build.py
 sudo snap install --dangerous --classic snapkit_0.1.0_amd64.snap
 ```
