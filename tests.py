@@ -1373,6 +1373,23 @@ def updater():
             # irssi has a second source; repointing it breaks the build.
             assert "source: snap/local" in text
 
+    @check("what got built is reported, not what the recipe says")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            here = Path(home)
+            snap = db.Snap(name="demo", version="2.0", directory=str(here))
+            same(update.built_version(snap), "", "nothing built yet")
+
+            (here / "demo_1.0_amd64.snap").write_bytes(b"old")
+            same(update.built_version(snap), "1.0")
+
+            # A failed build leaves recipe and artifact disagreeing.
+            assert update.built_version(snap) != snap.version, \
+                "a failed build after an update went unnoticed"
+
+            (here / "demo_2.0_amd64.snap").write_bytes(b"new")
+            same(update.built_version(snap), "2.0", "the newest one counts")
+
     @check("a missing artifact reads as an update, however current the version")
     def _():
         with tempfile.TemporaryDirectory() as home:
@@ -1426,6 +1443,27 @@ def updater():
             was = os.getcwd()
             buildlib.run_pack("demo", here)
             same(os.getcwd(), was, "the cwd came back")
+
+    @check("a wedged build container is recognised from snapcraft's own log")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            logs = Path(home) / "log"
+            logs.mkdir()
+            was = buildlib.SNAPCRAFT_LOGS
+            buildlib.SNAPCRAFT_LOGS = logs
+            try:
+                same(buildlib.stale_instance(), "", "no logs, nothing to find")
+
+                (logs / "old.log").write_text("nothing wrong here\n")
+                same(buildlib.stale_instance(), "", "a clean log is not a wedge")
+
+                # The CLI never sees snapcraft's output, so read its log.
+                (logs / "new.log").write_text(
+                    "Failed to add disk to instance 'snapcraft-demo-amd64-1234'.\n"
+                    "* Command standard error output: b'Error: The device already exists'\n")
+                same(buildlib.stale_instance(), "snapcraft-demo-amd64-1234")
+            finally:
+                buildlib.SNAPCRAFT_LOGS = was
 
     @check("a build's own output is handed to the reporter line by line")
     def _():

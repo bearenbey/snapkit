@@ -27,6 +27,7 @@ GITHUB = {
     "transmission": "transmission/transmission",
     # The portable tarballs come from a repository of their own.
     "ungoogled-chromium": "ungoogled-software/ungoogled-chromium-portablelinux",
+    "yt-dlp": "yt-dlp/yt-dlp",
     "zen": "zen-browser/desktop",
 }
 
@@ -152,6 +153,12 @@ CONFIG = {
         upstream=dict(kind="apt", base=UNITY_APT, package="unityhub",
                       index=f"{UNITY_APT}/dists/stable/main/binary-amd64/"
                             f"Packages")),
+
+    # Upstream publishes SHA2-256SUMS beside every asset of a release.
+    "yt-dlp": dict(
+        style="recipe",
+        checksums=dict(url="{base}/SHA2-256SUMS"),
+        source_anchor=r"^(\s*source:\s*).*/yt-dlp_linux\.zip\s*$"),
 
     # The tag is the version, "b" and all; the tarball name carries none.
     "zen": dict(

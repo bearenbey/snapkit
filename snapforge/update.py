@@ -60,6 +60,19 @@ def situation(snap, force=False):
                      release=release, asset=asset, note=note)
 
 
+def built_version(snap):
+    """The version of the newest .snap in the project, or "" if there is none."""
+    directory = snap.path
+    if not directory.is_dir():
+        return ""
+    made = sorted(directory.glob(f"{snap.name}_*.snap"),
+                  key=lambda p: p.stat().st_mtime)
+    if not made:
+        return ""
+    stem = made[-1].name[len(snap.name) + 1:]
+    return stem.rsplit("_", 1)[0] if "_" in stem else stem
+
+
 def missing_artifact(snap):
     """True when the file this project's build opens is not there."""
     if snap.style != "artifact" or not snap.asset_glob:

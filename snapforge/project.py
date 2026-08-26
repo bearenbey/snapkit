@@ -399,11 +399,20 @@ def build(snap, reporter, extra=()):
             command, shell = ["snapcraft", "pack", *extra], False
             reporter.step(f"snapcraft pack ({directory})")
 
-        if reporter.captures_output:
-            done = buildlib.stream(command, reporter, cwd=directory, shell=shell)
-        else:
+        def run_it():
+            if reporter.captures_output:
+                return buildlib.stream(command, reporter, cwd=directory, shell=shell)
             with reporter.suspended():
-                done = subprocess.run(command, cwd=directory, shell=shell)
+                return subprocess.run(command, cwd=directory, shell=shell)
+
+        done = run_it()
+        if done.returncode != 0 and not shell:
+            # A wedged container kills every later build before it starts.
+            stale = buildlib.stale_instance()
+            if stale and buildlib.drop_instance(stale):
+                reporter.warn(f"removed the wedged build container {stale}, "
+                              f"and building again")
+                done = run_it()
         if done.returncode != 0:
             raise ForgeError(f"the build exited with status {done.returncode}")
 

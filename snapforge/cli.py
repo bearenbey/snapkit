@@ -439,7 +439,13 @@ def cmd_check(db, args, reporter):
             status += f" ({found.asset.name})"
         elif found.state == "error":
             status = found.problem
-        print(f"{snap.name:<20} {snap.version:<16} {upstream:<16} {status}")
+        # What was built, not what the recipe says: a failed build parts them.
+        built = update.built_version(snap)
+        if built != snap.version:
+            status = (f"recipe says {snap.version}, not built"
+                      if not built else
+                      f"recipe says {snap.version}, built {built}")
+        print(f"{snap.name:<20} {built or '-':<16} {upstream:<16} {status}")
         if found.note:
             print(f"{'':<20} note: {found.note}")
     return 0

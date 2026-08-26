@@ -2,6 +2,7 @@
 
 import importlib.util
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -308,6 +309,31 @@ def run_pack(app, directory, filename="pack.py", reporter=None):
         return module.build(Build(app, directory, reporter))
     finally:
         os.chdir(here)
+
+
+SNAPCRAFT_LOGS = Path.home() / ".local/state/snapcraft/log"
+
+# An interrupted run leaves a container LXD will not re-attach craft-state to.
+STALE_INSTANCE = "Failed to add disk to instance"
+
+
+def stale_instance():
+    """The container a wedged run left behind, read from snapcraft's log."""
+    try:
+        newest = max(SNAPCRAFT_LOGS.glob("*.log"), key=lambda p: p.stat().st_mtime)
+    except (OSError, ValueError):
+        return ""
+    text = newest.read_text(errors="replace")
+    if STALE_INSTANCE not in text:
+        return ""
+    found = re.search(r"Failed to add disk to instance '([^']+)'", text)
+    return found.group(1) if found else ""
+
+
+def drop_instance(name):
+    """Delete a build container, so the next build starts from a clean one."""
+    return subprocess.run(["lxc", "--project", "snapcraft", "delete", "-f", name],
+                          capture_output=True).returncode == 0
 
 
 def snapcraft_preflight(destructive=False):

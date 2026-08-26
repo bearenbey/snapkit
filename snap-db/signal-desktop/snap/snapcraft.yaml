@@ -1,7 +1,7 @@
 name: signal-desktop
 title: Signal
 base: core24
-version: '8.24.1'
+version: '8.25.0'
 summary: Private messaging from your desktop
 description: |
   Signal is a messaging app with privacy at its core. It is free and easy to
@@ -76,8 +76,8 @@ apps:
 parts:
   signal:
     plugin: dump
-    source: https://updates.signal.org/desktop/apt/pool/s/signal-desktop/signal-desktop_8.24.1_amd64.deb
-    source-checksum: sha256/164a9b869cc5bb6ea24a4520952882e12104db93f3652723a00382a242928ae6
+    source: https://updates.signal.org/desktop/apt/pool/s/signal-desktop/signal-desktop_8.25.0_amd64.deb
+    source-checksum: sha256/bb071ec2433305d5ed8ec6572b7aceb14b75bf2dd36b2b13b957d567e3f4124e
     override-build: |
       craftctl default
 

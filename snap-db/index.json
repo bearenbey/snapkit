@@ -522,10 +522,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "8627ffec9c337e61b6a59918befce89810107681f1a9f52d10966b27f85da9ac"
+          "sha256": "e4754386cfeecaa02e205b7ab4c9a02530965e9bdc5aa390cd26d9cc09f885de"
         }
       },
-      "fingerprint": "63b205f3e2961326d2128a5f09da9506790f5d05d8d3f7ebc4027bb5cfad5aa3",
+      "fingerprint": "958e91246f17433fe3531adc01057cf35a6280cb06ab425a94935bea7ef5d2b5",
       "name": "ollama",
       "pack": "",
       "record": {
@@ -539,13 +539,14 @@
         "source_anchor": "^(\\s*source:\\s*).*/ollama-linux-amd64\\.tar\\.zst\\s*$",
         "style": "recipe",
         "summary": "Get up and running with large language models",
+        "tag": "v0.33.0",
         "url": "https://github.com/ollama/ollama",
-        "version": "0.32.15",
+        "version": "0.33.0",
         "write_version": false
       },
       "summary": "Get up and running with large language models",
       "upstream": "ollama/ollama",
-      "version": "0.32.15"
+      "version": "0.33.0"
     },
     "retroarch": {
       "files": {
@@ -615,14 +616,14 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "970ee5650ae70bea49f95eeaff1448d9c6d70217075962c7eedb2c2edef727a8"
+          "sha256": "072c81f97bd0e3c845f3f0db92e9924285d4daed3df414b48e2b268d37667382"
         }
       },
-      "fingerprint": "d3c6cc428e106a015c1045ffb2b70a19afe093e527a115aeda0b3baa3f393bd0",
+      "fingerprint": "ab96e27f74f1bdda605d92531d19d32d693f355a3caacd3b3f353d9220b28bea",
       "name": "signal-desktop",
       "pack": "",
       "record": {
-        "asset": "signal-desktop_8.24.1_amd64.deb",
+        "asset": "signal-desktop_8.25.0_amd64.deb",
         "kind": "deb",
         "repo": "signalapp/Signal-Desktop",
         "source_anchor": "^(\\s*source:\\s*).*/signal-desktop_.*\\.deb\\s*$",
@@ -635,12 +636,12 @@
           "package": "signal-desktop"
         },
         "url": "https://github.com/signalapp/Signal-Desktop",
-        "version": "8.24.1",
+        "version": "8.25.0",
         "write_version": true
       },
       "summary": "Private messaging from your desktop",
       "upstream": "signalapp/Signal-Desktop",
-      "version": "8.24.1"
+      "version": "8.25.0"
     },
     "spotube": {
       "files": {
@@ -845,6 +846,44 @@
       "summary": "The official Unity Hub",
       "upstream": "apt",
       "version": "3.21.0"
+    },
+    "yt-dlp": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "c915c36a9a5393463aed6cdcc2c6ced58abdf845b868fb34280ed8550bf2b140"
+        },
+        "launcher/yt-dlp": {
+          "exec": true,
+          "sha256": "9177c173ffa55d7d90451757b09e6fe7ddebde9dc2665c30b56260ef529004b9"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "1970cbf30f5086ab1d2e50a41ef5539abd070417ae5d33132bd5bdbeababf8f9"
+        }
+      },
+      "fingerprint": "c8e6db3df009148e34720e605da983ad5889e3a4f689eee45b71c9bc8c40dcf1",
+      "name": "yt-dlp",
+      "pack": "",
+      "record": {
+        "asset": "yt-dlp_linux.zip",
+        "asset_pattern": "^yt\\-dlp_linux\\.zip$",
+        "checksums": {
+          "url": "{base}/SHA2-256SUMS"
+        },
+        "kind": "archive",
+        "repo": "yt-dlp/yt-dlp",
+        "source_anchor": "^(\\s*source:\\s*).*/yt-dlp_linux\\.zip\\s*$",
+        "style": "recipe",
+        "summary": "A feature-rich command-line audio/video downloader - yt-dlp/yt-dlp",
+        "tag": "2026.08.19",
+        "url": "https://github.com/yt-dlp/yt-dlp",
+        "version": "2026.08.19",
+        "write_version": false
+      },
+      "summary": "A feature-rich command-line audio/video downloader - yt-dlp/yt-dlp",
+      "upstream": "yt-dlp/yt-dlp",
+      "version": "2026.08.19"
     },
     "zen": {
       "files": {

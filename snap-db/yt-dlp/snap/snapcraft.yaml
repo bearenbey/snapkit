@@ -1,0 +1,56 @@
+# Written by snapkit from https://github.com/yt-dlp/yt-dlp, then edited.
+
+name: yt-dlp
+base: core24
+version: '2026.08.19'
+summary: A feature-rich command-line audio/video downloader - yt-dlp/yt-dlp
+description: |
+  A feature-rich command-line audio/video downloader - yt-dlp/yt-dlp
+
+  Packaged from the upstream release at https://github.com/yt-dlp/yt-dlp.
+  This snap is not published or endorsed by the upstream project.
+grade: stable
+confinement: strict
+license: Unlicense
+title: yt-dlp
+website: https://github.com/yt-dlp/yt-dlp
+source-code: https://github.com/yt-dlp/yt-dlp
+issues: https://github.com/yt-dlp/yt-dlp/issues
+contact: https://github.com/yt-dlp/yt-dlp/issues
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+apps:
+  yt-dlp:
+    command: bin/yt-dlp
+    plugs:
+      - home
+      - network
+      - removable-media
+
+parts:
+  yt-dlp:
+    # The zip holds yt-dlp_linux beside _internal/, and records the exec bit.
+    plugin: dump
+    source: https://github.com/yt-dlp/yt-dlp/releases/download/2026.08.19/yt-dlp_linux.zip
+    source-checksum: sha256/32e72032766bef9199d99d15beb69fd52e46df8f8b06f0d8745db59e04d339e9
+
+  # No ffmpeg means no merging, and YouTube splits everything above 720p.
+  ffmpeg:
+    plugin: nil
+    stage-packages:
+      - ffmpeg
+    prime:
+      - -usr/share/doc
+      - -usr/share/man
+
+  launcher:
+    plugin: dump
+    source: launcher
+    organize:
+      yt-dlp: bin/yt-dlp
+    stage:
+      - bin/yt-dlp
