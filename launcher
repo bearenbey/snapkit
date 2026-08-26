@@ -1,0 +1,22 @@
+#!/bin/sh
+# Entry point: PATH and python3 come from the host, libraries from in here.
+set -eu
+
+export PYTHONPATH="$SNAP/lib:$SNAP/usr/lib/python3/dist-packages"
+export PYTHONDONTWRITEBYTECODE=1
+export LANG="${LANG:-C.UTF-8}"
+export LC_ALL="${LC_ALL:-C.UTF-8}"
+
+python="$(command -v python3 || true)"
+if [ -z "$python" ]; then
+    echo "snapkit: this needs python3 on the host: sudo apt install python3" >&2
+    exit 1
+fi
+
+# 3.10 is what the source needs; older fails as an odd syntax error.
+if ! "$python" -c 'import sys; sys.exit(sys.version_info < (3, 10))'; then
+    echo "snapkit: needs python 3.10 or newer; $python is $("$python" -V 2>&1)" >&2
+    exit 1
+fi
+
+exec "$python" "$SNAP/lib/snapkit.py" "$@"

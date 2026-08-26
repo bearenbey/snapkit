@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snapkit"
+version = "0.1.0"
+description = "Make a snap package out of a GitHub repository, and keep it up to date"
+requires-python = ">=3.10"
+dependencies = ["rich>=13.0"]
+
+[project.scripts]
+snapkit = "snapforge.cli:entry"
+
+[tool.setuptools]
+packages = ["snapforge"]

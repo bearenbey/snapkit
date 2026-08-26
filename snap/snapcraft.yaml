@@ -1,0 +1,71 @@
+name: snapkit
+base: core24
+version: '0.1.0'
+summary: Make a snap package out of a GitHub repository, or out of a .deb
+description: |
+  Give snapkit a GitHub repository and it works out what that project
+  publishes, picks the file it can actually package out of everything
+  attached to the newest release, downloads it, opens it to find where the
+  program and its desktop entry and icon really are, writes a snapcraft.yaml
+  around what it found, and builds the snap.
+
+  Not everything is published as a release. Point it at a .deb, an archive or
+  an AppImage you already have -- or at the folder one is in, or at nothing
+  at all, and it asks -- and that file is what gets packaged. A snap made
+  that way is kept in step with its folder: drop a newer file in beside it
+  and `snapkit check` reports it like any other update.
+
+  Every snap made this way is registered: a small JSON record, the recipe
+  beside it as the yaml it actually is, and the icon beside that. So a project
+  directory can be thrown away and written out again, an update is one
+  keystroke, and removing a snap removes the whole of it.
+
+  Run it with no arguments for the dashboard, or drive it from the command
+  line:
+
+      snapkit create owner/name     make a snap from a repository
+      snapkit create ./thing.deb    ... or from a file you already have
+      snapkit check                 what has a newer release upstream
+      snapkit update <name>         move onto that release and rebuild
+      snapkit list                  what is registered
+      snapkit remove <name>         forget a snap, and its recipe with it
+
+  It needs snapcraft to do the building, which is why this snap is classic:
+  building a snap means running snapcraft and writing project directories
+  wherever you keep them, and neither is something a confined snap can do.
+
+grade: devel
+confinement: classic
+license: MIT
+title: snapkit
+website: https://github.com/bearen/snapkit
+source-code: https://github.com/bearen/snapkit
+issues: https://github.com/bearen/snapkit/issues
+contact: https://github.com/bearen/snapkit/issues
+
+platforms:
+  amd64:
+
+apps:
+  snapkit:
+    command: bin/snapkit
+
+parts:
+  # No interpreter: a relocated CPython cannot find its own standard library.
+  snapkit:
+    plugin: dump
+    source: .
+    organize:
+      snapforge: lib/snapforge
+      snapkit.py: lib/snapkit.py
+      launcher: bin/snapkit
+    stage:
+      - lib/snapforge
+      - lib/snapkit.py
+      - bin/snapkit
+      - usr
+    stage-packages:
+      # rich, and what it imports. All pure python.
+      - python3-rich
+      # dpkg-deb is the .deb reader's only fallback, for zstd payloads.
+      - dpkg
