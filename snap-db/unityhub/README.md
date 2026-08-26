@@ -24,7 +24,7 @@ unityhub
 ```
 
 `--dangerous` is required because the snap is not signed by the store, and
-`--classic` because of the confinement choice described below — snapd refuses
+`--classic` because of the confinement choice described below. snapd refuses
 the install if either flag is missing. To remove: `sudo snap remove unityhub`.
 
 ## Layout
@@ -36,14 +36,14 @@ the install if either flag is missing. To remove: `sudo snap remove unityhub`.
 | `overlay/bin/launcher` | the app entry point |
 
 The icon is copied at build time out of the deb's
-`usr/share/icons/hicolor/256x256/apps/unityhub.png` — this build ships no SVG.
+`usr/share/icons/hicolor/256x256/apps/unityhub.png`, as it ships no SVG.
 
 ## Design notes
 
 - **Classic confinement, unlike the other snaps here.** Unity Hub is not a
   self-contained app; it is an installer and launcher. It downloads Unity
   Editors into `~/Unity/Hub/Editor` and executes them, and those editors in
-  turn shell out to host toolchains — gcc/clang for IL2CPP, the Android
+  turn shell out to host toolchains: gcc/clang for IL2CPP, the Android
   SDK/NDK, JDK, and so on. Under strict confinement a launched editor would
   inherit the Hub's AppArmor profile with none of that on `PATH`, so editor
   launching is unreliable and native builds break. Classic gives the Hub the
@@ -55,7 +55,7 @@ The icon is copied at build time out of the deb's
   usable. `pack.py` runs `ldd` over `unityhub-bin` and warns about anything
   the host is missing; all of the deb's `Depends` resolve on this machine.
 - **No `layout:`, no `plugs:`.** Both are meaningless under classic
-  confinement — the app already sees the real root filesystem.
+  confinement, because the app already sees the real root filesystem.
 - **`--no-sandbox`.** This build ships no setuid `chrome-sandbox` helper, so
   Electron would fall back to the unprivileged-user-namespace sandbox, which
   snapd's AppArmor profile and Ubuntu's
@@ -66,7 +66,7 @@ The icon is copied at build time out of the deb's
   the other Electron snaps on this system do.
 - **Config lives in the normal place.** Because confinement is classic, `$HOME`
   is the real home directory, so the Hub uses `~/.config/UnityHub` and
-  `~/Unity` just like the deb — no `~/snap/unityhub/` migration needed, and an
+  `~/Unity` just like the deb, so no `~/snap/unityhub/` migration is needed, and an
   existing Hub install is picked up as-is.
 - **`unityhub://` links** are registered through the exported desktop entry's
   `MimeType`, which is what the browser hands back after a sign-in.
@@ -78,7 +78,7 @@ The deb's `postinst` is not run, by design:
 - **No APT repository or signing key.** The deb adds
   `/etc/apt/sources.list.d/unityhub.sources` so `apt` keeps the Hub updated.
   A snap cannot, so updates mean downloading a newer deb and re-running
-  `pack.py` — bump `version:` in `snap/snapcraft.yaml` to match, or the
+  `pack.py`. Bump `version:` in `snap/snapcraft.yaml` to match, or the
   build warns about the mismatch.
 - **No `/usr/bin/unityhub` alternative.** snapd provides `/snap/bin/unityhub`.
 - **No host AppArmor profile.** The deb installs

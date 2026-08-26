@@ -41,7 +41,7 @@ remove: `sudo snap remove zen`.
 The window icon comes out of the tarball at build time
 (`browser/chrome/icons/default/default128.png`) rather than being kept here,
 and `snap/command-chain/desktop-launch` and `hooks-configure-fonts` are copied
-out of the installed `gnome-46-2404` snap — the same files snapcraft's `gnome`
+out of the installed `gnome-46-2404` snap, the same files snapcraft's `gnome`
 extension pulls from the matching SDK.
 
 ## Design notes
@@ -55,7 +55,7 @@ extension pulls from the matching SDK.
   a warning at pack time rather than a failed exec later.
 - **`browser-sandbox` has to be connected by hand.** Gecko builds its content
   sandbox out of unprivileged user namespaces, which snapd permits only
-  through `browser-support` with `allow-sandbox: true` — and an interface
+  through `browser-support` with `allow-sandbox: true`, and an interface
   declared that way never auto-connects. The launcher checks with `snapctl`
   and, if it is not connected, sets `MOZ_DISABLE_CONTENT_SANDBOX=1` and says
   so on stderr rather than letting every content process die at startup.
@@ -63,7 +63,7 @@ extension pulls from the matching SDK.
   `sudo snap connect zen:browser-sandbox`.
 - **The in-place updater is removed** (`updater`, `updater.ini`, and the
   `precomplete` and `removed-files` manifests it works from) and
-  `policies.json` sets `DisableAppUpdate` — a squashfs is read-only, so an
+  `policies.json` sets `DisableAppUpdate`, since a squashfs is read-only and an
   update Zen downloaded could never be applied. Rebuild with `snapkit build zen` to
   move to a new release. `DontCheckDefaultBrowser` is set for the same kind of
   reason: the check writes host settings the snap cannot reach.
@@ -72,11 +72,11 @@ extension pulls from the matching SDK.
   per revision, so every refresh would copy a whole browser profile forward;
   the launcher points `HOME` at `$SNAP_USER_COMMON` instead, which is what the
   official Firefox snap does. The trade-off is that `snap revert` does not
-  take the profile back with it — which for a browser profile is the wanted
+  take the profile back with it, which for a browser profile is the wanted
   behaviour anyway. To carry over an existing profile, copy `~/.zen` there
   after the first launch.
-- **A `dbus` session slot for `org.mozilla.zen`.** Gecko's remoting — handing
-  a URL to an already running window instead of starting a second copy — owns
+- **A `dbus` session slot for `org.mozilla.zen`.** Gecko's remoting, which
+  hands a URL to a running window instead of starting a second copy, owns
   `org.mozilla.<RemotingName>`, and `application.ini` spells that name `zen`.
   snapd's `dbus` interface grants the well-known name and its children, which
   is what the per-profile suffix Gecko appends needs.

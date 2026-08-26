@@ -35,7 +35,7 @@ sudo snap install --dangerous ./mpv_*.snap
 
 Note on the name: this builds as `mpv`, which is fine for local installs but is
 already registered in the Snap Store. Publishing would mean either claiming the
-name from its current owner or renaming the snap — change `name:` in
+name from its current owner or renaming the snap. Change `name:` in
 `snap/snapcraft.yaml` and the commands below follow.
 
 ## Video output
@@ -51,15 +51,15 @@ sudo snap connect mpv:opengl
 
 `gpu-2604` supplies the OpenGL, EGL, Vulkan and VAAPI drivers; `opengl` grants
 access to the `/dev/dri` device nodes. A store install would connect both
-automatically — a local `--dangerous` install will not, so do it by hand.
+automatically. A local `--dangerous` install will not, so do it by hand.
 
 This is wired up manually rather than through snapcraft's `gpu` extension on
 purpose. That extension's command-chain wrapper **exits 3** when the content
 snap is not connected, which would take out audio-only and terminal playback
 too. The launcher here uses the GPU wrapper only if it is present.
 
-No Mesa ships inside this snap. A full driver stack — `libgallium` and the
-133 MB `libLLVM` behind it — arrives as a dependency of `libgbm1` and is
+No Mesa ships inside this snap. A full driver stack, `libgallium` and the
+133 MB `libLLVM` behind it, arrives as a dependency of `libgbm1` and is
 pruned again at prime time: the provider wrapper points GBM, EGL and VA-API at
 `mesa-2604`'s copies regardless, and carrying a second Mesa build only invites
 the two to disagree. The glvnd dispatch libraries stay, since they are what
@@ -100,7 +100,7 @@ mpv --hwdec=nvdec     file.mkv          # NVIDIA
 
 On an NVIDIA-only machine VAAPI will fail to initialise: the proprietary driver
 ships no VA-API implementation, so `/dev/dri/renderD*` exists but has nothing
-usable behind it. That is not a packaging problem — use `--hwdec=nvdec`.
+usable behind it. That is not a packaging problem, so use `--hwdec=nvdec`.
 
 ## Streaming and yt-dlp
 
@@ -126,7 +126,7 @@ need to: mpv plays the separate video and audio streams itself.
 ## Configuration
 
 `$HOME` inside the snap is `~/snap/mpv/current`, so the configuration
-directory is `~/snap/mpv/current/.config/mpv` — that is where `mpv.conf`,
+directory is `~/snap/mpv/current/.config/mpv`, which is where `mpv.conf`,
 `input.conf`, `scripts/` and `watch_later/` go.
 
 To use your existing `~/.config/mpv` instead, connect the opt-in
@@ -179,7 +179,7 @@ sudo snap connect mpv:dot-config-mpv
 | Filters and colour | zimg, rubberband, lcms2 |
 
 Deliberately absent: PipeWire and JACK audio (no interface reaches those
-sockets under strict confinement — PulseAudio is what `audio-playback`
+sockets under strict confinement. PulseAudio is what `audio-playback`
 exposes, and a PipeWire host answers on it), SDL2 (duplicates outputs mpv has
 natively), VapourSynth, and the DVB input (needs `/dev/dvb`).
 
@@ -205,7 +205,7 @@ not play.
   <https://mpv.io/manual/stable/> cover the same ground.
 
 * **Sound.** snapd points `XDG_RUNTIME_DIR` at
-  `/run/user/<uid>/snap.mpv`, and libpulse builds its socket path from that —
+  `/run/user/<uid>/snap.mpv`, and libpulse builds its socket path from that,
   so it looks for `snap.mpv/pulse/native`, which does not exist, and every
   connection is refused with no sound and no obvious reason. The launcher sets
   `PULSE_SERVER` to the real socket one directory up, which is what the
@@ -224,8 +224,8 @@ not play.
 ```
 
 This rewrites `source:` and `source-checksum:` in `snap/snapcraft.yaml`. mpv
-publishes no source tarball of its own — the release is the tag and GitHub
-generates the archive — so there is nothing to verify a signature against and
+publishes no source tarball of its own. The release is the tag and GitHub
+generates the archive, so there is nothing to verify a signature against and
 the script computes the sha256 from the download itself. The snap version is
 taken from the tarball's `MPV_VERSION` file at build time via `adopt-info`, so
 it never needs editing by hand.

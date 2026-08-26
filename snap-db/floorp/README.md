@@ -57,7 +57,7 @@ be copied out of the installed `gnome-46-2404` snap at build time.
   at `$SNAP/gnome-platform`; graphics and the X11 libraries come from
   `mesa-2404` at `$SNAP/gpu-2404`. Nothing is staged into the snap itself:
   every soname the payload needs resolves against those two plus `core24`.
-  `pack.py` checks that rather than asserting it — it walks the payload's
+  `pack.py` checks that rather than asserting it. It walks the payload's
   `NEEDED` entries against what the three snaps offer and warns about anything
   nothing provides, because a missing soname surfaces as a bare exec failure
   at launch rather than as a pack error.
@@ -66,14 +66,14 @@ be copied out of the installed `gnome-46-2404` snap at build time.
   policy denies; the interface that allows them is `browser-support` with
   `allow-sandbox: true`, and an interface in that shape never auto-connects
   for a local `--dangerous` install. While it is disconnected `bin/launcher`
-  sets `MOZ_DISABLE_CONTENT_SANDBOX=1` and says so on stderr — the browser
+  sets `MOZ_DISABLE_CONTENT_SANDBOX=1` and says so on stderr. The browser
   runs with snapd/AppArmor confinement alone instead of having every content
   process die at startup. Connect it and that layer comes back.
 - **The updater is removed and disabled.** It cannot rewrite a read-only
   squashfs, so all it can produce is a restart prompt that changes nothing.
   `distribution/policies.json` sets `DisableAppUpdate`, and `updater`,
-  `updater.ini`, `precomplete` and `removed-files` — the machinery that would
-  have carried an update out — are dropped from the payload. Updates come from
+  `updater.ini`, `precomplete` and `removed-files`, the machinery that would
+  have carried an update out, are dropped from the payload. Updates come from
   `snapkit update floorp` instead.
 - **`HOME=$SNAP_USER_COMMON`, set in the launcher.** snapd copies
   `$SNAP_USER_DATA` into the new revision on every refresh, and a browser
@@ -86,8 +86,8 @@ be copied out of the installed `gnome-46-2404` snap at build time.
   from under an app whose `HOME` it does not recognise. By the time the
   launcher runs it has already pinned the XDG directories, so this moves the
   profile and nothing else.
-- **A `dbus` session slot for `org.mozilla.floorp`.** Gecko's remoting — handing
-  a URL to an already running window instead of starting a second copy — owns
+- **A `dbus` session slot for `org.mozilla.floorp`.** Gecko's remoting, which
+  hands a URL to a running window instead of starting a second copy, owns
   `org.mozilla.<RemotingName>`, and `application.ini` spells that name
   `floorp`. snapd's `dbus` interface grants the well-known name and its
   children, which is what the per-profile suffix Gecko appends needs.

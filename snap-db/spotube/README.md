@@ -21,8 +21,8 @@ the recipe changed.
 
 `snapkit build spotube` builds whatever `.deb` is here now. Moving it onto a
 newer release is the other command: `snapkit update spotube` fetches the
-`.deb` -- upstream's name for it carries no version, so it is overwritten in
-place -- and builds the result.
+`.deb`, whose name carries no version so it is overwritten in place, and
+builds the result.
 
 ## Install / run
 
@@ -60,9 +60,9 @@ remove: `sudo snap remove spotube`.
   the first track with a plugin initialisation error.
 - **The `cleanup` part prunes against the runtime *search path*, not against
   the platform's file list.** A library the platform keeps in a subdirectory
-  — Debian's alternatives put BLAS and LAPACK in `blas/` and `lapack/` and
+  Debian's alternatives put BLAS and LAPACK in `blas/` and `lapack/` and
   point ldconfig at them via `/etc/ld.so.conf.d`, which is not staged and
-  would not be consulted for `$SNAP` anyway — is *not* something the snap can
+  would not be consulted for `$SNAP` anyway, is *not* something the snap can
   resolve, so it does not count as provided. Libraries found in such a
   subdirectory are linked up into a directory that is searched, which is what
   ldconfig would have done. Exact-path pruning is applied to everything
@@ -72,13 +72,13 @@ remove: `sudo snap remove spotube`.
   same search path and fails the build if anything is unreachable. This is
   the part that earns its keep: name-based pruning that gets a name wrong
   does not fail during the build, it fails inside a `dlopen()` at runtime and
-  blames the wrong thing — media_kit reports a missing libmpv when what is
+  blames the wrong thing. media_kit reports a missing libmpv when what is
   really missing is `libblas.so.3`, three levels below it, needed by
   `libsphinxbase`.
 - **The platform snaps are read out of their squashfs images**, not out of
   `/snap/<name>/current`. Those snaps are installed in
-  the build container but snapd never mounts them there — `/snap/core24/current`
-  is a dangling symlink — so the usual `cd /snap/.../current && find .` idiom
+  the build container but snapd never mounts them there. `/snap/core24/current`
+  is a dangling symlink, so the usual `cd /snap/.../current && find .` idiom
   matches nothing and prunes nothing while looking like it worked.
 - **Pruning is by soname, not by file name.** `libappindicator3-1` pulls in
   the whole of GTK and `libmpv2` the whole of ffmpeg, and the platform carries
@@ -90,33 +90,33 @@ remove: `sudo snap remove spotube`.
   that snapd's seccomp profile denies, so it is turned off with
   `WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS`; the snap as a whole is still
   confined by snapd/AppArmor. `WEBKIT_DISABLE_DMABUF_RENDERER` is set for the
-  same reason other confined webviews set it — the fallback path is slower
+  same reason other confined webviews set it. The fallback path is slower
   but always draws; drop it if your session renders fine without it. Both
   matter for the Spotify login window. The `layout:` entries that bind
   WebKit's libexec directory and libproxy into place are *not* here: the
   `gnome` extension already adds exactly those two.
 - **`StartupWMClass=oss.krtirtho.spotube`.** `my_application_new()` picks
   the id `com.github.KRTirtho.Spotube` only when `container`, `FLATPAK_ID` or
-  `FLATPAK` is set; in a snap none are, so the GTK application id — and the
-  Wayland `app_id` the shell matches windows on — is `oss.krtirtho.spotube`.
+  `FLATPAK` is set; in a snap none are, so the GTK application id, and with it
+  the Wayland `app_id` the shell matches windows on, is `oss.krtirtho.spotube`.
   On X11 the class comes from `argv[0]` and is `spotube` instead; only one of
   the two can go in the desktop entry, and Wayland is the default session
   here. (The deb's desktop file also ends without a trailing newline, which
   is worth knowing before appending anything to it.)
 - **Two D-Bus names, two slots.** A snap may only own session bus names tied
   to its own snap name, and Spotube wants two that are not. The `dbus` slot
-  covers the GTK application id — without it the app starts with
+  covers the GTK application id. Without it the app starts with
   `Failed to register: ... is not allowed to own the service
   "oss.krtirtho.spotube" due to AppArmor policy` and loses single-instance
   behaviour and shell integration. The `mpris` slot covers the player name:
   `audio_service_mpris` builds it as
   `org.mpris.MediaPlayer2.<dBusName>.instance<pid>` and the interface grants
   `org.mpris.MediaPlayer2.<name>{,.*}`, so the per-process suffix is covered.
-  Owning a name works from the declaration alone — neither slot has to be
+  Owning a name works from the declaration alone, and neither slot has to be
   connected to anything.
 - **Interfaces granted:** network, network-bind, home, removable-media,
   audio-playback, screen-inhibit-control, password-manager-service,
-  browser-support, unity7, avahi-observe, avahi-control — plus the extension's.
+  browser-support, unity7, avahi-observe and avahi-control, plus the extension's.
   `password-manager-service` (Spotify credentials via libsecret) and
   `avahi-control` (advertising this device for Spotube Connect) are not
   auto-connected and need the `snap connect` lines above.

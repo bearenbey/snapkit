@@ -43,23 +43,23 @@ remove: `sudo snap remove defold`.
 
 The icon is upstream's own `logo_blue.png`, copied out of the zip at build
 time. `snap/command-chain/desktop-launch` and `hooks-configure-fonts` are
-copied out of the installed `gnome-46-2404` snap — the same files snapcraft's
+copied out of the installed `gnome-46-2404` snap, the same files snapcraft's
 `gnome` extension pulls from the matching SDK.
 
 ## Design notes
 
 - **The editor needs nothing staged; the engine needs OpenAL.** The editor
   bundles its own JDK 25 and all its JavaFX/JOGL natives, and the ~35 system
-  libraries those pull in — GTK 3, gdk-3, pango, atk, cairo, gdk-pixbuf,
-  libXtst, freetype, fontconfig, libasound — all come from `gnome-46-2404`,
-  with libGL, libX11, libXext, libdrm, libgbm and libXxf86vm from
+  libraries those pull in, which are GTK 3, gdk-3, pango, atk, cairo,
+  gdk-pixbuf, libXtst, freetype, fontconfig and libasound, come from
+  `gnome-46-2404`, with libGL, libX11, libXext, libdrm, libgbm and libXxf86vm from
   `mesa-2404`. The *game engine* is the exception: `dmengine`, which the
   editor unpacks and runs on Build, links `libopenal.so.1`, which no provider
   snap ships, and libopenal in turn links `libsndio.so.7`. `pack.py` vendors
   those two out of the noble archive into `$SNAP/usr/lib/x86_64-linux-gnu`
   (already on `LD_LIBRARY_PATH`) and checks the digests. Noble, not the host:
   the base is core24, so a host `.deb` would link a newer glibc than the base
-  provides. Below those two, the closure is covered again — libasound from
+  provides. Below those two, the closure is covered again: libasound from
   `gnome-46-2404`, libbsd/libmd/libstdc++/libgcc_s from `core24`. The hrtf
   profiles from `libopenal-data` are staged too and reached through a
   `/usr/share/openal` layout, since OpenAL looks them up by absolute path.
@@ -73,7 +73,7 @@ copied out of the installed `gnome-46-2404` snap — the same files snapcraft's
   redirects `XDG_CONFIG_HOME`/`XDG_DATA_HOME`/`XDG_CACHE_HOME` but not
   `XDG_STATE_HOME`, which is a newer part of the spec. The fallback is worse:
   the JVM does not read `user.home` from `$HOME`, it reads the passwd entry,
-  so it resolves to the real home regardless of what snapd sets — and
+  so it resolves to the real home regardless of what snapd sets, and
   `~/.local/state` is a dot directory, which the `home` interface denies.
   `bin/launcher` therefore sets `XDG_STATE_HOME` *and* passes
   `-Duser.home=$SNAP_USER_DATA` through `JAVA_TOOL_OPTIONS`, so anything else
@@ -81,7 +81,7 @@ copied out of the installed `gnome-46-2404` snap — the same files snapcraft's
   stays inside the sandbox.
 - **The launcher finds itself.** Upstream's `Defold` binary resolves its
   resources path from `/proc/self/exe` (`dmSys::GetResourcesPath`), so
-  dropping the tree at `$SNAP/opt/Defold` is enough — no path patching, and
+  dropping the tree at `$SNAP/opt/Defold` is enough, with no path patching and
   the launcher execs the real binary rather than symlinking to it.
 - **Unpack-and-execute works.** The editor extracts its bundled natives and
   the game engine into its data directory and runs them from there; snapd's
@@ -94,9 +94,9 @@ copied out of the installed `gnome-46-2404` snap — the same files snapcraft's
 - **Interfaces granted:** desktop, desktop-legacy, gsettings, opengl, x11,
   wayland, unity7, network, network-bind, home, removable-media,
   audio-playback, joystick, screen-inhibit-control. `joystick` is not
-  auto-connected — run `snap connect defold:joystick` to test gamepad input.
+  auto-connected, so run `snap connect defold:joystick` to test a gamepad.
 - Projects under `$HOME` (and on removable media) are reachable, but hidden
-  directories in `$HOME` are not — the `home` interface does not cover
+  directories in `$HOME` are not, because the `home` interface does not cover
   dotfiles. Editor preferences live under `~/snap/defold/current/`.
 
 ## Publishing to the store

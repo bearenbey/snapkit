@@ -1,9 +1,9 @@
 # ungoogled-chromium-snap
 
 Snap packaging for
-[ungoogled-chromium](https://github.com/ungoogled-software/ungoogled-chromium)
--- Chromium with Google web-service integration removed -- built by
-repackaging the official upstream amd64 portable tarball from
+[ungoogled-chromium](https://github.com/ungoogled-software/ungoogled-chromium),
+Chromium with Google web-service integration removed, built by repackaging
+the official upstream amd64 portable tarball from
 [ungoogled-chromium-portablelinux](https://github.com/ungoogled-software/ungoogled-chromium-portablelinux).
 
 ## Layout
@@ -27,7 +27,7 @@ snapkit build ungoogled-chromium    # build what the recipe points at now
 
 `snapcraft` on its own also works, but it builds whatever tarball the recipe
 currently points at, and it skips the check that the tarball really is the
-release the recipe claims -- a tag that does not exist answers with GitHub's
+release the recipe claims. A tag that does not exist answers with GitHub's
 404 page rather than an error. `snapkit build` runs that check first.
 
 Moving the recipe to a new release is the other command. `snapkit update
@@ -84,7 +84,7 @@ reachable, which is otherwise a hang at startup, and sets
 * No `stage-packages`: every library the binary links against comes from the
   `gnome-46-2404` platform snap (nss, cups, alsa, glib, pango, atk, cairo,
   dbus, udev, xkbcommon), `mesa-2404` (gbm, X11) or `core24` (libgcc).
-* Upstream's `chrome-wrapper` is dropped at prime time -- it rewrites
+* Upstream's `chrome-wrapper` is dropped at prime time, because it rewrites
   `LD_LIBRARY_PATH` and writes a stray `.desktop` file into `$HOME`, both
   wrong inside a snap. `snap/local/ungoogled-chromium-launch` replaces it.
 * Upstream publishes no checksum file next to the release assets, so the

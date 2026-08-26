@@ -8,7 +8,7 @@ manifest at [flathub/org.libretro.RetroArch](https://github.com/flathub/org.libr
 
 The set of components in `snap/snapcraft.yaml`, and the build flags, are copied
 from that manifest, so this snap builds the same tree of code and data the
-Flatpak ships. The *revisions* are not copied -- see "What this tracks" below.
+Flatpak ships. The *revisions* are not copied. See "What this tracks" below.
 
 ## Build
 
@@ -45,7 +45,7 @@ the shared updater, RetroArch is now built from the upstream release tarball
 (the tag archive, checksummed in the yaml) and the seven data repositories
 follow their default branches instead. So:
 
-- the frontend is reproducible and verified -- `source-checksum` is checked by
+- the frontend is reproducible and verified, since `source-checksum` is checked by
   snapcraft at build time, and the updater refuses a tarball that does not
   contain `RetroArch-<version>/version.all`
 - the bundled assets, database, core info, autoconfigs, shaders and overlays
@@ -142,7 +142,7 @@ gets a remapped `$HOME` and relocated libraries.
 
 ## Interfaces worth connecting
 
-`sudo snap connect retroarch:alsa` — without it the ALSA sequencer is denied and
+`sudo snap connect retroarch:alsa`. Without it the ALSA sequencer is denied and
 you get `open /dev/snd/seq failed: Operation not permitted`. That only affects
 MIDI; ordinary audio goes through PulseAudio and works unconnected.
 

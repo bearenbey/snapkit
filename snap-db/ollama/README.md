@@ -1,13 +1,13 @@
 # ollama-snap
 
 A [snap](https://snapcraft.io/) package for [Ollama](https://ollama.com), built
-from the official upstream Linux release tarball — the same artefact that
+from the official upstream Linux release tarball, the same artefact that
 `https://ollama.com/install.sh` downloads.
 
 The snap ships:
 
-* `ollama` — the command line client, on `PATH` after install.
-* `ollama.daemon` — `ollama serve` as a systemd service, started automatically.
+* `ollama` is the command line client, on `PATH` after install.
+* `ollama.daemon` is `ollama serve` as a systemd service, started for you.
 
 ## Build
 
@@ -26,7 +26,7 @@ Moving it onto a newer release is the other command: `snapkit update ollama`
 repoints the `source:` line at the new release, rewrites its checksum, and
 builds the result.
 
-That produces `ollama_<version>_amd64.snap` (roughly 1.5 GB — the upstream
+That produces `ollama_<version>_amd64.snap` (roughly 1.5 GB, since the upstream
 tarball bundles the CUDA v12 and v13 runtimes).
 
 ## Install
@@ -99,7 +99,7 @@ Models survive `snap refresh` and `snap remove --purge` is what deletes them.
 
 * The client plugs `home` and `removable-media` so `ollama create -f Modelfile`
   can read files you own. Hidden directories under `$HOME` are not readable
-  through the `home` interface — keep Modelfiles in a normal directory.
+  through the `home` interface, so keep Modelfiles in a normal directory.
 * The service runs as root inside the snap sandbox with `network-bind`; by
   default it only listens on `127.0.0.1:11434`.
 * There is no `classic` fallback here. If you need Ollama to see a GPU stack

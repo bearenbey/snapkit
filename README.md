@@ -1,5 +1,24 @@
 # snapkit
 
+> **This project is co-authored with Claude, Anthropic's Opus 5 model, and
+> roughly a quarter of what you are reading was written by it.**
+>
+> The measurable part: about 1,800 of the 16,100 lines of source in this tree
+> were written by Claude from scratch. That is the shared recipe database and
+> its commands, eight of the twenty-one snapcraft recipes, and nine of the
+> `pack.py` build scripts. On top of that it rewrote every comment and
+> docstring in the tree, most of this README, and the dashboard's build and
+> install handling.
+>
+> The parts that are not Claude's: the design of the tool, the register and
+> the update model, and the packaging decisions behind all twenty-one snaps.
+> Those came first and the rest was built onto them.
+>
+> One limit worth stating plainly. That figure covers work Claude can account
+> for by having done it. It cannot see what happened before, so if earlier
+> parts of this were also written with help, the true share is higher than a
+> quarter rather than lower.
+
 Make a snap package out of a GitHub repository, or out of a `.deb` you
 already have, and keep it that way.
 

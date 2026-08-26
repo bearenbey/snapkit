@@ -4,7 +4,7 @@ Builds a strictly confined `signal-desktop` snap from the `.deb` that Signal
 Messenger publishes for Debian/Ubuntu. Not published or endorsed by Signal.
 
 Signal's download page only offers the apt repository, never a direct `.deb`
-link, which is why the package looks like it does not exist. It does — the
+link, which is why the package looks like it does not exist. It does, and the
 repo's pool is a plain HTTP directory:
 
 ```
@@ -45,7 +45,7 @@ signal-desktop
 `--dangerous` is required because the snap is not signed by the store. To
 remove it again: `sudo snap remove signal-desktop`.
 
-Link it to your phone the usual way — Signal Desktop is a linked device, not a
+Link it to your phone the usual way. Signal Desktop is a linked device, not a
 standalone account.
 
 ## Updating
@@ -61,7 +61,7 @@ and `source-checksum:` in `snapcraft.yaml`, and stops early if you are already
 on the newest release.
 
 This is the only way this snap moves forward. Signal Desktop only ships a
-self-updater for macOS and AppImage builds — on a `.deb`-style install its
+self-updater for macOS and AppImage builds. On a `.deb`-style install its
 updater is never even constructed, so nothing in the app will try (or manage)
 to replace the read-only squashfs underneath it.
 
@@ -85,7 +85,7 @@ to replace the read-only squashfs underneath it.
   from the platform, at the version its module and loader caches expect. It
   matches on path first and then again on soname, because the platform ships
   different point releases (`libgtk-3.so.0.2418.32` against the staged
-  `libgtk-3.so.0.2409.32`) — a path-only pass takes the soname symlink and
+  `libgtk-3.so.0.2409.32`), so a path-only pass takes the soname symlink and
   leaves ~25 MB of unreachable real files behind.
 - **Keyring.** Signal encrypts its SQLCipher database key with Electron's
   `safeStorage`, which goes through libsecret to `org.freedesktop.secrets` over
@@ -97,7 +97,7 @@ to replace the read-only squashfs underneath it.
   to stay on XWayland if decorations or screen sharing misbehave.
 - **Interfaces granted:** network, network-bind, browser-support,
   audio-playback, audio-record, camera, home, removable-media,
-  screen-inhibit-control, password-manager-service, hardware-observe, unity7 —
+  screen-inhibit-control, password-manager-service, hardware-observe, unity7,
   plus desktop, desktop-legacy, gsettings, opengl, wayland and x11 from the
   `gnome` extension.
 - **Data lives in `~/snap/signal-desktop/current/.config/Signal`**, not

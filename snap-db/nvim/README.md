@@ -31,7 +31,7 @@ store, and `--classic` because it declares classic confinement. To remove:
 `sudo snap remove nvim`.
 
 The snap is named `nvim` rather than `neovim` so the exported command is
-plain `nvim` — snapd only shortens `/snap/bin/<snap>.<app>` to
+plain `nvim`, because snapd only shortens `/snap/bin/<snap>.<app>` to
 `/snap/bin/<snap>` when the app and the snap share a name.
 
 ## Layout
@@ -42,7 +42,7 @@ plain `nvim` — snapd only shortens `/snap/bin/<snap>.<app>` to
 | `pack.py` | run snapcraft, then check the packed snap's version and host libraries |
 
 The icon and the desktop entry are upstream's own, copied out of the tarball
-at build time — only `TryExec` is rewritten, to `/snap/bin/nvim`.
+at build time. Only `TryExec` is rewritten, to `/snap/bin/nvim`.
 
 ## Design notes
 
@@ -51,14 +51,14 @@ at build time — only `TryExec` is rewritten, to `/snap/bin/nvim`.
   would be unreadable and the config would have to be redirected into the
   snap's own data dir; `:!`, `:terminal` and every LSP client would see only
   the snap's `PATH`, so host language servers, formatters, compilers and
-  `git` would not run; and files outside `$HOME` — `/etc`, other trees —
+  `git` would not run; and files outside `$HOME`, such as `/etc`,
   would be off-limits. Classic keeps the real `$HOME`, the real `PATH` and
   the whole filesystem, which is what upstream's own `neovim` snap does too.
 - **Nothing had to be staged.** Upstream links LuaJIT, tree-sitter, libuv,
   msgpack and unibilium statically; the binary's only `NEEDED` entries are
   `libm`, `libgcc_s` and `libc`, and the highest symbol version it asks for
   is `GLIBC_2.34`. A classic snap resolves those against the host rather than
-  the base, and this host is well past that — but `pack.py` still runs `ldd`
+  the base, and this host is well past that, but `pack.py` still runs `ldd`
   over the binary *and* every tree-sitter parser, because the parsers are
   `dlopen`ed and a missing dependency in one would otherwise surface only
   when a buffer of that filetype is opened.
@@ -70,7 +70,7 @@ at build time — only `TryExec` is rewritten, to `/snap/bin/nvim`.
   cannot point the snap at a different Neovim's runtime files.
 - **`base: core24` is nearly vestigial here.** A classic snap runs against
   the host filesystem, not the base, so core24 only sets the build-time
-  expectations — it is declared for consistency with the other snaps in this
+  expectations. It is declared for consistency with the other snaps in this
   collection.
 - **Config, plugins and state stay on the host.** `~/.config/nvim`,
   `~/.local/share/nvim` and `~/.local/state/nvim` are the real ones, so an

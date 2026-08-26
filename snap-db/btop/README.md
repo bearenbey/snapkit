@@ -45,8 +45,9 @@ instead of degrading gracefully. btop's own log made it visible:
 
 Disabling just the net box (`shown_boxes = "cpu mem proc"`) made the crash go
 away, which confirmed it. `network` auto-connects, so the fix needs no
-`snap connect`. The underlying fragility is upstream's — btop should survive a
-failing `getifaddrs()` — so it is worth reporting to the btop project.
+`snap connect`. The underlying fragility is upstream's, since btop should
+survive a failing `getifaddrs()`, so it is worth reporting to the btop
+project.
 
 The `update.go:193: cannot change mount namespace ... /boot ... permission
 denied` message that accompanies startup is unrelated and harmless: the same
@@ -57,14 +58,14 @@ denied` message that accompanies startup is unrelated and harmless: the same
 `Failed to get mounts from /etc/mtab and /proc/self/mounts`. Likewise the CPU
 temperature readout needs `hardware-observe`, which otherwise logs
 `No good candidate for cpu sensor found`. `Failed to read /etc/fstab` is
-expected and harmless — the core24 base ships no `/etc/fstab`, and btop only
+expected and harmless. The core24 base ships no `/etc/fstab`, and btop only
 consults it when `use_fstab` is enabled.
 
 **The disks panel reports the snap's root, not the host's.** Upstream builds
 btop for its own snap with `ADDFLAGS="-D SNAPPED"`, which switches the disks
 panel from `/` to `/mnt` because a snap sees the host root there. That is a
 compile-time flag, so it cannot be applied to a repack of the prebuilt release
-binary — fixing it means building btop from source in the snap instead.
+binary. Fixing it means building btop from source in the snap instead.
 
 ## Configuration
 

@@ -34,7 +34,7 @@ sudo snap install --dangerous ./ffmpeg_*.snap
 
 Note on the name: this builds as `ffmpeg`, which is fine for local installs but
 is very likely already registered in the Snap Store. Publishing would mean
-either claiming the name from its current owner or renaming the snap — change
+either claiming the name from its current owner or renaming the snap. Change
 `name:` in `snap/snapcraft.yaml` and the command prefixes below follow.
 
 ## Commands
@@ -73,7 +73,7 @@ so the result stays redistributable.
 | Devices | SDL2, PulseAudio, ALSA, JACK, V4L2, XCB (x11grab), libcaca |
 
 Notable omission: **libfdk-aac**. It is licence-incompatible with GPL
-redistribution, so it is deliberately absent — use the built-in `aac` encoder.
+redistribution, so it is deliberately absent. Use the built-in `aac` encoder.
 
 To see exactly what the built snap supports:
 
@@ -95,7 +95,7 @@ sudo snap connect ffmpeg:opengl
 
 `gpu-2604` supplies the VAAPI, Vulkan and OpenCL drivers; `opengl` grants
 access to the `/dev/dri` device nodes. Installing from the store would connect
-both automatically — a local `--dangerous` install will not, so do it by hand.
+both automatically. A local `--dangerous` install will not, so do it by hand.
 
 This is wired up manually rather than through snapcraft's `gpu` extension on
 purpose. That extension's command-chain wrapper **exits 3** when the content

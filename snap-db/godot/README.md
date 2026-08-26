@@ -60,11 +60,11 @@ be copied out of the installed `gnome-46-2404` snap at build time.
 - **Interfaces granted:** desktop, desktop-legacy, gsettings, opengl, wayland,
   x11, unity7, network, network-bind, home, removable-media, audio-playback,
   audio-record, joystick, screen-inhibit-control. `audio-record` and
-  `joystick` are not auto-connected — run
+  `joystick` are not auto-connected, so run
   `snap connect godot:joystick` / `snap connect godot:audio-record` if you
   need gamepad input or microphone capture.
 - Projects under `$HOME` (and on removable media) are reachable, but hidden
-  directories in `$HOME` are not — the `home` interface does not cover
+  directories in `$HOME` are not, because the `home` interface does not cover
   dotfiles. Editor settings live in `~/snap/godot/current/.config/godot/`
   rather than `~/.config/godot`; copy an existing profile there after the
   first launch to carry it over.

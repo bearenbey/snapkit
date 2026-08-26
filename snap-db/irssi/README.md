@@ -72,7 +72,7 @@ The launcher detects that connection and starts irssi with
 
 Perl support is compiled in and the Perl runtime is bundled. Drop scripts in
 `<irssi home>/scripts/` and `/script load` them as usual. Scripts that shell
-out to other programs or pull in CPAN modules from the host will not work —
+out to other programs or pull in CPAN modules from the host will not work.
 only what is inside the snap is visible.
 
 ## Terminals
@@ -81,8 +81,8 @@ The bundled `ncurses-term` database plus the entries in the base snap cover
 essentially every common `TERM`, including `alacritty`, `foot`, `wezterm`,
 `st-256color` and `vte-256color`.
 
-Terminals that ship their own terminfo rather than getting it from ncurses —
-kitty (`xterm-kitty`) and ghostty — are the exception: their entries live in
+Terminals that ship their own terminfo rather than getting it from ncurses,
+kitty (`xterm-kitty`) and ghostty, are the exception: their entries live in
 `~/.terminfo`, which strict confinement puts out of reach. Set
 `TERM=xterm-256color` for the irssi window if you use one of those.
 
@@ -98,14 +98,14 @@ snap/local/irssi-launch launcher: terminfo, PERL5LIB, config dir selection
 irssi bakes its module and data directories in as absolute paths
 (`/usr/lib/irssi/modules`, `/usr/share/irssi`) and offers no environment
 variable to redirect them. Inside a snap those paths do not exist, and irssi
-does not treat that as fatal — it starts up looking perfectly healthy while
+does not treat that as fatal. It starts up looking perfectly healthy while
 Perl scripting, OTR, the IRC proxy, `/help` and the bundled themes are all
 quietly missing.
 
 The `layout:` binds in `snapcraft.yaml` map both directories into `$SNAP`,
 and `--libdir=lib` keeps the module path free of the architecture triplet so
 a single layout works on every architecture. If you change either, re-check
-that `/script list` and `/load otr` still work — a broken build looks
+that `/script list` and `/load otr` still work, because a broken build looks
 identical to a working one until you ask for those.
 
 ## Updating to a new irssi release

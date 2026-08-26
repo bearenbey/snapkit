@@ -4,7 +4,7 @@ A [snap](https://snapcraft.io/) package of [GNU Emacs](https://www.gnu.org/softw
 the extensible, customizable text editor.
 
 Built from the GNU release tarball against `core24`, in **strict**
-confinement, as a **PGTK** (pure GTK) build — a native Wayland client that
+confinement, as a **PGTK** (pure GTK) build, a native Wayland client that
 falls back to GDK's X11 backend on an X11 session. Tree-sitter, GnuTLS,
 SQLite, libxml2, dynamic modules, RSVG/WebP/PNG/JPEG/GIF/TIFF images and
 Cairo/HarfBuzz text rendering are enabled.
@@ -77,7 +77,7 @@ Strict confinement remaps `$HOME`, so Emacs reads its configuration from:
 
 not `~/.emacs.d`. Your real home directory is still readable and writable
 through the `home` interface, which deliberately does **not** grant access to
-dot-directories at the top of it — so an existing `~/.emacs.d` is out of
+dot-directories at the top of it, so an existing `~/.emacs.d` is out of
 reach. Copy it across, or symlink individual files from inside the snap's
 home to non-hidden paths in your real one.
 
@@ -98,7 +98,7 @@ GTK reports:
 (emacs:NNNN): Gtk-WARNING **: cannot open display: :0
 ```
 
-That message points at X11 and at confinement, and both are red herrings —
+That message points at X11 and at confinement, and both are red herrings.
 the X socket, the `XAUTHORITY` cookie and the auth entries are identical
 inside the snap and on the host, and the profile logs no AppArmor denials at
 all. Building `--with-pgtk` makes Emacs a GDK client that can use either
@@ -121,8 +121,8 @@ binary at configure time and does not relocate at runtime. Configuring with
 `--prefix=/usr` would produce a binary that looks for its Lisp in the host's
 `/usr/share/emacs`, which inside a snap is the base snap and does not have it.
 
-So the recipe configures with `--prefix=/snap/emacs/current/usr` — the path
-the snap is actually mounted on — and the part's `organize:` moves the
+So the recipe configures with `--prefix=/snap/emacs/current/usr`, the path
+the snap is actually mounted on, and the part's `organize:` moves the
 installed tree from `snap/emacs/current/usr` back to `usr` so it lands in the
 right place in the package. The compiled-in paths then resolve at runtime.
 
@@ -146,7 +146,7 @@ the old version, and removes the superseded tarball.
 
 GNU publishes no checksum file for Emacs, so the signature is the only thing
 that says the download is what GNU released. Verification needs the release
-key in your keyring, which it is not by default — until then the update
+key in your keyring, which it is not by default. Until then the update
 reports `gpg: NOT verified (release key not in your keyring)` and continues.
 To make it a real check:
 

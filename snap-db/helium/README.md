@@ -68,7 +68,7 @@ Fix it with `sudo snap connect helium:browser-sandbox`; confirm with
 
 `u2f-devices` is also manual-connect. Without it the snap has no access to the
 `/dev/hidraw*` node of a YubiKey (or any FIDO key), so WebAuthn / 2FA prompts in
-Helium find no security key at all -- the browser shows no error, the key just
+Helium find no security key at all. The browser shows no error, the key just
 never blinks.
 
 ```sh
@@ -80,8 +80,8 @@ snap declaration (that is why the Proton snaps work out of the box); a local
 `--dangerous` install gets no auto-connections and needs them by hand.
 
 Note this covers the FIDO/U2F (hidraw) side only. The YubiKey's CCID smartcard
-side -- PIV, OpenPGP -- goes through `pcscd` on the host and is not reachable
-from strict confinement via this interface.
+side, such as PIV and OpenPGP, goes through `pcscd` on the host and is not
+reachable from strict confinement via this interface.
 
 ## Notes
 
@@ -104,8 +104,8 @@ run afterwards; neither interface auto-connects for a local install.
 `snapkit build helium` is still the whole update in one command; it is just no longer
 all in one file. `snapkit update helium` does the first half:
 
-1. Resolves the release tag (from the releases atom feed, which -- unlike the
-   REST API -- has no rate limit) and the matching `helium-bin_*_amd64.deb`
+1. Resolves the release tag (from the releases atom feed, which has no rate
+   limit, unlike the REST API) and the matching `helium-bin_*_amd64.deb`
    asset name, including its debian revision.
 2. Downloads the `.deb`, to a `.part` file that is only renamed once the
    transfer finishes. Upstream signs only the tarballs, so there is no
