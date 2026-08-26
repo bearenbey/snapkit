@@ -1,12 +1,4 @@
-"""Version ordering, apt Packages indexes, and reading a packaged version.
-
-Two orderings live here, and they are not the same one. `version_key` orders
-the way `sort -V` does, which is what upstream tags want: they are numbers
-with dots in them and nothing more. `deb_compare` implements Debian's
-ordering, which is what a version out of an apt Packages index means -- it
-has an epoch, a revision, and a `~` that sorts *before* the empty string so
-that 1.0~rc1 comes before 1.0.
-"""
+"""Version ordering, apt Packages indexes, and reading a packaged version."""
 
 import re
 
@@ -14,11 +6,7 @@ from .net import NetworkError, get_text
 
 
 def version_key(text):
-    """Order versions the way `sort -V` does.
-
-    Digit runs compare numerically and everything else lexically, so 8.9.0
-    sorts before 8.23.0 and 1.4.10 after 1.4.9.
-    """
+    """Order versions the way `sort -V` does."""
     parts = []
     for token in re.findall(r"\d+|\D+", text):
         if token.isdigit():
@@ -44,13 +32,7 @@ def _is_alpha(char):
 
 
 def _order(char):
-    """One character's place in Debian's alphabet.
-
-    Everything sorts by this rather than by its code point, because of `~`:
-    it sorts before everything, the end of the string included, which is what
-    makes 1.0~rc1 older than 1.0. Otherwise digits come first, then letters
-    in the usual order, then all other characters after them.
-    """
+    """One character's place in Debian's alphabet."""
     if _is_digit(char):
         return 0
     if _is_alpha(char):
@@ -63,12 +45,7 @@ def _order(char):
 
 
 def _verrevcmp(a, b):
-    """Compare one part of a version -- an upstream version or a revision.
-
-    Digit runs compare as numbers and everything else compares character by
-    character through _order, alternating between the two for as long as
-    either string has anything left.
-    """
+    """Compare one part of a version -- an upstream version or a revision."""
     i = j = 0
     while i < len(a) or j < len(b):
         first_diff = 0
@@ -104,13 +81,7 @@ def _verrevcmp(a, b):
 
 
 def deb_split(version):
-    """A Debian version as (epoch, upstream version, revision).
-
-    The epoch is the digits before the first colon and the revision is
-    everything after the last hyphen; a version carrying neither -- which is
-    most of them -- is all upstream version, with an epoch of 0 and an empty
-    revision, and those compare as such.
-    """
+    """A Debian version as (epoch, upstream version, revision)."""
     epoch, colon, rest = version.partition(":")
     if not colon or not epoch.isdigit():
         epoch, rest = "0", version
@@ -121,11 +92,7 @@ def deb_split(version):
 
 
 def deb_compare(a, b):
-    """`dpkg --compare-versions a <op> b`, without the fork.
-
-    Negative, zero or positive, the way a comparison function is expected to
-    answer. Epoch first, then the upstream version, then the revision.
-    """
+    """`dpkg --compare-versions a <op> b`, without the fork."""
     # Empty sorts first as a rule, not by character: `~` sorts before the end.
     blank_a, blank_b = a in ("", "<unknown>"), b in ("", "<unknown>")
     if blank_a or blank_b:
@@ -177,11 +144,7 @@ def _lines(path):
 
 
 def apt_stanza(index_url, package, want=""):
-    """One package out of an apt Packages index.
-
-    Returns (version, filename, sha256) for the newest amd64 stanza of
-    `package`, or for the one matching `want` when a version was pinned.
-    """
+    """One package out of an apt Packages index."""
     rows = []
     fields = {}
 

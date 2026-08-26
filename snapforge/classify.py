@@ -1,16 +1,4 @@
-"""What kind of thing a release actually ships.
-
-A release page is mostly things this tool cannot use: the same build for five
-architectures, three operating systems, checksums, signatures, zsync files,
-and the source archives GitHub attaches to everything. What is wanted is the
-one prebuilt Linux x86_64 payload, and what shape it is in, because that
-decides the whole recipe.
-
-Everything is scored rather than matched, and the whole ranking is handed
-back rather than just the winner. Upstreams are inconsistent enough that the
-top pick is a good default and a bad law -- so the caller shows the list and
-lets a person disagree.
-"""
+"""What kind of thing a release actually ships."""
 
 import re
 from dataclasses import dataclass
@@ -102,16 +90,7 @@ def kind_of(name):
 
 
 def packages(directory):
-    """Every file in a directory that is a shape this tool can package.
-
-    Asked rather than globbed for. A list of globs has to spell out every
-    suffix and every capitalisation of it, and there were three such lists
-    here that had drifted apart: `.txz` and `.tbz2` were invisible to the
-    importer, a plain `.tar` to everything, and all three were packageable
-    according to this module. `kind_of` is the authority on what can be
-    packaged, so it is what decides -- and it lowercases, so `.AppImage` and
-    `.appimage` need no second entry.
-    """
+    """Every file in a directory that is a shape this tool can package."""
     directory = Path(directory)
     if not directory.is_dir():
         return []
@@ -139,14 +118,7 @@ def rejection(name):
 
 
 def score(name):
-    """How good a candidate an asset is, and one line saying why.
-
-    A .deb scores highest because it carries what a snap needs anyway -- a
-    desktop entry, an icon, a version, a dependency list. A plain archive is
-    next: it is just files, which is easy, but nothing describes them. An
-    AppImage is last, because it is a squashfs wrapped around its own runtime
-    and has to be prised open before any of it is useful.
-    """
+    """How good a candidate an asset is, and one line saying why."""
     kind = kind_of(name)
     if not kind:
         return 0, kind, ""
@@ -197,13 +169,7 @@ def rejected(assets):
 
 
 def asset_pattern(name, version):
-    """A regex matching this asset in *later* releases too.
-
-    The file name is the only handle on "the same asset next time", and the
-    part of it that moves is the version. Blanking that out leaves a pattern
-    that still matches when 1.2.3 becomes 1.2.4 -- and leaves the name alone
-    entirely when it carries no version, which is the easy case.
-    """
+    """A regex matching this asset in *later* releases too."""
     pattern = re.escape(name)
     spellings = {version, version.replace("-", "_"), version.replace(".", "_"),
                  version.replace("-", "."), version.replace("_", "-")}

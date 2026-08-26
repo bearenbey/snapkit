@@ -1,14 +1,4 @@
-"""Rebuild the FreeTube snap from the official upstream .deb.
-
-`snapkit build freetube` calls build() below with a Build; `snapkit update
-freetube` fetches the release it packs first.
-
-This is a real snapcraft build -- snap/snapcraft.yaml is run as written -- so
-what is left here is the work a recipe cannot express: refusing to pack a snap
-whose payload is not the release the recipe claims, and catching the
-electron-builder layout move that would otherwise produce a snap which packs
-cleanly and then dies on exec.
-"""
+"""Rebuild the FreeTube snap from the official upstream .deb."""
 
 ARCH = "amd64"
 

@@ -1,22 +1,4 @@
-"""From a repository or a file to a project on disk, and from that to a .snap.
-
-This is the sequence the tool exists to run:
-
-    resolve   what does this repository publish, and what is the newest of it
-              -- or, for a file that was handed over, what is that file
-    choose    which of those is the one to build from
-    fetch     get it, and check what arrived; a file already here is skipped
-    inspect   open it and find out where everything is
-    write     a snapcraft.yaml around what was found, and a project around that
-    register  put the record in the database
-    build     hand it to snapcraft, or to the project's own pack.py
-
-Keeping a snap in step with what it was made from afterwards is the other
-half, and lives in `update.py`.
-
-Each step reports through a Reporter, so the same code runs under the
-dashboard and under a plain terminal without knowing which it is in.
-"""
+"""From a repository or a file to a project, and from that to a .snap."""
 
 import shutil
 import contextlib
@@ -38,19 +20,7 @@ class ForgeError(Exception):
 
 @dataclass
 class Plan:
-    """What making this snap is going to involve.
-
-    Made before anything is written, so that the dashboard can show it and a
-    person can change their mind about the asset or the name while it is
-    still free to do so.
-
-    The `origin` is where the payload comes from, and is the only thing that
-    differs between making a snap out of a release and making one out of a
-    file somebody already has. Everything downstream -- fetching, opening,
-    recording, writing the recipe -- asks the origin rather than asking which
-    kind of plan this is, because a boolean tested in four places is how the
-    two paths quietly stop agreeing.
-    """
+    """What making this snap is going to involve."""
 
     origin: object                # Release | File
     candidates: list              # [classify.Candidate], best first
@@ -108,16 +78,11 @@ class Release:
         return archive, sha
 
     def source_for(self, snap, chosen, archive, sha, reporter):
-        """What the recipe fetches, and the checksum to hold it to.
-
-        The URL, because snapcraft can fetch it again at build time -- and
-        upstream published it, so the checksum means something.
-        """
+        """What the recipe fetches, and the checksum to hold it to."""
         return chosen.asset.url, sha
 
     def track(self, snap, chosen, version):
-        """How this snap is kept in step: the release it came from, and a
-        pattern that will still match the asset in the next one."""
+        """How this snap is kept in step: the release it came from, and a"""
         snap.tag = self.release.tag
         snap.asset_pattern = classify.asset_pattern(chosen.name,
                                                     self.release.version)
@@ -125,13 +90,7 @@ class Release:
 
 @dataclass
 class File:
-    """A payload that is already on the disk.
-
-    Nothing is known about where it came from, and none of it is guessed:
-    the description, the licence and the repository are simply empty, which
-    is true and leaves the recipe with less to say rather than with
-    something invented.
-    """
+    """A payload that is already on the disk."""
 
     path: Path                    # the file, or the folder it was found in
     version: str
@@ -158,16 +117,7 @@ class File:
         return archive, sha
 
     def source_for(self, snap, chosen, archive, sha, reporter):
-        """Put the file beside the recipe, and name it there.
-
-        By name rather than by path, so a project that carries its own
-        payload is still a directory you can move somewhere else and build.
-
-        No checksum goes with it. `source-checksum` says "this is what
-        upstream published"; for a file somebody put in a folder there is no
-        upstream to have published anything, and a checksum of the file
-        against itself would only restate that it had not changed.
-        """
+        """Put the file beside the recipe, and name it there."""
         archive = Path(archive)
         target = snap.path / archive.name
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -177,26 +127,14 @@ class File:
         return archive.name, ""
 
     def track(self, snap, chosen, version):
-        """How this snap is kept in step: by watching the folder.
-
-        The payload lives in the project rather than being fetched at build
-        time, so an update is about that directory -- a newer file dropped in
-        beside it is the only thing there is to notice, and the only thing
-        this tool can honestly claim to see.
-        """
+        """How this snap is kept in step: by watching the folder."""
         snap.style = "artifact"
         snap.asset_glob = local.glob_for(chosen.name, version)
         snap.upstream = {"kind": "local", "glob": snap.asset_glob}
 
 
 def plan(repo_text, reporter, tag=None, name=None, asset=None):
-    """Work out what would be built, without building it.
-
-    `asset` picks one of the candidates by name, or by its position in the
-    ranking as it is printed. Without it the best-scoring one is taken --
-    which is a default, not a verdict: the whole ranking comes back on the
-    Plan so a caller can offer the rest.
-    """
+    """Work out what would be built, without building it."""
     repo = github.parse_repo(repo_text)
     reporter.step(f"looking up {repo}")
     info = github.describe(repo)
@@ -216,13 +154,7 @@ def plan(repo_text, reporter, tag=None, name=None, asset=None):
 
 
 def plan_local(path, reporter, name=None, asset=None):
-    """Work out what packaging a file already on disk would involve.
-
-    `path` is the file itself, or a directory to look in -- which is the case
-    worth having, because the question people actually have is "I downloaded
-    this, can you make a snap of it" and the answer should not require them
-    to spell the filename out.
-    """
+    """Work out what packaging a file already on disk would involve."""
     path = Path(path).expanduser()
     if path.is_dir():
         found = local.find(path)
@@ -291,13 +223,7 @@ def _nothing_usable(repo, release):
 
 
 def create(plan_, reporter, directory=None):
-    """Carry a plan out: get the payload, open it, write the project.
-
-    All of it happens inside one temporary directory, and the record is
-    finished before that directory goes away -- the icon has to be copied out
-    and the recipe has to be written while there is still a payload to write
-    them from.
-    """
+    """Carry a plan out: get the payload, open it, write the project."""
     origin, chosen = plan_.origin, plan_.chosen
     with tempfile.TemporaryDirectory(prefix="snapkit-") as scratch:
         archive, sha = origin.obtain(chosen, Path(scratch), reporter)
@@ -357,14 +283,7 @@ def _record(plan_, payload, directory=None):
 
 
 def _install_icon(snap, payload, reporter):
-    """Copy the icon out of the payload and put it next to the recipe.
-
-    snapcraft resolves a top-level `icon:` against the project directory, not
-    against anything the build produces, so an icon that exists only inside
-    the downloaded payload names a file that will never be there. It also
-    takes png and svg and nothing else, which rules out the .xpm and the
-    gzipped .svgz some projects still ship.
-    """
+    """Copy the icon out of the payload and put it next to the recipe."""
     if not payload.icon:
         return ""
     source = payload.root / payload.icon
@@ -383,12 +302,7 @@ def _install_icon(snap, payload, reporter):
 
 
 def write(snap, reporter):
-    """Put the project on disk: the recipe, and a note saying where it came from.
-
-    The recipe comes out of the record rather than being regenerated, so what
-    lands here is exactly what the database holds -- edit the file and re-add
-    it, or delete the directory and write it out again, and the two agree.
-    """
+    """Put the project on disk: the recipe, and where it came from."""
     directory = snap.path
     if not snap.snapcraft_yaml:
         # Never hand one of these an empty recipe; the build goes wrong oddly.
@@ -423,11 +337,7 @@ def write(snap, reporter):
 
 
 def adopt(snap, reporter):
-    """Take an edited snapcraft.yaml back into the record.
-
-    The file on disk wins: someone changed it for a reason, and the database
-    is meant to hold what was built, not what was once generated.
-    """
+    """Take an edited snapcraft.yaml back into the record."""
     yaml_path = snap.path / "snap" / "snapcraft.yaml"
     if not yaml_path.is_file():
         return False
@@ -440,21 +350,7 @@ def adopt(snap, reporter):
 
 
 def package(snap, reporter, build_it=True):
-    """Build a snap from its record, without going upstream for anything.
-
-    The register holds the recipe and a copy of the icon, so a snap that has
-    been made once can be made again from what is written down -- no
-    repository, no release lookup, no download of the payload by this tool.
-    snapcraft still fetches the source the recipe names, and checks it against
-    the checksum that was written in at the time.
-
-    That is what makes a registered snap worth having: the second time is a
-    name, not a URL.
-
-    Whatever is on disk wins over the copy in the register: someone may have
-    edited the recipe since, and writing the stored one over it would undo
-    that without saying so.
-    """
+    """Build a snap from its record, without going upstream for anything."""
     adopt(snap, reporter)
     write(snap, reporter)
     if not build_it:
@@ -466,16 +362,7 @@ def package(snap, reporter, build_it=True):
 
 
 def build(snap, reporter, extra=()):
-    """Build the project, and find what it produced.
-
-    Usually that means `snapcraft pack`. A record naming a `pack` file is a
-    project that assembles its own prime/ tree -- because snapcraft cannot
-    build a core24 snap without a backend, and a project whose whole content
-    is an upstream binary being restaged does not need one -- so that file's
-    build(p) is called instead. A record naming a `build_with` command runs
-    that; running snapcraft at either would fail on a recipe that is not
-    there.
-    """
+    """Build the project, and find what it produced."""
     directory = snap.path
     if not directory.is_dir():
         raise ForgeError(f"no project at {directory} -- write it out first")

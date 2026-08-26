@@ -1,16 +1,4 @@
-"""Rebuild the Helium snap against an upstream helium-linux release.
-
-`snapkit build helium` calls build() below with a Build; `snapkit update
-helium` resolves the tag, downloads the .deb, rewrites snapcraft.yaml and
-README.md and drops the superseded .deb first, for this project the same way
-it does for the other twenty.
-
-Unlike most of the projects here this one is a real snapcraft build -- the
-recipe is run as written -- so what is left below is the part that is
-Helium's alone: lifting the desktop entry and icon out of the .deb rather
-than keeping a stale copy of them in the repository, and refusing to pack a
-snap whose payload is not the release the recipe claims.
-"""
+"""Rebuild the Helium snap against an upstream helium-linux release."""
 
 import re
 import subprocess
@@ -28,11 +16,7 @@ FROM_DEB = {
 
 
 def packaged_deb(project):
-    """The .deb the recipe names, which is the one to open.
-
-    Read back rather than assumed: after an update, snapcraft.yaml is the
-    record of which release this is.
-    """
+    """The .deb the recipe names, which is the one to open."""
     for line in project.snapcraft_yaml.read_text().splitlines():
         found = re.match(r"^\s*source:\s*(helium-bin_.*\.deb)\s*$", line)
         if found:
@@ -41,8 +25,7 @@ def packaged_deb(project):
 
 
 def refresh_gui(project, deb):
-    """Take the desktop entry and icon from the .deb rather than keeping a
-    stale copy of them in the repository."""
+    """Take the desktop entry and icon from the .deb rather than keeping a"""
     project.say(f"refreshing {GUI} from the .deb")
     GUI.mkdir(parents=True, exist_ok=True)
 

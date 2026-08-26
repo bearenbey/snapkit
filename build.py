@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""Build the snapkit snap.
-
-    ./build.py                  snapcraft pack
-    ./build.py --destructive-mode    ... on this host, without a container
-
-Anything on the command line is passed through to snapcraft. This project is
-an ordinary snapcraft recipe, so this script is a convenience rather than a
-necessity -- what it adds is the check that snapcraft and a backend are there
-before a build that takes minutes rather than after.
-"""
+"""Build the snapkit snap."""
 
 import shutil
 import subprocess

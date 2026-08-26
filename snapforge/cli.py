@@ -1,13 +1,4 @@
-"""Argument handling, and the command each argument leads to.
-
-The list of commands lives once, in USAGE below, because that is the copy
-`--help` prints -- a second copy up here would be the one that quietly stops
-being true.
-
-Every command is a function of (db, args, reporter), so the same work reads
-the same way whether it was reached from the command line or from the
-dashboard, and the reporter decides where the commentary goes.
-"""
+"""Argument handling, and the command each argument leads to."""
 
 import argparse
 import subprocess
@@ -63,14 +54,7 @@ CHOICES = 9
 
 
 def can_ask(args):
-    """Whether there is a person at the other end to put a question to.
-
-    Asked in three places -- whether to open the dashboard, whether to offer
-    a choice of what to package, whether to offer to track a project against
-    its folder -- and it has to mean the same thing in all of them. A pipe, a
-    cron job or `--plain` gets told what its options were and refused;
-    it never gets a prompt nothing will answer.
-    """
+    """Whether there is a person at the other end to put a question to."""
     return sys.stdin.isatty() and sys.stdout.isatty() and not args.plain
 
 
@@ -180,14 +164,7 @@ def cmd_create(db, args, reporter):
 
 
 def create_from_file(db, args, reporter, text):
-    """Make a snap out of a package file, rather than out of a release.
-
-    Before anything is made, the folder the file is in is checked against the
-    register. Someone who drops a newer `.deb` beside a project they already
-    have wants that project updated, not a second one made next to it -- and
-    they are much more likely to have typed the path than to have remembered
-    which of the two commands this is.
-    """
+    """Make a snap out of a package file, rather than out of a release."""
     path = Path(text).expanduser()
     known = _registered_at(db, path if path.is_dir() else path.parent)
     if known and not args.name:
@@ -240,15 +217,7 @@ def _registered_at(db, directory):
 
 
 def ask_what_to_package(db, args):
-    """With nothing named: what is in this folder, or a repository.
-
-    The question `snapkit create` used to answer with "create needs a
-    repository", which is only useful advice if the thing you want to package
-    is published as one. Plenty are not -- Discord's `.deb` comes off a
-    redirect, Unity's out of an apt index, and some are simply handed to you
-    -- and in every one of those cases the file is already sitting in a
-    folder, so the folder is worth looking in before asking for a URL.
-    """
+    """With nothing named: what is in this folder, or a repository."""
     here = Path(args.directory).expanduser() if args.directory else Path.cwd()
     found = local.find(here)
     if not can_ask(args):
@@ -258,12 +227,7 @@ def ask_what_to_package(db, args):
 
 
 def _no_prompt_help(here, found):
-    """What to say instead of asking, when there is nobody to ask.
-
-    Not a bare refusal: whatever is in the folder is named, because being
-    told "create needs a repository" while the file you meant is sitting
-    right there is the least useful thing this could do.
-    """
+    """What to say instead of asking, when there is nobody to ask."""
     if found:
         die("create needs something to make a snap from.\n\n"
             f"           These are in {here}:\n"
@@ -356,12 +320,7 @@ def _one_of(db, text):
 
 
 def cmd_import(db, args, reporter):
-    """Register snap projects that are already on disk.
-
-    What can be read is read and nothing else is guessed: a project that does
-    not say which repository it packages is registered without one, and says
-    so, rather than being pointed at a repository somebody might update from.
-    """
+    """Register snap projects that are already on disk."""
     if not args.rest:
         die("import needs a directory: snapkit import ../btop-snap")
     taken = skipped = 0
@@ -398,15 +357,7 @@ def cmd_import(db, args, reporter):
 
 
 def track_locally(snap, args, reporter):
-    """Offer to keep an unconfirmed project in step with its own folder.
-
-    A project that does not say which repository it packages cannot be
-    checked against one, and guessing at a repository from a URL in a README
-    is how the wrong release gets packaged. But most of these do have the
-    file they were built from sitting right there, so there is something to
-    watch after all -- and watching a folder claims nothing about where the
-    file came from, which is the part that has to stay honest.
-    """
+    """Offer to keep an unconfirmed project in step with its own folder."""
     found = local.find(snap.path, snap.asset_glob or None)
     if not found:
         return False

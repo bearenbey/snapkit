@@ -1,18 +1,4 @@
-"""Rebuild the Transmission snap from the official upstream source release.
-
-`snapkit build transmission` calls build() below with a Build; `snapkit update
-transmission` fetches the release it packs first.
-
-This is a real snapcraft build -- snap/snapcraft.yaml is run as written -- so
-what is left here is the work a recipe cannot express: refusing to start a
-ten-minute compile for a tarball that is not the release the recipe claims.
-
-The compile used to happen in a noble build root assembled by
-tools/fetch-buildroot.py and entered with bubblewrap, because there was no
-build backend on the machine this was written on. snapcraft builds in a noble
-instance against the same core24 base, so the build root, the sandbox and the
-vendored package list are no longer this repository's to carry.
-"""
+"""Rebuild the Transmission snap from the official upstream source release."""
 
 import re
 import tarfile
@@ -22,12 +8,7 @@ ARCH = "amd64"
 
 
 def source_version(project, tarball):
-    """What the tarball says it is.
-
-    Read straight out of the archive rather than from an unpacked tree: the
-    unpacking happens inside snapcraft's instance, and the point of this check
-    is to fail before the compile rather than after it.
-    """
+    """What the tarball says it is."""
     with tarfile.open(tarball) as tar:
         member = next((m for m in tar.getmembers()
                        if m.name.endswith("/CMakeLists.txt")

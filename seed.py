@@ -1,51 +1,5 @@
 #!/usr/bin/env python3
-"""Register the snap projects that live beside this one.
-
-    ./seed.py              register ../*-snap into the default register
-    ./seed.py --dry-run    say what it would do, and register nothing
-    ./seed.py btop zen     just those
-
-The projects in this directory were made by hand, one at a time, before this
-tool existed. They are still snaps: they have recipes, versions and upstreams,
-and they are worth having in the register so they can be listed, searched,
-checked, updated and built without being rewritten first.
-
-Most of what a record needs is read off the project -- its name, version,
-summary, icon, and the recipe itself. What cannot be read is written down
-here: which repository a project packages, how an update reaches its
-packaging, and what its download is checked against. That table is the last
-thing left over from the updater this replaced, and it is here rather than in
-the tool because it is about these twenty-one projects and nothing else. Once
-it is in the register it is JSON in a file you can edit; nothing has to come
-back here to change it.
-
-None of it is inferred. A repository worked out from a URL in a README is
-recorded but left inert, because updating rewrites a recipe and repoints it
-at a release -- only a repository stated here counts as confirmed.
-
-What each field in the table below means:
-
-    repo           the GitHub repository it packages, where that is the upstream
-    upstream       a shape out of snapforge/sources.py, where it is not
-    style          artifact: the build opens a file in the project directory, so
-                   an update puts it there and rewrites the version around it
-                   recipe: snapcraft fetches the source, so an update repoints
-                   that line and rewrites its checksum
-    asset_glob     matches that file from every release, so the superseded one
-                   is cleaned up rather than left for the next build to trip on
-    local_asset    what the build opens it as, where upstream's name is not it
-    source_anchor  which source: line to repoint, so a second one is left alone
-    checksums      where upstream publishes the checksum, when not beside it
-    verify         what the download is checked against before it is trusted
-    pack           the file exposing build(p), for a project that assembles
-                   its own prime/ tree
-
-asset_glob and local_asset belong to the project rather than the upstream, so
-they are named once and not repeated inside `upstream` -- except for the
-`local` shape, where the glob is also how it finds the file in the first
-place. Everything else -- version, summary, licence, icon, the recipe -- is
-read out of the project itself.
-"""
+"""Register the snap projects that live beside this one."""
 
 import sys
 from pathlib import Path

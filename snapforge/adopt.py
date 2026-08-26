@@ -1,15 +1,4 @@
-"""Taking a snap project that already exists into the register.
-
-Someone maintaining snaps by hand has directories full of them, each with a
-recipe, a version and an upstream it came from. Registering those is worth
-more than starting empty: they can be listed, searched, built and -- where
-there is a GitHub release behind them -- checked and updated, without being
-rewritten first.
-
-Nothing is inferred that cannot be read. A project whose upstream cannot be
-worked out is registered without one and says so, rather than being given a
-guess that would send an update at the wrong repository.
-"""
+"""Taking a snap project that already exists into the register."""
 
 import re
 from pathlib import Path
@@ -42,11 +31,7 @@ def find_recipe(directory):
 
 
 def yaml_field(text, field):
-    """One top-level scalar out of a yaml file, without a yaml parser.
-
-    These are read to describe a project, not to build it, and the fields
-    wanted are all plain one-line scalars at the top level.
-    """
+    """One top-level scalar out of a yaml file, without a yaml parser."""
     found = re.search(rf"(?m)^{re.escape(field)}:\s*(.*)$", text)
     if not found:
         return ""
@@ -64,11 +49,7 @@ def yaml_block(text, field):
 
 
 def find_repo(directory, text):
-    """The GitHub repository this project packages, if it says anywhere.
-
-    The recipe first, then the README. A URL pointing at a release, an issue
-    or a file still names the repository, so those are trimmed back to it.
-    """
+    """The GitHub repository this project packages, if it says anywhere."""
     sources = [text]
     readme = directory / "README.md"
     if readme.is_file():
@@ -90,12 +71,7 @@ def find_repo(directory, text):
 
 
 def find_artifact(directory, text):
-    """The upstream file this project builds from, and what kind it is.
-
-    Either a file sitting in the directory, or the one a `source:` line names.
-    A project that builds from a source tarball has neither of the kinds this
-    tool knows how to package, and says so by answering with no kind.
-    """
+    """The upstream file this project builds from, and what kind it is."""
     source = yaml_field(text, "source") or ""
     found = re.search(r"(?m)^\s*source:\s*(\S+)", text)
     if found:
@@ -112,12 +88,7 @@ def find_artifact(directory, text):
 
 
 def version_from(source, artifact):
-    """The version a project is on, when its recipe does not carry one.
-
-    A recipe that lets snapcraft adopt the version from the source has no
-    `version:` field, and the only statement of which release it is on is the
-    URL it fetches -- the tag in the path, or the version in the file name.
-    """
+    """The version a project is on, when its recipe does not carry one."""
     for text in (source or "", artifact or ""):
         found = re.search(r"/(?:download|tags)/v?([0-9][^/]*?)/", text)
         if found:
@@ -139,14 +110,7 @@ def source_in(text):
 
 
 def packaged_version(directory):
-    """The version the project on disk is on now, or "" if it cannot be read.
-
-    A record stores the version its project was on when it was imported, but
-    a project is a directory somebody can edit, and its recipe is meant to be
-    edited. So the stored version is a cache, this is the authority, and
-    db.Database.load() puts one back in line with the other rather than
-    letting them drift apart.
-    """
+    """The version the project on disk is on now, or "" if it cannot be read."""
     directory = Path(directory)
     try:
         recipe, _ = find_recipe(directory)

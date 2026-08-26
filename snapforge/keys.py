@@ -1,10 +1,4 @@
-"""Reading single keystrokes from a terminal.
-
-Separate from the dashboard because it is not about the dashboard: it is
-about what a terminal sends and how easy that is to get wrong. The whole of
-it is exercised by the tests without a terminal, which is the other reason it
-is here rather than in the middle of five hundred lines of drawing code.
-"""
+"""Reading single keystrokes from a terminal."""
 
 import os
 import re
@@ -26,19 +20,7 @@ _SEQUENCE = re.compile(r"[\[O][0-9;]*[A-Za-z~]")
 
 
 class Keyboard:
-    """Single keystrokes, without waiting for a line.
-
-    Read straight from the file descriptor rather than through sys.stdin.
-    That matters more than it looks: sys.stdin is buffered, so reading one
-    character of an arrow key pulls the rest of the sequence into Python's
-    buffer, where select() -- which watches the descriptor -- cannot see it.
-    The sequence then looks like a lone Escape followed by nothing, and every
-    arrow key read as Escape.
-
-    The terminal settings are saved on the way in and restored on the way
-    out, including on the way out through an exception: a tool that leaves a
-    terminal in raw mode is a tool people stop opening.
-    """
+    """Single keystrokes, without waiting for a line."""
 
     def __init__(self):
         self.fd = sys.stdin.fileno()

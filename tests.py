@@ -1,29 +1,5 @@
 #!/usr/bin/env python3
-"""Tests.
-
-    ./tests.py            everything that needs no network
-    ./tests.py --online   those, and the ones that talk to GitHub
-
-No test framework: this is one file with no dependencies beyond what the tool
-already has, which means it runs anywhere the tool does, including inside the
-snap.
-
-The offline tests build their own .deb rather than downloading one, so the
-archive reader is tested against bytes this file made and knows the shape of.
-
-One function per subject, run in the order below, so that a failure names the
-area before it names the case:
-
-    upstreams    what a repository published, and which file to package
-    recipes      writing a snapcraft.yaml, and repointing one
-    register     records and recipes on disk, read, written and hand-edited
-    payloads     opening a .deb, and finding the program inside it
-    projects     reading a project that exists, and writing one back out
-    checking     is this snap behind, and what would it be built from
-    dashboard    the keys, the worker thread, and the drawing
-    updater      the upstreams that are not a GitHub release
-    from_a_file  packaging something already on disk, tracked by its folder
-"""
+"""Tests."""
 
 import io
 import json
@@ -103,8 +79,7 @@ def make_deb(path, package="demo", version="1.2.3", binary="usr/bin/demo"):
 # -- offline ------------------------------------------------------------------
 
 def upstreams():
-    """Reading an upstream: what a repository is called, what it published,
-    and which of the files it published can actually be packaged."""
+    """Reading an upstream: what a repository is called, what it published,"""
     from snapforge import classify, github, project, update
 
     @check("github.parse_repo takes a url in any of its shapes")
@@ -209,8 +184,7 @@ def upstreams():
 
 
 def recipes():
-    """Writing a snapcraft.yaml, and moving an existing one onto a new
-    release without disturbing what was edited into it."""
+    """Writing a snapcraft.yaml, and moving an existing one onto a new"""
     from snapforge import classify, db, recipe
 
     @check("recipe.snap_name produces a name snapd will take")
@@ -282,8 +256,7 @@ def recipes():
 
 
 def register():
-    """The register: one file per snap, the recipe beside it, and what has
-    to keep being true of both as they are read, written and hand-edited."""
+    """The register: one file per snap, the recipe beside it, and what has"""
     from snapforge import db, github, recipe
 
     @check("the register survives a round trip, and delete takes the recipe")
@@ -504,8 +477,7 @@ def register():
 
 
 def payloads():
-    """Opening what was downloaded: the .deb reader, and working out which
-    of the files inside is the program."""
+    """Opening what was downloaded: the .deb reader, and working out which"""
     from snapforge import inspect as ins
 
     @check("the .deb reader finds the program, the entry and the version")
@@ -545,8 +517,7 @@ def payloads():
 
 
 def projects():
-    """Projects that exist already: reading one into a record, writing one
-    back out, and not damaging either in the process."""
+    """Projects that exist already: reading one into a record, writing one"""
     from snapforge import db, github, project, recipe, update
 
     @check("a project deleted from disk comes back from the register, icon and all")
@@ -700,8 +671,7 @@ def projects():
 
 
 def checking():
-    """Asking whether a snap is behind, and what to build it from when it
-    is -- including when upstream has renamed the file since."""
+    """Asking whether a snap is behind, and what to build it from when it"""
     from snapforge import db, project, update
 
     @check("a matching version is up to date even with no tag recorded")
@@ -814,8 +784,7 @@ def checking():
 
 
 def dashboard():
-    """The dashboard: the keys, the one worker thread, and the drawing --
-    which has to survive every state a register can be in."""
+    """The dashboard: the keys, the one worker thread, and the drawing --"""
     from snapforge import db
 
     @check("the picker blocks the worker until something is chosen")
@@ -1287,9 +1256,7 @@ def dashboard():
 # -- the updater, ported from the tool this replaced --------------------------
 
 def updater():
-    """The parts that used to be ../update.py: upstreams that are not a
-    GitHub release, updating a project whose build opens a file on disk, and
-    calling a project's own pack.py."""
+    """The parts that used to be ../update.py: upstreams that are not a"""
     from snapforge import build as buildlib
     from snapforge import db, project, rewrite, sources, update
 
@@ -1536,8 +1503,7 @@ def updater():
 
 
 def from_a_file():
-    """Packaging something that is already on the disk, and keeping a snap in
-    step with the folder it sits in rather than with an upstream."""
+    """Packaging something that is already on the disk, and keeping a snap in"""
     from snapforge import classify, db, local, project, sources, update
 
     @check("every shape the classifier packages is found on a disk")

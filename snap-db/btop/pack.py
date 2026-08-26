@@ -1,21 +1,4 @@
-"""Rebuild the btop snap from the official upstream release tarball.
-
-`snapkit build btop` calls build() below with a Build; `snapkit update btop`
-fetches the release it packs first.
-
-This is a real snapcraft build -- snap/snapcraft.yaml is run as written -- so
-what is left here is the work a recipe cannot express: refusing to pack a snap
-whose payload is not the release the recipe claims.
-
-This file used to assemble prime/ itself, reimplementing the dump plugin's
-organize/stage rules and rendering meta/snap.yaml from the recipe, because
-there was no build backend on the machine it was written on. That
-reimplementation is what made the recipe wrong without anyone noticing: it
-extracted the tarball whole, while craft-parts strips an archive's single
-leading directory, so the `organize` map was written against paths snapcraft
-never sees and `snapcraft pack` failed at the staging step. The recipe is
-correct now and snapcraft runs it.
-"""
+"""Rebuild the btop snap from the official upstream release tarball."""
 
 import pathlib
 import re
@@ -26,25 +9,14 @@ ARCH = "amd64"
 
 
 def unpacked(project, snap):
-    """The packed snap's contents, extracted to a temporary directory.
-
-    snapcraft builds in a managed instance and its parts/, stage/ and prime/
-    live inside it, so there is no prime/ on this side to look at. The checks
-    below therefore read the artifact that was actually produced, which is the
-    stronger thing to check anyway: it is what ships.
-    """
+    """The packed snap's contents, extracted to a temporary directory."""
     out = pathlib.Path(tempfile.mkdtemp(prefix="snapkit-check-"))
     project.run("unsquashfs", "-q", "-d", out / "root", snap)
     return out / "root"
 
 
 def refuse(project, snap, holding, message):
-    """Delete a snap that failed its checks, then say why.
-
-    Packed and then rejected rather than rejected before packing: what is worth
-    checking is only in the artifact. Leaving it on disk would let the next
-    `snapkit check` read it as a good build of this version.
-    """
+    """Delete a snap that failed its checks, then say why."""
     shutil.rmtree(holding, ignore_errors=True)
     snap.unlink(missing_ok=True)
     project.die(message)

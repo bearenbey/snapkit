@@ -1,25 +1,4 @@
-"""The dashboard: what it is, what the keys do, and the thread doing the work.
-
-One screen -- what the register looks like across the top, everything in it
-underneath, the running commentary at the bottom -- but the drawing of it is
-in `screen.py`. What is here is the state that screen reads, the keystrokes
-that change it, and the one worker thread allowed to change it slowly.
-
-Slowly is the point. A check asks twenty upstreams and an update fetches a
-hundred megabytes, and neither may happen on the thread that is drawing: the
-screen has to keep moving and Ctrl-C has to keep working throughout. So every
-piece of work goes through `run_job`, which refuses to start a second one,
-and reports through a `DashboardReporter` that turns each step into a line in
-the log pane and raises `Cancelled` when somebody asks it to stop.
-
-The terminal is put in raw mode to read single keystrokes, which means it has
-to be put back afterwards whatever happens -- hence `suspended`. A build no
-longer needs it: `DashboardReporter` sets `captures_output`, so snapcraft's
-output is piped in line by line and shown in the log pane instead of being
-written over the top of the screen. What still needs the terminal is `sudo`,
-which has to ask for a password on a real one, so installing is the one thing
-the dashboard steps aside for.
-"""
+"""The dashboard: its state, its keys, and the one worker thread."""
 
 import subprocess
 import threading
@@ -131,14 +110,7 @@ class Dashboard:
     # -- work ----------------------------------------------------------------
 
     def run_job(self, label, function, *args):
-        """Start a piece of work on the worker thread.
-
-        One place decides whether the tool is free, marks it busy, and clears
-        that when the work ends however it ends. Each action used to do this
-        for itself, and each of them set `busy` before asking whether it was
-        allowed to start -- so the guard refused every one of them and no
-        action in the dashboard ran at all.
-        """
+        """Start a piece of work on the worker thread."""
         if self.busy:
             self.say(f"busy {self.busy}; wait for that to finish", "yellow")
             return False
@@ -237,12 +209,7 @@ class Dashboard:
         self.run_job("creating", work)
 
     def _plan_local(self, text, reporter):
-        """A file or a folder that was typed into the box instead of a repo.
-
-        A folder that is already a registered project is an update rather
-        than a new snap -- someone who drops a newer .deb beside a project
-        and then types its path means "pick that up", not "make a second one".
-        """
+        """A file or a folder that was typed into the box instead of a repo."""
         directory = Path(text).expanduser()
         directory = directory if directory.is_dir() else directory.parent
         for snap in self.db:
@@ -255,13 +222,7 @@ class Dashboard:
         return project.plan_local(text, reporter)
 
     def _ask_which(self, made):
-        """Put the ranking on screen and wait for a person to pick one.
-
-        The worker blocks here while the main thread keeps drawing and reading
-        keys, which is the point: choosing between six files is not something
-        to do in the two seconds before a download starts, and the ranking is
-        a default rather than a decision.
-        """
+        """Put the ranking on screen and wait for a person to pick one."""
         self.picking, self.pick_cursor = made, 0
         self.picked.clear()
         self.status = "which file should this be built from?"
@@ -316,12 +277,7 @@ class Dashboard:
         self.run_job("pulling", work)
 
     def _ask_yes_no(self, question):
-        """Put a question on screen and block the worker until it is answered.
-
-        The same arrangement as `_ask_which`: the worker waits while the main
-        thread keeps drawing and reading keys. Cancelling counts as no -- the
-        build is already done and nothing is owed but an answer.
-        """
+        """Put a question on screen and block the worker until answered."""
         self.asking = question
         self.answered.clear()
         try:
@@ -333,12 +289,7 @@ class Dashboard:
             self.asking = ""
 
     def _install(self, snap, built, reporter):
-        """Install what was just built, with the terminal handed back.
-
-        `sudo` has to ask for a password on a real terminal, so the dashboard
-        comes down for as long as that takes. Nothing else here needs root, so
-        this is the one place that asks for it.
-        """
+        """Install what was just built, with the terminal handed back."""
         classic = ""
         try:
             recipe = (Path(snap.path) / "snap" / "snapcraft.yaml").read_text()
@@ -444,12 +395,7 @@ class Dashboard:
             self.say(f"built {built.name}, not installed", "dim")
 
     def delete_selected(self):
-        """Forget the selected snap. Asked about first -- it is not undoable.
-
-        The project directory is left where it is. Deleting files somebody may
-        have edited is a bigger thing than forgetting a record, and it is not
-        what pressing one key should do.
-        """
+        """Forget the selected snap. Asked about first -- it is not undoable."""
         row = self.row
         if row is None or self.busy:
             return
@@ -528,13 +474,7 @@ class Dashboard:
             self.detail = self.row.snap
 
     def _typing(self, key):
-        """The one box: find something already registered, or add something new.
-
-        Most of the time what someone types is something they have packaged
-        before -- so the register is searched as they type, and enter on a
-        match builds it from what is written down. Only a repository nothing
-        matches goes upstream.
-        """
+        """The one box: find something registered, or add something new."""
         if key == "escape":
             self._close_prompt()
         elif key in ("down",):
@@ -651,12 +591,7 @@ class DashboardReporter(Reporter):
             raise Cancelled()
 
     def _lines(self, text, style, prefix="", rest="    "):
-        """One log entry per line.
-
-        The log pane is a list of lines, so a multi-line note -- `install it
-        with:` and the three `snap connect` commands under it -- has to arrive
-        as four entries rather than one entry containing newlines.
-        """
+        """One log entry per line."""
         for index, line in enumerate(str(text).split("\n")):
             self.dashboard.say(f"{prefix if index == 0 else rest}{line}", style)
 

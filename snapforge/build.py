@@ -1,30 +1,4 @@
-"""Assembling a snap tree by hand, for the projects snapcraft cannot build.
-
-Most recipes are handed to snapcraft, which does all of this and more. Some
-cannot be: a core24 snap needs an LXD or Multipass backend, and a project
-whose whole content is an upstream binary being restaged does not need a
-build container to begin with -- nothing from the host would end up in the
-snap. Those projects assemble a `prime/` tree themselves and call `snap
-pack`, and what they have in common is here.
-
-A project that does that keeps a `pack.py` beside its recipe, exposing one
-function:
-
-    def build(p):                 # p is a Build, already in the project
-        tarball = p.artifact("floorp-linux-x86_64.tar.xz")
-        prime = p.fresh_prime("usr/lib")
-        p.run("tar", "xf", tarball, "-C", prime / "usr/lib")
-        p.copy_overlay("meta/snap.yaml")
-        p.gnome_helpers()
-        return p.pack()
-
-`snapkit build <name>` imports that and calls it. The dependency runs this
-way round on purpose: the project used to import the tooling off a relative
-path, which stops working the moment the tooling is installed as a snap, and
-meant every project carried four lines of `sys.path` before it could say
-anything about itself. What is left in a `pack.py` is the part that is that
-project's alone.
-"""
+"""Assembling a snap tree by hand, for the projects snapcraft cannot build."""
 
 import importlib.util
 import os
@@ -65,15 +39,7 @@ def die(text):
 
 
 def stream(command, reporter=None, **kwargs):
-    """Run a command, handing each line it writes to the reporter.
-
-    stderr is folded into stdout because that is how it reads on a terminal:
-    snapcraft writes its progress to one and its warnings to the other, and
-    interleaved is the order things actually happened in.
-
-    With no reporter the command keeps the terminal to itself, which is what
-    the plain CLI wants and what every caller used to get.
-    """
+    """Run a command, handing each line it writes to the reporter."""
     if not getattr(reporter, "captures_output", False):
         return subprocess.run(command, **kwargs)
 
@@ -142,8 +108,7 @@ class Build:
 
     @property
     def version(self):
-        """Read back rather than assumed: after an update the packaging is the
-        record of which release this is."""
+        """The version the packaging currently spells out."""
         version = yaml_version(self.yaml)
         if not version:
             die(f"could not read version: from {self.yaml}")
@@ -163,13 +128,7 @@ class Build:
         return path
 
     def artifact(self, pattern, given=None):
-        """The upstream file this build consumes.
-
-        Named by the caller, or the one file in the project directory that
-        matches -- an update leaves exactly one behind, having removed the
-        superseded one. Looked up rather than hard-coded, so an update that
-        lands mid-build changes what is packed, not what is opened.
-        """
+        """The upstream file this build consumes."""
         if given:
             return self.need_file(given)
         found = sorted(self.directory.glob(pattern))
@@ -189,8 +148,7 @@ class Build:
         return GNOME_SNAP
 
     def check_version(self, found, what):
-        """Refuse to pack a snap that would advertise a version its payload
-        does not have."""
+        """Refuse to pack a snap that would advertise a version its payload"""
         if found != self.version:
             die(f"version mismatch: {self.yaml.name} says {self.version}, "
                 f"{what} ships {found}")
@@ -222,33 +180,17 @@ class Build:
     # -- splitting a build across more than one file ---------------------------
 
     def module(self, relative):
-        """Import another file of this project's own build, by location.
-
-        A project whose packaging runs to more than one file -- Transmission
-        assembles a whole build root before it compiles anything -- keeps the
-        rest beside its pack.py and asks for it here, rather than re-entering
-        Python as a subprocess to reach code that is sitting next to it.
-        """
+        """Import another file of this project's own build, by location."""
         return pack_module(self.directory, relative)
 
     def deb_compare(self, a, b):
-        """dpkg's version ordering, for a project reading an apt index.
-
-        Not `sort -V`: a Debian version has an epoch, a revision, and a `~`
-        that sorts before the empty string so that 1.0~rc1 comes before 1.0.
-        """
+        """dpkg's version ordering, for a project reading an apt index."""
         return deb_compare(a, b)
 
     # -- fetching ------------------------------------------------------------
 
     def download(self, url, destination, sha=""):
-        """Fetch a file, checking it against a checksum if one is known.
-
-        Here so that a project vendoring a library out of an archive mirror
-        -- which is the only reason any of them fetch anything of their own,
-        the release itself having been fetched by the update -- does not have
-        to reach for the tooling to do it.
-        """
+        """Fetch a file, checking it against a checksum if one is known."""
         return download(url, Path(destination), sha)
 
     def sha256(self, path):
@@ -280,8 +222,7 @@ class Build:
             self.copy(self.directory / "overlay" / name, self.prime / name)
 
     def configure_hook(self):
-        """snapd runs a configure hook if one is declared; this is the stub the
-        recipes declare so that `snap set` does not fail."""
+        """Write the stub configure hook snapd runs when one is declared."""
         hook = self.prime / "meta" / "hooks" / "configure"
         hook.parent.mkdir(parents=True, exist_ok=True)
         hook.write_text("#!/bin/true\n")
@@ -289,8 +230,7 @@ class Build:
         self.make_executable(hook)
 
     def gnome_helpers(self, gnome=None):
-        """The desktop/font helpers snapcraft's `gnome` extension copies out of
-        the matching SDK -- taken straight from the platform snap here."""
+        """Copy the desktop and font helpers out of the gnome platform snap."""
         gnome = gnome or self.gnome_platform()
         chain = self.prime / "snap" / "command-chain"
         chain.mkdir(parents=True, exist_ok=True)
@@ -305,21 +245,13 @@ class Build:
                     one.chmod(one.stat().st_mode | 0o111)
 
     def missing_libraries(self, binary):
-        """What ldd cannot resolve for a binary. Empty when everything is
-        there; anything listed fails at runtime, not at pack time."""
+        """What ldd cannot resolve for a binary. Empty when everything is"""
         done = subprocess.run(["ldd", str(binary)], capture_output=True, text=True)
         return [line.split()[0] for line in done.stdout.splitlines()
                 if "not found" in line]
 
     def warn_missing(self, binary, hint=""):
-        """Say what a classic snap will not find on this host.
-
-        A warning rather than an error, and it is about the host rather than
-        about the snap: a classic snap links against whatever is out there, so
-        the same pack can be fine on the next machine and broken on this one.
-        Either way it fails at runtime, where it is hard to read, so it is
-        worth saying at pack time, where it is not.
-        """
+        """Say what a classic snap will not find on this host."""
         missing = self.missing_libraries(binary)
         if missing:
             warn("these libraries are missing on this host:\n"
@@ -343,13 +275,7 @@ class Build:
 # -- finding and running a project's pack.py ----------------------------------
 
 def pack_module(directory, filename="pack.py"):
-    """Import a project's pack.py, without it being on the path.
-
-    Loaded by location rather than by name so that twenty projects can each
-    have a `pack.py` without the first one imported shadowing the rest, and
-    so that nothing has to be installed or `sys.path`-ed for a project to be
-    built from wherever it happens to sit.
-    """
+    """Import a project's pack.py, without it being on the path."""
     path = Path(directory) / filename
     if not path.is_file():
         die(f"no {filename} in {Path(directory).name}")
@@ -385,13 +311,7 @@ def run_pack(app, directory, filename="pack.py", reporter=None):
 
 
 def snapcraft_preflight(destructive=False):
-    """What is worth saying before a build that takes minutes, not after.
-
-    snapcraft says the second half of this itself, but only once it has
-    pulled the recipe apart first -- and the fix is three commands rather
-    than one. A warning and not an error: --destructive-mode and a host whose
-    base matches need no backend at all.
-    """
+    """What is worth saying before a build that takes minutes, not after."""
     if not shutil.which("snapcraft"):
         die("snapcraft is not installed: sudo snap install snapcraft --classic")
     if destructive:

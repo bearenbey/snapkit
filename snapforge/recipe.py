@@ -1,16 +1,4 @@
-"""Writing the snapcraft.yaml.
-
-Everything the recipe needs has already been found out by this point: which
-asset, what is inside it, where the binary sits, whether it draws a window.
-This module does no guessing -- it arranges what is known into the file
-snapcraft reads, and writes a comment next to every part of it that a person
-might reasonably want to change.
-
-The output is text rather than a dumped data structure on purpose. A
-generated file that nobody can read is a file people replace instead of
-editing, and this one is meant to be edited: it is the starting point for a
-package, not the last word on it.
-"""
+"""Writing the snapcraft.yaml."""
 
 import re
 import textwrap
@@ -31,13 +19,7 @@ MAX_NAME = 40
 
 
 def snap_name(text):
-    """A snap name out of a repository name.
-
-    Snap names are lowercase letters, digits and hyphens, and may not start or
-    end with one or hold two in a row. Repository names are nearly but not
-    quite that, so the near misses -- underscores, dots, capitals, a -linux or
-    -desktop suffix that says nothing once it is a snap -- are filed off.
-    """
+    """A snap name out of a repository name."""
     name = (text or "").strip().lower()
     name = re.sub(r"[._\s]+", "-", name)
     name = re.sub(r"[^a-z0-9-]", "", name)
@@ -61,12 +43,7 @@ def summarise(text, fallback):
 
 
 def describe(text, summary, repo_url):
-    """The long description, always ending with where it came from.
-
-    The provenance line is not decoration. A snap built by this tool is not
-    published by the people who wrote the software in it, and the description
-    is the only place a person installing it will look.
-    """
+    """The long description, always ending with where it came from."""
     body = " ".join((text or summary or "").split())
     paragraphs = textwrap.fill(body, width=76) if body else summary
     return f"{paragraphs}\n\nPackaged from the upstream release at {repo_url}.\n" \
@@ -178,14 +155,7 @@ def build(*, name, version, summary, description, license_id, kind, url,
 
 
 def from_record(snap, payload, url, sha="", description="", icon=""):
-    """The recipe for a record and the payload it was made from.
-
-    Driven by the record rather than by loose arguments, so that what the
-    register says about a snap -- its confinement, its grade, its base, the
-    interfaces it asks for -- is what ends up in the file. Those fields are
-    shown by `snapkit show`; if they did not decide anything, showing them
-    would be a lie.
-    """
+    """The recipe for a record and the payload it was made from."""
     repo_url = f"https://github.com/{snap.repo}" if snap.repo else ""
     summary = summarise(payload.summary or description,
                         f"{snap.name}, packaged as a snap")
@@ -212,12 +182,7 @@ def from_record(snap, payload, url, sha="", description="", icon=""):
 
 
 def repoint(yaml_text, old_version, new_version, old_url, new_url, sha=""):
-    """Move an existing recipe onto a newer release, in place.
-
-    The recipe is not regenerated: whatever was edited by hand since it was
-    written -- a plug added, a command corrected, a summary rewritten -- is
-    the reason to keep the file and change the three things that move.
-    """
+    """Move an existing recipe onto a newer release, in place."""
     out = []
     for line in yaml_text.splitlines():
         if re.match(r"^version:\s", line):

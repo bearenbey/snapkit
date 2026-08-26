@@ -1,17 +1,4 @@
-"""Opening the downloaded payload to see what is actually in it.
-
-The alternative is guessing, and guessing is wrong often enough to be useless:
-a .deb from a Go project puts its binary in usr/bin, a .deb from an Electron
-project puts it in opt/Name, and the desktop entry that names it is somewhere
-else again. Since the payload has to be downloaded to build anyway, it is
-opened first and the recipe is written from what is in it.
-
-.deb is read here rather than shelled out to. A .deb is an `ar` archive of
-three members, and the one that matters is a tar -- both of which Python can
-read -- so the common case needs nothing installed. A payload compressed with
-zstd falls back to dpkg-deb, which is the only piece Python has no reader for
-on the base this snap is built against.
-"""
+"""Opening the downloaded payload to see what is actually in it."""
 
 import io
 import re
@@ -70,12 +57,7 @@ def unpack(archive, destination, kind):
 
 
 def _deb_member(path, prefix):
-    """One member of a .deb, by name prefix, as (name, bytes).
-
-    A .deb is an `ar` archive: a magic line, then for each member a 60-byte
-    header of fixed-width text fields followed by its data, padded to an even
-    length. Three members, and the two that matter here are both tars.
-    """
+    """One member of a .deb, by name prefix, as (name, bytes)."""
     with open(path, "rb") as handle:
         if handle.read(8) != b"!<arch>\n":
             raise InspectionError(f"{path.name} is not a .deb (no ar magic)")
@@ -132,13 +114,7 @@ def _unpack_archive(archive, destination):
 
 
 def _unpack_appimage(archive, destination):
-    """AppImages unpack themselves, and only themselves.
-
-    An AppImage is an ELF launcher with a squashfs stuck on the end; the
-    launcher knows the offset and nothing else does, so --appimage-extract is
-    the way in. It needs the file to be executable and it writes into the
-    working directory, hence the chmod and the cwd.
-    """
+    """AppImages unpack themselves, and only themselves."""
     archive.chmod(archive.stat().st_mode | 0o111)
     done = subprocess.run([str(archive.resolve()), "--appimage-extract"],
                           cwd=destination, capture_output=True, text=True)
@@ -178,14 +154,7 @@ def control_fields(archive):
 
 
 def collapse_single_root(root):
-    """The directory the payload's own paths are relative to.
-
-    Nearly every tarball is one directory holding everything -- nvim-linux-
-    x86_64/, btop/ -- and the snap wants what is inside it, not it. snapcraft
-    does this itself for a `dump` part, so what matters here is knowing that
-    it will, so the paths written into the recipe are the ones that will
-    exist at build time.
-    """
+    """The directory the payload's own paths are relative to."""
     entries = [e for e in root.iterdir() if e.name != "__MACOSX"]
     if len(entries) == 1 and entries[0].is_dir():
         return entries[0]
@@ -211,13 +180,7 @@ def find_binaries(root):
 
 
 def rank_binaries(binaries, wanted):
-    """Order candidates so the application comes first.
-
-    The name is the strongest signal -- a binary called `btop` in a repository
-    called btop is the answer -- and after that it is a matter of where it
-    sits: usr/bin before opt before anywhere else, and shallower before
-    deeper, because the deep ones are bundled helpers.
-    """
+    """Order candidates so the application comes first."""
     def key(relative):
         path = Path(relative)
         stem = path.name.lower()
@@ -277,12 +240,7 @@ SIGNS = (
 
 
 def is_terminal_app(root, desktop):
-    """Whether the desktop entry asks to be run in a terminal.
-
-    A .desktop file is not proof of a window: btop ships one and is a curses
-    program. Terminal=true is upstream saying so, and it is the difference
-    between a snap that pulls in the whole GTK stack and one that does not.
-    """
+    """Whether the desktop entry asks to be run in a terminal."""
     if not desktop:
         return False
     try:

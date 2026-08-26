@@ -1,21 +1,4 @@
-"""Drawing the dashboard.
-
-Everything the dashboard puts on the screen, and nothing about what it does.
-It is handed the board and reads it: the rows, where the cursor is, what is
-in flight, what the log says. Splitting it out is not tidiness for its own
-sake -- the two halves change for different reasons. A column moving is not
-the same kind of edit as an update fetching the wrong file, and neither
-should be able to break the other by being in the same file.
-
-The screen owns the little state that is only ever about drawing -- the
-animation counter, how many rows fit, and how far the list is scrolled --
-because none of it means anything to the register and the board should not
-have to carry it.
-
-Everything is sized from the console rather than assumed: the columns that
-fit go in, the key legend shortens before it would run off the end, and the
-list is as tall as the window leaves it.
-"""
+"""Drawing the dashboard."""
 
 from datetime import datetime, timezone
 
@@ -75,12 +58,7 @@ SPLIT_AT = 108              # ... and the width below which there is not
 
 
 class Screen:
-    """One dashboard, drawn.
-
-    Holds a reference to the board rather than a copy of it, so a frame is
-    always of the register as it is now -- the worker thread changes rows
-    underneath this and the next frame simply shows the change.
-    """
+    """One dashboard, drawn."""
 
     def __init__(self, board):
         self.board = board
@@ -89,14 +67,7 @@ class Screen:
         self.offset = 0
 
     def render(self):
-        """One frame.
-
-        The pane the list gets is whatever the header, the log and the footer
-        leave behind, so the list grows with the window instead of being told
-        how tall it is. On a wide terminal the right of it becomes an
-        inspector for whatever the cursor is on; on a narrow one there is no
-        room for two panes and the list takes the width back.
-        """
+        """One frame."""
         self.frame += 1
         console = self.board.live.console if self.board.live else None
         height = console.size.height if console else 30
@@ -125,12 +96,7 @@ class Screen:
             Layout(self._footer(width), size=1))
         return layout
     def _header_height(self):
-        """Tall enough for what the header has to say.
-
-        A fixed height silently clips: the find-or-add box grew a list of
-        matches underneath it and none of them were drawn, because the row it
-        was drawn into was still three lines high.
-        """
+        """Tall enough for what the header has to say."""
         if not self.board.prompting:
             return 3
         return 2 + 1 + min(len(self.board.matches), 5) + 1
@@ -144,12 +110,7 @@ class Screen:
         return Panel(Group(self._masthead()), box=box.ROUNDED,
                      border_style=EDGE, padding=(0, 1))
     def _masthead(self):
-        """The wordmark, and the shape of the register beside it.
-
-        The counts are the reason this line exists rather than a title: the
-        one thing worth knowing before looking at anything is whether
-        something needs doing.
-        """
+        """The wordmark, and the shape of the register beside it."""
         counts = {}
         for row in self.board.rows:
             counts[row.state] = counts.get(row.state, 0) + 1
@@ -227,12 +188,7 @@ class Screen:
         return Panel(Group(*lines), title="find or add", box=box.ROUNDED,
                      border_style=ACCENT, padding=(0, 1))
     def _table(self, width=100, compact=False):
-        """The registered snaps, scrolled so the cursor is always on screen.
-
-        Sixteen projects is more than fits, and a cursor that walks off the
-        bottom of a pane is a cursor nobody can follow. `compact` drops the
-        columns the inspector is already showing, for when it is beside this.
-        """
+        """The registered snaps, scrolled so the cursor is always on screen."""
         first, last = self._window()
         table = Table(expand=True, box=None, pad_edge=False,
                       header_style="dim " + EDGE)
@@ -287,11 +243,7 @@ class Screen:
         return Panel(table, title=title, box=box.ROUNDED, border_style=EDGE,
                      padding=(0, 1))
     def _status_cell(self, row):
-        """What this snap is doing, as one cell.
-
-        A download replaces the words with the bar rather than sitting beside
-        it: the words at that point are "working", which the bar already says.
-        """
+        """What this snap is doing, as one cell."""
         if row.state == "working" and row.total_bytes:
             share = row.done_bytes / row.total_bytes
             return Text.assemble(
@@ -316,12 +268,7 @@ class Screen:
         self.offset = max(0, min(self.offset, total - height))
         return self.offset, self.offset + height
     def _inspector(self):
-        """Everything about the highlighted snap that fits without asking.
-
-        `enter` still opens the full record and its recipe; this is the part
-        worth having on screen the whole time, so that moving the cursor is
-        how you read the register rather than opening and closing things.
-        """
+        """Everything about the highlighted snap that fits without asking."""
         row = self.board.row
         if row is None:
             return Panel(Text("nothing selected", style="dim"),
@@ -425,11 +372,7 @@ class Screen:
                      border_style=ACCENT, padding=(0, 1))
 
 def _gradient(text, start=(0x4C, 0xE0, 0xFF), end=(0xB9, 0x8C, 0xFF)):
-    """The wordmark and every snap name, cyan to violet across the letters.
-
-    A terminal that cannot do 24-bit colour is not a problem to solve here:
-    rich steps these down to whatever the terminal has.
-    """
+    """The wordmark and every snap name, cyan to violet across the letters."""
     out = Text()
     span = max(1, len(text) - 1)
     for index, character in enumerate(text):
@@ -475,12 +418,7 @@ def _upstream_cell(row):
     style = "bold yellow" if row.behind else "dim"
     return Text(row.latest, style=style)
 def _lineage(snap):
-    """The last few versions this snap has been on, oldest first.
-
-    A record keeps only the last few builds in full, so this is short by
-    design -- it is there to say "this one moves" or "this one has been on
-    the same release since it was imported", which the version alone cannot.
-    """
+    """The last few versions this snap has been on, oldest first."""
     seen = []
     for entry in snap.history:
         version = entry.get("version") if isinstance(entry, dict) else None
@@ -521,11 +459,7 @@ def _parse(stamp):
         return None
     return when.replace(tzinfo=timezone.utc) if when.tzinfo is None else when
 def _smooth_bar(share, width=12):
-    """A bar that moves an eighth of a cell at a time rather than a whole one.
-
-    A whole-cell bar on a twelve-cell download looks stuck; this one is always
-    visibly moving, which is the only thing it is there to say.
-    """
+    """A bar that moves an eighth of a cell at a time."""
     share = min(1.0, max(0.0, share))
     exact = share * width
     whole = int(exact)

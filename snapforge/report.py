@@ -1,10 +1,4 @@
-"""Where the running commentary goes.
-
-A create is a sequence of slow steps and the person watching wants to know
-which one is happening. On a plain terminal that is a line each; under the
-dashboard it is a pane. Everything reports through one of these rather than
-printing, so neither has to know about the other.
-"""
+"""Where the running commentary goes."""
 
 import sys
 from contextlib import contextmanager
@@ -32,13 +26,7 @@ class Reporter:
         """A piece of work finished."""
 
     def output(self, line):
-        """One line a subprocess wrote.
-
-        A build is ten minutes of somebody else's output. It used to go
-        straight to the terminal, which meant handing the terminal over and
-        taking the dashboard down for the duration; routing it through here
-        instead lets each front end decide where it goes.
-        """
+        """One line a subprocess wrote."""
 
     @contextmanager
     def suspended(self):

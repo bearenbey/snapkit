@@ -1,14 +1,4 @@
-"""Rebuild the Unity Hub snap from the official upstream .deb.
-
-`snapkit build unityhub` calls build() below with a Build; `snapkit update
-unityhub` fetches the release it packs first.
-
-This is a real snapcraft build -- snap/snapcraft.yaml is run as written -- so
-what is left here is the work a recipe cannot express: reporting a version the
-metadata disagrees with, catching the payload layout move that would otherwise
-produce a snap which packs cleanly and dies on exec, and reporting host
-libraries a classic snap will need at runtime and cannot bring with it.
-"""
+"""Rebuild the Unity Hub snap from the official upstream .deb."""
 
 import pathlib
 import shutil
@@ -18,25 +8,14 @@ ARCH = "amd64"
 
 
 def unpacked(project, snap):
-    """The packed snap's contents, extracted to a temporary directory.
-
-    snapcraft builds in a managed instance and its parts/, stage/ and prime/
-    live inside it, so there is no prime/ on this side to look at. The checks
-    below therefore read the artifact that was actually produced, which is the
-    stronger thing to check anyway: it is what ships.
-    """
+    """The packed snap's contents, extracted to a temporary directory."""
     out = pathlib.Path(tempfile.mkdtemp(prefix="snapkit-check-"))
     project.run("unsquashfs", "-q", "-d", out / "root", snap)
     return out / "root"
 
 
 def refuse(project, snap, holding, message):
-    """Delete a snap that failed its checks, then say why.
-
-    Packed and then rejected rather than rejected before packing: what is worth
-    checking is only in the artifact. Leaving it on disk would let the next
-    `snapkit check` read it as a good build of this version.
-    """
+    """Delete a snap that failed its checks, then say why."""
     shutil.rmtree(holding, ignore_errors=True)
     snap.unlink(missing_ok=True)
     project.die(message)

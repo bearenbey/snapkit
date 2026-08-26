@@ -1,20 +1,4 @@
-"""Rebuild the ungoogled-chromium snap against an upstream portable release.
-
-`snapkit build ungoogled-chromium` calls build() below with a Build; `snapkit
-update ungoogled-chromium` resolves the tag, downloads the tarball, rewrites
-snapcraft.yaml and README.md and drops the superseded tarball first.
-
-This one is a real snapcraft build -- the recipe is run as written -- so what
-is left below is the check that the recipe and the tarball agree on a
-version, and the build itself.
-
-Upstream tags carry a packaging revision the Chromium version does not
-(151.0.7922.173-1), and the snap is versioned by the tag rather than by the
-Chromium version, so that a rebuild of the same Chromium against a newer
-upstream package is a different snap. `chrome --version` therefore reports the
-tag's leading component and not the whole of it, which is what check_payload
-compares.
-"""
+"""Rebuild the ungoogled-chromium snap against an upstream portable release."""
 
 import re
 import tarfile
@@ -24,11 +8,7 @@ TARBALL = "ungoogled-chromium-*-x86_64_linux.tar.xz"
 
 
 def packaged_tarball(project):
-    """The tarball the recipe names, which is the one to build.
-
-    Read back rather than assumed: after an update, snapcraft.yaml is the
-    record of which release this is.
-    """
+    """The tarball the recipe names, which is the one to build."""
     for line in project.snapcraft_yaml.read_text().splitlines():
         found = re.match(r"^\s*source:\s*(ungoogled-chromium-.*\.tar\.xz)\s*$", line)
         if found:
@@ -37,11 +17,7 @@ def packaged_tarball(project):
 
 
 def check_payload(project, tarball):
-    """Refuse to pack a snap whose payload is not the release it claims.
-
-    The tarball's top-level directory carries the tag, so this costs a read of
-    the archive's first header rather than an unpack of 750 MB.
-    """
+    """Refuse to pack a snap whose payload is not the release it claims."""
     with tarfile.open(tarball) as tar:
         first = tar.next()
     if first is None:

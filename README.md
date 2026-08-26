@@ -283,22 +283,44 @@ recorded but left inert, because updating rewrites a recipe and repoints it
 at a release. Pass `--repo owner/name` to confirm one and have that project
 checked. `seed.py` holds those confirmations for the projects here.
 
-A project registered this way keeps its own build. Eleven of the twenty-one
-assemble their tree themselves rather than leaving it to snapcraft, which is a
-core24 snap needs an LXD or Multipass backend, and a project whose whole
-content is an upstream binary being restaged does not need a build container
-to begin with. Their records name a `pack.py`, and `snapkit build` imports it
-and calls its `build(project)` with a `Build` to assemble into:
+Its table says the things a project cannot say about itself. Everything else,
+the version, summary, licence, icon and the recipe, is read off the project:
+
+| field | what it says |
+| --- | --- |
+| `repo` | the GitHub repository it packages, where that is the upstream |
+| `upstream` | a shape out of `sources.py`, where it is not |
+| `style` | `artifact` if the build opens a file sitting in the project, `recipe` if snapcraft fetches the source itself |
+| `asset_glob` | matches that file in every release, so the superseded one is cleaned up |
+| `local_asset` | what the build opens it as, where upstream's name is not it |
+| `source_anchor` | which `source:` line an update repoints, so a second one is left alone |
+| `checksums` | where upstream publishes the checksum, when it is not beside the file |
+| `verify` | what a download is checked against before it is trusted |
+| `pack` | the file exposing `build(project)`, for a project that wraps the build |
+
+`asset_glob` and `local_asset` belong to the project rather than the upstream,
+so they are named once and not repeated inside `upstream`. The exception is
+the `local` shape, where the glob is also how the file is found in the first
+place.
+
+A project registered this way keeps its own build. All twenty-one hand their
+recipe to snapcraft, but eleven of them wrap it in a `pack.py` that does the
+work a recipe cannot express, and `snapkit build` imports that and calls its
+`build(project)` with a `Build`:
 
 ```python
 def build(project):                       # floorp-snap/pack.py
     tarball = project.artifact("floorp-linux-x86_64.tar.xz")
-    prime = project.fresh_prime("usr/lib")
-    project.run("tar", "xf", tarball, "-C", prime / "usr/lib")
-    project.copy_overlay("meta/snap.yaml")
-    project.gnome_helpers()
-    return project.pack()
+    project.run("snapcraft", "pack")
+    built = project.directory / f"floorp_{project.version}_amd64.snap"
+    check_the_packed_snap(project, built)
+    return built
 ```
+
+Almost all of that work is one thing: refusing to ship a snap whose payload is
+not the release the recipe claims. The rest is per project, such as reading a
+version out of an `application.ini` or warning about a library a classic snap
+will need from the host.
 
 The dependency runs this way round on purpose. These scripts used to reach
 the shared half of themselves along a relative path, which stops working the
@@ -308,7 +330,7 @@ imports nothing: everything it can use is on the `project` it is handed,
 including `say`, `download` and a `module()` for a build that runs to more
 than one file.
 
-Six of them are not a GitHub release at all. Discord's download redirect,
+Six of them are not a GitHub release at all: Discord's download redirect,
 Emacs on ftp.gnu.org, ffmpeg.org, and the apt repositories Signal, Sublime
 Text and Unity publish through, and two more build from the archive GitHub
 rolls out of a tag rather than from anything attached to the release. Those

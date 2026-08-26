@@ -1,11 +1,4 @@
-"""A repository URL, and what that repository publishes.
-
-None of this uses api.github.com. Everything is read off pages that carry no
-rate limit: the /releases/latest redirect, the releases atom feed, the
-expanded_assets fragment the release page loads its file list from, and the
-repository's own HTML for a description. That costs a little parsing and buys
-a tool that still works on the twentieth repository of the afternoon.
-"""
+"""A repository URL, and what that repository publishes."""
 
 import re
 from dataclasses import dataclass, field
@@ -94,12 +87,7 @@ class Repository:
 
 
 def parse_repo(text):
-    """`owner/name` out of whatever the user pasted.
-
-    A bare owner/name, a browser URL, a clone URL, with or without the scheme,
-    the www, the .git or a trailing slash -- they all name the same thing and
-    it is not worth making anyone care which one they copied.
-    """
+    """`owner/name` out of whatever the user pasted."""
     text = (text or "").strip()
     if not text:
         raise ValueError("no repository given")
@@ -119,12 +107,7 @@ def parse_repo(text):
 
 
 def describe(repo):
-    """The repository's description and licence.
-
-    Both are nice to have and neither is worth failing over: a snap needs a
-    summary, and having one written for you beats writing "a snap of foo"
-    every time, but an unreachable page just means an empty description.
-    """
+    """The repository's description and licence."""
     info = Repository(repo=repo)
     info.description = _description(repo)
     info.license = licence_of(repo)
@@ -146,13 +129,7 @@ def _description(repo):
 
 
 def licence_of(repo):
-    """The SPDX identifier of the repository's licence, or "".
-
-    Empty means "could not tell", and that is the useful answer: snapcraft
-    rejects a licence field it does not recognise, so a wrong guess fails the
-    build while an absent one does not. A project that splits its licence
-    across LICENSE-MIT and LICENSE-APACHE lands here, correctly.
-    """
+    """The SPDX identifier of the repository's licence, or ""."""
     for name in LICENCE_FILES:
         try:
             text = get_text(f"https://raw.githubusercontent.com/{repo}/HEAD/{name}")
@@ -167,12 +144,7 @@ def licence_of(repo):
 
 
 def latest_tag(repo):
-    """The newest release tag.
-
-    /releases/latest is a redirect, so this costs one HEAD. A project that
-    only ever publishes prereleases has no "latest" and lands on the release
-    list instead; the atom feed is newest-first and answers for those.
-    """
+    """The newest release tag."""
     location = head_location(f"https://github.com/{repo}/releases/latest")
     if "/releases/tag/" in location:
         return _unquote(location.split("/tag/", 1)[1])
@@ -198,13 +170,7 @@ def recent_tags(repo, limit=30):
 
 
 def assets(repo, tag):
-    """Everything attached to one release.
-
-    Read off the expanded_assets fragment, which is what the release page
-    itself fetches to draw the file list. Source archives are left out: every
-    release has them, they are never what a prebuilt snap is made from, and
-    offering them as candidates only makes the choice harder.
-    """
+    """Everything attached to one release."""
     url = f"https://github.com/{repo}/releases/expanded_assets/{_quote(tag)}"
     try:
         page = get_text(url)
@@ -229,12 +195,7 @@ def release(repo, tag=None):
 
 
 def version_of(tag):
-    """The version a tag stands for.
-
-    Tags are decorated in a handful of predictable ways and snap versions are
-    not, so the decoration comes off: a leading v or release-, a trailing
-    -stable or -release, and any of the leading name- forms a monorepo uses.
-    """
+    """The version a tag stands for."""
     version = tag.strip()
     version = re.sub(r"^(?:v|release[-/]?|rel[-/]?)", "", version, flags=re.I)
     version = re.sub(r"[-_](?:stable|release|final)$", "", version, flags=re.I)

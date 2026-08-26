@@ -1,10 +1,4 @@
-"""Replacing a version wherever it is spelled out, and saying what changed.
-
-Every rewrite here reports the lines it touched. Nothing about this is clever:
-the point of printing each changed line is that a bump stays reviewable
-without diffing afterwards, which matters most when a version string turns up
-somewhere it was not expected.
-"""
+"""Replacing a version wherever it is spelled out, and saying what changed."""
 
 import re
 from dataclasses import dataclass
@@ -30,12 +24,7 @@ def _changed(before, after):
 
 
 def rewrite_versions(directory, old, new, old_asset="", new_asset=""):
-    """Replace every mention of the old version, and of the old artifact name.
-
-    Version strings also appear inside file names -- Godot_v4.7.1-stable_linux
-    .x86_64.zip, freetube_0.25.2_beta_amd64.deb -- and the .deb ones spell the
-    version with underscores, hence the second substitution.
-    """
+    """Replace every mention of the old version and artifact name."""
     changes = []
     if not old or old == new:
         old = ""       # nothing to swap, but an asset rename may still apply
@@ -62,12 +51,7 @@ def rewrite_versions(directory, old, new, old_asset="", new_asset=""):
 
 
 def repoint_yaml(path, anchor, url, sha, version=""):
-    """Point a snapcraft part at a new source tarball and checksum.
-
-    `anchor` matches the source: line of the part being updated and captures
-    its indentation, so a second source: line -- the launcher part in irssi's
-    yaml, for instance -- is left where it is.
-    """
+    """Point a snapcraft part at a new source tarball and checksum."""
     path = Path(path)
     before = path.read_text(encoding="utf-8", errors="replace").splitlines()
     after = []

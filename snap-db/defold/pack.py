@@ -1,19 +1,4 @@
-"""Rebuild the Defold snap from the official upstream editor zip.
-
-`snapkit build defold` calls build() below with a Build; `snapkit update
-defold` fetches the release it packs first.
-
-This is a real snapcraft build -- snap/snapcraft.yaml is run as written -- so
-what is left here is the work a recipe cannot express: refusing to ship a snap
-whose payload is not the release the recipe claims, and checking that the
-OpenAL the game engine loads still needs only what the base and the platform
-snaps provide.
-
-libopenal used to be three .debs downloaded into vendor/ and unpacked by hand,
-because there was no build backend on the machine this was written on. The
-recipe now stage-packages them from the archive against the same noble base,
-so the pinning is no longer this repository's to carry.
-"""
+"""Rebuild the Defold snap from the official upstream editor zip."""
 
 import pathlib
 import re
@@ -32,25 +17,14 @@ EXPECTED_NEEDED = {
 
 
 def unpacked(project, snap):
-    """The packed snap's contents, extracted to a temporary directory.
-
-    snapcraft builds in a managed instance and its parts/, stage/ and prime/
-    live inside it, so there is no prime/ on this side to look at. The checks
-    below therefore read the artifact that was actually produced, which is the
-    stronger thing to check anyway: it is what ships.
-    """
+    """The packed snap's contents, extracted to a temporary directory."""
     out = pathlib.Path(tempfile.mkdtemp(prefix="snapkit-check-"))
     project.run("unsquashfs", "-q", "-d", out / "root", snap)
     return out / "root"
 
 
 def refuse(project, snap, holding, message):
-    """Delete a snap that failed its checks, then say why.
-
-    Packed and then rejected rather than rejected before packing: what is worth
-    checking is only in the artifact. Leaving it on disk would let the next
-    `snapkit check` read it as a good build of this version.
-    """
+    """Delete a snap that failed its checks, then say why."""
     shutil.rmtree(holding, ignore_errors=True)
     snap.unlink(missing_ok=True)
     project.die(message)
@@ -68,12 +42,7 @@ def editor_version(root):
 
 
 def check_openal(project, root):
-    """Warn if libopenal grew a dependency nothing in the snap provides.
-
-    A missing NEEDED here means a library the engine loads stopped being
-    covered by the provider snaps, which only shows up as a broken game at
-    runtime rather than as a failed build.
-    """
+    """Warn if libopenal grew a dependency nothing in the snap provides."""
     library = root / "usr/lib/x86_64-linux-gnu/libopenal.so.1"
     if not library.is_file():
         project.warn("no libopenal.so.1 in the packed snap; "

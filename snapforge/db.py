@@ -1,28 +1,4 @@
-"""The register of every snap this tool has made.
-
-A directory, not a file. One small JSON record per snap, the recipe beside it
-as the yaml it actually is, and the icon beside that:
-
-    snapkit/
-      snaps/btop.json        what it is, where it came from, what to fetch
-      recipes/btop.yaml      the snapcraft.yaml, as text
-      icons/btop.svg         lifted out of the payload when it was made
-
-It began as one JSON file holding all of it, which is the obvious thing and
-does not last. Recipes are most of the weight -- at sixteen snaps they were
-78% of the file -- so every record carried several kilobytes that almost
-nothing ever reads, and every change to any field rewrote the lot. At a
-thousand snaps that is a 5.5 MB file reparsed by every command and rewritten
-by every `add`, which a create does three times.
-
-Split like this, listing a thousand snaps reads a megabyte instead of five
-and a half, changing one touches one small file however many there are, and
-each piece stays a thing you can open: the record is legible JSON and the
-recipe is a yaml file your editor already understands.
-
-The recipe is read only when something asks for it, which is why it is a
-property rather than a field.
-"""
+"""The register of every snap this tool has made."""
 
 import json
 import os
@@ -45,12 +21,7 @@ ORDER = ("name", "repo", "url", "upstream", "kind", "style", "version", "tag",
 
 
 def home():
-    """Where the register and the generated projects live.
-
-    Inside the snap this is the snap's own writable area; outside it is the
-    usual XDG place. SNAPKIT_HOME overrides both, which is what the tests use
-    and what anyone keeping their projects on another disk will want.
-    """
+    """Where the register and the generated projects live."""
     for name in ("SNAPKIT_HOME", "SNAP_USER_COMMON"):
         value = os.environ.get(name)
         if value:
@@ -66,12 +37,7 @@ def default_path():
 
 @dataclass
 class Snap:
-    """One registered snap.
-
-    `asset_pattern` is the part that makes an update possible at all: it is
-    the chosen asset's name with the version blanked out, so the same asset
-    can be found again in a release that does not exist yet.
-    """
+    """One registered snap."""
 
     name: str
     repo: str = ""                  # owner/name on GitHub
@@ -165,13 +131,7 @@ class Snap:
         return ordered
 
     def record_build(self, version, at=None):
-        """Note that this version was built, most recent last.
-
-        Only the last few are kept in full. A record is meant to stay small
-        and readable, and three hundred builds of the same snap is seventeen
-        kilobytes of history in a one-kilobyte record; `builds` keeps the
-        count honest once the detail has been dropped.
-        """
+        """Note that this version was built, most recent last."""
         stamp = at or now()
         self.history.append({"version": version, "at": stamp})
         del self.history[:-HISTORY_KEPT]
@@ -206,12 +166,7 @@ def now():
 
 
 class Database:
-    """The register directory, and the snaps in it.
-
-    Writes touch one snap. Reads take the records and leave the recipes
-    alone until something asks for one, so listing a thousand snaps does not
-    read a thousand recipes to print their versions.
-    """
+    """The register directory, and the snaps in it."""
 
     def __init__(self, path=None):
         # A path ending in .json is taken as the old single-file register.
@@ -234,14 +189,7 @@ class Database:
     # -- reading -------------------------------------------------------------
 
     def load(self):
-        """Read every record. Recipes are left on disk until wanted.
-
-        A record that cannot be read is set aside rather than taken as the
-        end of the register. One file per snap is worth having partly for
-        this: a typo in one hand-edited record should cost that record, not
-        the other nine hundred and ninety nine. What it must not do is pass
-        unnoticed, so the failures are kept and the caller says so.
-        """
+        """Read every record. Recipes are left on disk until wanted."""
         self.migrate()
         self.snaps = {}
         self.problems = []
@@ -267,19 +215,7 @@ class Database:
         return self
 
     def _resync(self, snap):
-        """Put a record's version back in line with the project it describes.
-
-        The version in a record is what the project was on when it was last
-        imported or built through this tool -- but these projects are also
-        updated by things that have never heard of this register, and a record
-        left behind reports a release as available that is already packaged.
-        The packaging is the authority whenever the directory is still there;
-        a record whose project is gone keeps the last version it was known to
-        be on, because there is nothing better to say.
-
-        Done on load rather than at the call sites so that there is no way to
-        read a record without this having happened first.
-        """
+        """Put a record's version back in line with the project it describes."""
         if not snap.directory or not Path(snap.directory).is_dir():
             return False
         from . import adopt        # here, not above: adopt imports this module
@@ -293,13 +229,7 @@ class Database:
         return True
 
     def migrate(self):
-        """Split the old single-file register into this one, once.
-
-        Kept rather than dropped: somebody has a register from before this
-        changed, and losing it silently would be the worst thing this code
-        could do. The old file is left where it is, renamed, so the migration
-        can be checked afterwards and undone by hand if it went wrong.
-        """
+        """Split the old single-file register into this one, once."""
         legacy = self.root / "snapkit.json"
         if not legacy.is_file() or (self.root / "snaps").is_dir():
             return False
@@ -319,20 +249,7 @@ class Database:
     # -- writing -------------------------------------------------------------
 
     def _write(self, snap):
-        """One snap: its record, and its recipe if there is one.
-
-        The recipe goes down first. If the run dies between the two, what is
-        left over is a recipe with no record -- which nothing reads and the
-        next write replaces. The other order would leave a record pointing at
-        a recipe that was never written.
-
-        The three states of `recipe_text` all mean something different here:
-        text is written, None means it was never read so whatever is on disk
-        stands, and empty means there is deliberately no recipe -- so the file
-        goes. Without that last case an emptied recipe left its old file
-        behind and the next load read it back, and the register said one thing
-        while the disk said another.
-        """
+        """One snap: its record, and its recipe if there is one."""
         if snap.recipe_text:
             _atomic_write(snap.recipe_path, snap.recipe_text)
         elif snap.recipe_text == "":
@@ -349,14 +266,7 @@ class Database:
     # -- the snaps in it -----------------------------------------------------
 
     def add(self, snap, replace=False):
-        """Register a snap, or update the record of one already registered.
-
-        A name already held by a *different* repository is refused. Snap names
-        are made from repository names, so two projects called the same thing
-        -- and there are a lot of repositories called `bat` -- would otherwise
-        land on the same key, and the second would quietly take the place of
-        the first, recipe and all. `replace` is for when that is meant.
-        """
+        """Register a snap, or update the record of one already registered."""
         if not snap.name:
             raise DatabaseError("a snap needs a name")
         existing = self.snaps.get(snap.name)
@@ -390,12 +300,7 @@ class Database:
         return snap
 
     def search(self, text):
-        """Registered snaps matching a piece of text, best match first.
-
-        What a person types is a name, or part of a repository, or the word
-        they remember from the summary -- so all three are searched, and the
-        ordering is by how directly it matched rather than alphabetically.
-        """
+        """Registered snaps matching a piece of text, best match first."""
         needle = (text or "").strip().lower()
         if not needle:
             return []
@@ -426,24 +331,14 @@ class Database:
         return [snap for _, _, snap in sorted(scored, key=lambda row: row[:2])]
 
     def find_repo(self, repo):
-        """The snap already made from this repository, if there is one.
-
-        What makes a repository reusable: paste the same URL again and the
-        answer is "you already have this, here is what was chosen last time"
-        rather than a second project directory next to the first.
-        """
+        """The snap already made from this repository, if there is one."""
         for snap in self.snaps.values():
             if snap.repo.lower() == (repo or "").lower():
                 return snap
         return None
 
     def remove(self, name):
-        """Forget a snap entirely -- the record, the recipe, and the icon.
-
-        The project directory is not touched: deleting files someone may have
-        edited is the caller's decision to take and to confirm, not a side
-        effect of tidying the register.
-        """
+        """Forget a snap entirely -- the record, the recipe, and the icon."""
         snap = self.get(name)
         kept = snap.kept_icon
         del self.snaps[name]
@@ -470,12 +365,7 @@ class Database:
 
 
 def _atomic_write(path, text):
-    """Write a file through a temporary one in the same directory.
-
-    So that an interrupted write leaves what was there before rather than
-    half of what was coming. These files are the only record of how to
-    rebuild anything.
-    """
+    """Write a file through a temporary one in the same directory."""
     path.parent.mkdir(parents=True, exist_ok=True)
     handle, temporary = tempfile.mkstemp(dir=path.parent, prefix=".snapkit-")
     try:

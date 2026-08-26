@@ -1,27 +1,4 @@
-"""The shared recipe database, published as a folder in a git repository.
-
-A project here is more than its snapcraft.yaml. Three of the twenty-one build
-from the recipe alone; the rest also need a launcher, an overlay tree, a
-pack.py or a hook, and a recipe without them is a recipe that cannot build. So
-what goes into the database is every source file of a project -- not the
-downloaded release, not the built .snap, and not a build tree.
-
-    snap-db/
-        index.json              every snap, its version and its files
-        btop/snapcraft.yaml
-        btop/pack.py
-        zen/overlay/bin/launcher
-        ...
-
-index.json is the whole of the protocol. A client reads it once, and then
-knows what exists, what each one is, and which files to ask for -- so adding a
-file to a project needs no new client, and a client that is a version behind
-still works.
-
-Publishing writes that tree out of the projects on this disk. Fetching reads
-it back over https from raw.githubusercontent.com, which needs no token and no
-git.
-"""
+"""The shared recipe database, published as a folder in a git repository."""
 
 import fnmatch
 import hashlib
@@ -166,12 +143,7 @@ class DatabaseError(Exception):
 
 
 def base_url(repo=REPO, branch=BRANCH, folder=FOLDER):
-    """Where the database is read from, or SNAPKIT_DB_URL when it is set.
-
-    The override is what makes a fork, a private mirror or a local checkout
-    usable without editing anything, and it is how the tests reach a database
-    on disk instead of over the network.
-    """
+    """Where the database is read from, or SNAPKIT_DB_URL when it is set."""
     return os.environ.get("SNAPKIT_DB_URL") or RAW.format(
         repo=repo, branch=branch, folder=folder)
 
@@ -190,11 +162,7 @@ def _wanted(relative):
 
 
 def project_files(directory):
-    """Every source file of one project, relative to it, sorted.
-
-    Anything too large is left out and reported, so a vendored tarball does
-    not quietly turn the database into a binary store.
-    """
+    """Every source file of one project, relative to it, sorted."""
     directory = Path(directory)
     kept, skipped = [], []
     for path in sorted(directory.rglob("*")):
@@ -224,16 +192,7 @@ def local_sources(recipe_text):
 
 
 def unmet_sources(directory, kept, artifact=""):
-    """Local sources a published project would arrive without.
-
-    Driven by the recipe rather than by file size: the reason transmission
-    cannot be built from the database is that its vendored gtkmm tarball is an
-    archive, and archives are excluded as payload. Checking sizes would never
-    have caught it -- checking what the recipe asks for does.
-
-    The one release the project downloads is not counted: snapkit fetches that
-    itself from the record.
-    """
+    """Local sources a published project would arrive without."""
     directory = Path(directory)
     published = {str(k) for k in kept}
     unmet = []
@@ -271,10 +230,7 @@ def local_fingerprint(directory):
 # -- publishing ---------------------------------------------------------------
 
 def publish(snaps, into, reporter=None):
-    """Write the database out of the projects on this disk.
-
-    `snaps` is an iterable of records. Returns the index it wrote.
-    """
+    """Write the database out of the projects on this disk."""
     into = Path(into)
     into.mkdir(parents=True, exist_ok=True)
     entries, left_out = {}, {}
@@ -383,13 +339,7 @@ def fetch(name, into, found=None, url=None, reporter=None):
 
 
 def apply_record(snap, record):
-    """Put the published update fields onto a record read off the project.
-
-    Reading a project tells you what it builds; it cannot tell you where the
-    release comes from or how an update reaches the packaging. That is what
-    the index carries, and without it a pulled project has no artifact to
-    build and no upstream to check.
-    """
+    """Put the published update fields onto a record read off the project."""
     for field, value in (record.get("record") or {}).items():
         if field in RECORD:
             setattr(snap, field, value)

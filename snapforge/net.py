@@ -1,10 +1,4 @@
-"""HTTP, downloads and checksums.
-
-Everything here is one small request against a page that is not rate limited,
-or one large download. Nothing talks to api.github.com: a shared address gets
-403s from it often enough that a tool which fails on the first thing you ask
-of it is not worth having.
-"""
+"""HTTP, downloads and checksums."""
 
 import hashlib
 import time
@@ -72,12 +66,7 @@ def head_location(url, timeout=META_TIMEOUT):
 
 
 def sha256_file(path):
-    """The sha256 of a file already on disk, read in blocks.
-
-    A vendored library is checked against the checksum written down beside it
-    rather than fetched again, so this is what makes a second build of the
-    same project need no network at all.
-    """
+    """The sha256 of a file already on disk, read in blocks."""
     digest = hashlib.sha256()
     with open(path, "rb") as handle:
         for block in iter(lambda: handle.read(CHUNK), b""):
@@ -86,13 +75,7 @@ def sha256_file(path):
 
 
 def download(url, dest, sha="", on_progress=None):
-    """Fetch a URL to `dest`, verifying `sha` when one is known.
-
-    Returns the sha256 of what arrived. The download lands on `dest.part` and
-    is moved into place only once it is complete and verified, so an
-    interrupted run never leaves a half file that a later build would open
-    and trust.
-    """
+    """Fetch a URL to `dest`, verifying `sha` when one is known."""
     part = dest.with_name(dest.name + ".part")
     digest = hashlib.sha256()
     done = 0

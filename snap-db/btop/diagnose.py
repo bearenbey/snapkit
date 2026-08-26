@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""Reinstall the btop snap, connect its interfaces, and capture everything
-needed to explain the SIGSEGV.
-
-    ./diagnose.py
-
-It asks for sudo (install + connect) and leaves a report in ./diagnose.log.
-The snap it installs is the one this project currently packages, so build
-first if the packaging has moved on.
-"""
+"""Reinstall the btop snap, connect its interfaces, and capture everything"""
 
 import os
 import subprocess
@@ -17,12 +9,7 @@ from pathlib import Path
 
 
 def yaml_version(path):
-    """The `version:` field of a snapcraft.yaml.
-
-    Three lines, and kept here rather than reached for out of the packaging
-    tool: this script is a thing you run when the snap is misbehaving, and it
-    should not stop working because the tool beside it moved.
-    """
+    """The `version:` field of a snapcraft.yaml."""
     for line in Path(path).read_text(encoding="utf-8").splitlines():
         if line.startswith("version:"):
             return line.split(":", 1)[1].strip().strip("'\"")
