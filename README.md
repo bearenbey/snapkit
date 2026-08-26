@@ -22,10 +22,9 @@
 > the update model, and the packaging decisions behind all twenty-one snaps.
 > Those came first and the rest was built onto them.
 >
-> One limit worth stating plainly. That figure covers work Claude can account
-> for by having done it. It cannot see what happened before, so if earlier
-> parts of this were also written with help, the true share is higher than a
-> quarter rather than lower.
+> The quarter counts work Claude did and can point to. It has no way of
+> knowing whether anything here was written with help before that, so read it
+> as the least AI went into this rather than the most.
 
 Make a snap package out of a GitHub repository, or out of a `.deb` you
 already have, and keep it that way.
