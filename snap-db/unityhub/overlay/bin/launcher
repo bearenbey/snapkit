@@ -1,0 +1,14 @@
+#!/bin/bash
+set -eu
+
+# Upstream's wrapper does not survive the move, and 3.20 moved the payload.
+bin=
+for dir in "$SNAP/usr/lib/unityhub" "$SNAP/opt/unityhub"; do
+  if [ -x "$dir/unityhub-bin" ]; then bin=$dir/unityhub-bin; break; fi
+done
+[ -n "$bin" ] || { echo "unityhub-bin is not in this snap" >&2; exit 1; }
+
+# No setuid chrome-sandbox here, and the userns fallback gets blocked.
+opts=(--no-sandbox)
+
+exec "$bin" "${opts[@]}" "$@"

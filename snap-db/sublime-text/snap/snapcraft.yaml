@@ -1,0 +1,57 @@
+name: sublime-text
+base: core24
+adopt-info: sublime-text
+title: Sublime Text
+summary: Sophisticated text editor for code, markup and prose
+license: Proprietary
+website: https://www.sublimetext.com/
+contact: hi.bearen@pm.me
+description: |
+  Sublime Text is a sophisticated text editor for code, markup and prose.
+
+  This snap repackages the official Sublime Text .deb published by
+  Sublime HQ Pty Ltd. Sublime Text is proprietary software and requires a
+  license for continued use - see https://www.sublimetext.com/
+
+  Classic confinement is used so that Sublime Text behaves exactly like the
+  .deb: it reads your real ~/.config/sublime-text (settings, license,
+  packages), and build systems, LSP plugins and terminal integrations can
+  reach the tools installed on the host.
+
+grade: stable
+confinement: classic
+compression: lzo
+
+platforms:
+  amd64:
+
+# Prebuilt binaries with their own $ORIGIN RUNPATH, so silence the linters.
+lint:
+  ignore:
+    - classic
+    - library
+
+apps:
+  sublime-text:
+    command: opt/sublime_text/sublime_text
+    common-id: sublime_text.desktop
+  subl:
+    command: bin/subl
+
+parts:
+  sublime-text:
+    plugin: dump
+    source: ./sublime-text_build-4200_amd64.deb
+    source-type: deb
+    override-pull: |
+      craftctl default
+      craftctl set version="$(dpkg-deb -f "${CRAFT_PROJECT_DIR}"/sublime-text_*.deb Version)"
+    override-build: |
+      craftctl default
+      # --fwdargv0 keys off the basename, so hand it a path ending in "subl".
+      install -d "${CRAFT_PART_INSTALL}/bin"
+      cat > "${CRAFT_PART_INSTALL}/bin/subl" <<'EOF'
+      #!/bin/sh
+      exec "${SNAP}/opt/sublime_text/sublime_text" --fwdargv0 "${SNAP}/usr/bin/subl" "$@"
+      EOF
+      chmod 755 "${CRAFT_PART_INSTALL}/bin/subl"

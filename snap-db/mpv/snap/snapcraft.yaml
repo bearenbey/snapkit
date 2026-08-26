@@ -1,0 +1,379 @@
+name: mpv
+title: mpv
+base: core26
+adopt-info: mpv
+summary: Media player for the command line and the desktop
+description: |
+  mpv is a media player based on MPlayer and mplayer2. It plays practically
+  every container and codec there is, drives its video output through OpenGL,
+  Vulkan or VAAPI, and is driven from the keyboard, a small on screen
+  controller, an IPC socket or its Lua and JavaScript scripting interfaces.
+
+  This snap builds mpv from the upstream release tarball against the system
+  FFmpeg and libplacebo of Ubuntu 26.04.
+
+  Notes for this snap:
+
+    * Video output needs GPU userspace, which comes from the `mesa-2604`
+      content snap rather than the host:
+
+          sudo snap install mesa-2604
+          sudo snap connect mpv:gpu-2604 mesa-2604:gpu-2604
+          sudo snap connect mpv:opengl
+
+      Without it the `gpu` and `gpu-next` video outputs have no driver to talk
+      to; `--vo=xv`, `--vo=sixel` and `--vo=tct` still work.
+
+    * Configuration lives in `~/snap/mpv/current/.config/mpv` by default. To
+      use your existing `~/.config/mpv` instead, connect the opt-in
+      personal-files plug:
+
+          sudo snap connect mpv:dot-config-mpv
+
+    * The `home` interface covers ordinary files in your home directory but
+      not dot-directories at its top level. Connect `removable-media` for
+      files under `/media` and `/mnt`.
+
+    * `yt-dlp` is bundled, so playing a URL works out of the box. Streaming
+      sites break yt-dlp faster than a snap rebuild can follow, so a newer
+      copy dropped in `~/snap/mpv/current/bin/yt-dlp` is used in preference to
+      the bundled one.
+
+    * Lua (LuaJIT) and JavaScript (MuJS) scripting are enabled; user scripts
+      go in `scripts/` inside the configuration directory above.
+
+    * Disc playback (`dvd://`, `bd://`, `cdda://`) needs the `optical-drive`
+      interface, which is connected read-only by default. Neither CSS
+      decryption nor AACS/BD+ keys are included.
+
+license: GPL-2.0-or-later
+website: https://mpv.io/
+source-code: https://github.com/mpv-player/mpv
+issues: https://github.com/mpv-player/mpv/issues
+contact: https://github.com/mpv-player/mpv/issues
+
+grade: stable
+confinement: strict
+# lzo over xz: a bigger .snap for a faster cold start, launched often.
+compression: lzo
+
+# nv-codec-headers is x86 only, so another arch needs that flag dropped.
+platforms:
+  amd64:
+
+lint:
+  ignore:
+    - gpu:
+        # mpv links libva and libvdpau, so the client libraries ship.
+        - usr/lib/*/libva.so.*
+        - usr/lib/*/libva-drm.so.*
+        - usr/lib/*/libva-wayland.so.*
+        - usr/lib/*/libva-x11.so.*
+        - usr/lib/*/libvdpau.so.*
+    - library:
+        # glvnd's third dispatch lib: splitting the set up breaks drivers.
+        - usr/lib/*/libOpenGL.so.*
+
+plugs:
+  # Mesa by hand: the gpu extension exits 3 and kills audio-only playback.
+  gpu-2604:
+    interface: content
+    target: $SNAP/gpu-2604
+    default-provider: mesa-2604
+
+  # Opt-in ~/.config/mpv: personal-files is privileged and never auto-connects.
+  dot-config-mpv:
+    interface: personal-files
+    write:
+      - $HOME/.config/mpv
+
+apps:
+  mpv:
+    command: bin/mpv-launch
+    desktop: usr/share/applications/mpv.desktop
+    common-id: io.mpv.mpv
+    plugs:
+      - home
+      - removable-media
+      - network
+      - network-bind
+      - audio-playback
+      - audio-record
+      - alsa
+      - optical-drive
+      - opengl
+      - desktop
+      - desktop-legacy
+      - wayland
+      - x11
+      - screen-inhibit-control
+      - dot-config-mpv
+
+parts:
+  mpv:
+    plugin: meson
+    source: https://github.com/mpv-player/mpv/archive/refs/tags/v0.41.0.tar.gz
+    source-checksum: sha256/ee21092a5ee427353392360929dc64645c54479aefdb5babc5cfbb5fad626209
+    meson-parameters:
+      - --prefix=/usr
+      - --buildtype=release
+      - -Dgpl=true
+      - -Dcplayer=true
+      # Nothing here links libmpv, and its headers get pruned below anyway.
+      - -Dlibmpv=false
+      - -Dbuild-date=false
+      - -Dtests=false
+      # `man` does not look inside a snap; --list-options covers it.
+      - -Dmanpage-build=disabled
+      # LuaJIT for the OSC and user scripts, MuJS for the JavaScript ones.
+      - -Dlua=luajit
+      - -Djavascript=enabled
+      - -Dcplugins=enabled
+      # Demuxers, streams and filters
+      - -Dlibavdevice=enabled
+      - -Dlibarchive=enabled
+      - -Dlibbluray=enabled
+      - -Dcdda=enabled
+      - -Ddvdnav=enabled
+      - -Duchardet=enabled
+      - -Diconv=enabled
+      - -Drubberband=enabled
+      - -Dzimg=enabled
+      - -Dzlib=enabled
+      - -Dlcms2=enabled
+      - -Djpeg=enabled
+      # DVB needs /dev/dvb, which strict confinement has no interface for.
+      - -Ddvbin=disabled
+      # VapourSynth drags in all of Python for a feature needing a script.
+      - -Dvapoursynth=disabled
+      # PulseAudio and ALSA only: nothing reaches a native PipeWire or JACK.
+      - -Dpulse=enabled
+      - -Dalsa=enabled
+      - -Dpipewire=disabled
+      - -Djack=disabled
+      - -Dopenal=disabled
+      - -Dsndio=disabled
+      - -Doss-audio=disabled
+      # Video outputs
+      - -Dgl=enabled
+      - -Dgl-x11=enabled
+      - -Degl=enabled
+      - -Degl-x11=enabled
+      - -Degl-wayland=enabled
+      - -Degl-drm=enabled
+      - -Dgbm=enabled
+      - -Dplain-gl=enabled
+      - -Dvulkan=enabled
+      - -Dwayland=enabled
+      - -Ddmabuf-wayland=enabled
+      - -Dx11=enabled
+      - -Dx11-clipboard=enabled
+      - -Dxv=enabled
+      - -Ddrm=enabled
+      # Terminal output, for when there is no gpu-2604 and no display.
+      - -Dsixel=enabled
+      - -Dcaca=enabled
+      # SDL2 would duplicate outputs mpv already has natively.
+      - -Dsdl2-audio=disabled
+      - -Dsdl2-video=disabled
+      - -Dsdl2-gamepad=disabled
+      # shaderc and spirv-cross are only used by the Direct3D 11 backend.
+      - -Dshaderc=disabled
+      - -Dspirv-cross=disabled
+      # CUDA/NVDEC dlopens the driver, so nothing proprietary is linked in.
+      - -Dvaapi=enabled
+      - -Dvaapi-drm=enabled
+      - -Dvaapi-wayland=enabled
+      - -Dvaapi-x11=enabled
+      - -Dvdpau=enabled
+      - -Dvdpau-gl-x11=enabled
+      - -Dcuda-hwaccel=enabled
+      - -Dcuda-interop=enabled
+    build-packages:
+      - gcc
+      - meson
+      - ninja-build
+      - pkgconf
+      - python3
+      - libavcodec-dev
+      - libavformat-dev
+      - libavutil-dev
+      - libavfilter-dev
+      - libavdevice-dev
+      - libswscale-dev
+      - libswresample-dev
+      - libplacebo-dev
+      - libass-dev
+      - libluajit-5.1-dev
+      - libmujs-dev
+      - libarchive-dev
+      - libbluray-dev
+      - libcdio-dev
+      - libcdio-paranoia-dev
+      - libdvdnav-dev
+      - libdvdread-dev
+      - libuchardet-dev
+      - librubberband-dev
+      - libzimg-dev
+      - liblcms2-dev
+      - libjpeg-dev
+      - zlib1g-dev
+      - libasound2-dev
+      - libpulse-dev
+      - libdrm-dev
+      - libdisplay-info-dev
+      - libgbm-dev
+      - libegl-dev
+      - libgl-dev
+      - libwayland-dev
+      - wayland-protocols
+      - libxkbcommon-dev
+      - libx11-dev
+      - libxext-dev
+      - libxfixes-dev
+      - libxrandr-dev
+      - libxpresent-dev
+      - libxss-dev
+      - libxv-dev
+      - libvulkan-dev
+      - libva-dev
+      - libvdpau-dev
+      - libsixel-dev
+      - libcaca-dev
+      # nv-codec-headers only: the driver libraries are dlopened at runtime.
+      - libffmpeg-nvenc-dev
+    stage-packages:
+      - libavcodec62
+      - libavformat62
+      - libavutil60
+      - libavfilter11
+      - libavdevice62
+      - libswscale9
+      - libswresample6
+      - libplacebo360
+      - libass9
+      - libluajit-5.1-2
+      - libmujs3
+      - libarchive13t64
+      - libbluray3
+      - libcdio19t64
+      - libcdio-cdda2t64
+      - libcdio-paranoia2t64
+      - libdvdnav4
+      - libdvdread8t64
+      - libuchardet0
+      - librubberband3
+      - libzimg2
+      - liblcms2-2
+      - libjpeg8
+      - zlib1g
+      - libasound2t64
+      - libasound2-data
+      - libpulse0
+      - libdrm2
+      - libdisplay-info3
+      - libgbm1
+      # glvnd's dispatch libs; the drivers behind them are gpu-2604's.
+      - libegl1
+      - libgl1
+      - libglx0
+      - libopengl0
+      - libwayland-client0
+      - libwayland-cursor0
+      - libwayland-egl1
+      - libxkbcommon0
+      - libx11-6
+      - libxext6
+      - libxfixes3
+      - libxrandr2
+      - libxpresent1
+      - libxss1
+      - libxv1
+      - libvulkan1
+      - libva2
+      - libva-drm2
+      - libva-wayland2
+      - libva-x11-2
+      - libvdpau1
+      - libsixel1
+      - libcaca0
+      # Fonts for libass and the OSD; the host's are not guaranteed.
+      - fontconfig-config
+      - fonts-dejavu-core
+    override-build: |
+      craftctl default
+      craftctl set version="$(cat "${CRAFT_PART_SRC}/MPV_VERSION")"
+      # Upstream's `Icon=mpv` is a theme name a host cannot resolve for a snap.
+      sed -i 's|^Icon=mpv$|Icon=${SNAP}/usr/share/icons/hicolor/128x128/apps/mpv.png|' \
+        "${CRAFT_PART_INSTALL}/usr/share/applications/mpv.desktop"
+    prime:
+      # Nothing compiles in here, and completions suit a system install.
+      - -usr/include
+      - -usr/lib/*/pkgconfig
+      - -usr/share/doc
+      - -usr/share/man
+      - -usr/share/lintian
+      - -usr/share/bash-completion
+      - -usr/share/zsh
+      - -usr/share/fish
+      # libcaca's GL driver wants a GLUT stack; ncurses and X11 remain.
+      - -usr/lib/*/caca/libgl_plugin.*
+      # Mesa rides in on libgbm1 and duplicates mesa-2604; libLLVM is 133 MB.
+      - -usr/lib/*/dri
+      - -usr/lib/*/gbm
+      - -usr/lib/*/libgallium*
+      - -usr/lib/*/libLLVM*
+      - -usr/lib/*/libEGL_mesa*
+      - -usr/lib/*/libGLX_mesa*
+      - -usr/lib/*/libGLX_indirect*
+      - -usr/share/glvnd
+      # Only the trace driver; real VDPAU comes from mesa-2604 and the host.
+      - -usr/lib/*/vdpau
+      # Each rides along in a package something else needs, linked by nothing.
+      - -usr/lib/*/libflite_cmu_grapheme_*
+      - -usr/lib/*/libflite_cmu_indic_*
+      - -usr/lib/*/libflite_cmu_time_*
+      - -usr/lib/*/libhwy_contrib.*
+      - -usr/lib/*/libhwy_test.*
+      - -usr/lib/*/libcaca++.*
+      - -usr/lib/*/libjacknet.*
+      - -usr/lib/*/libjackserver.*
+      - -usr/lib/*/libpulse-simple.*
+      - -usr/lib/*/libcjson_utils.*
+      - -usr/lib/*/libfftw3_omp.*
+      - -usr/lib/*/libfftw3_threads.*
+      - -usr/lib/*/libzvbi-chains.*
+      # Support libs orphaned by the prune above; mesa-2604 has its own.
+      - -usr/lib/*/libdrm_amdgpu.*
+      - -usr/lib/*/libdrm_intel.*
+      - -usr/lib/*/libxcb-glx.*
+      - -usr/lib/*/libxcb-present.*
+      - -usr/lib/*/libxcb-randr.*
+      - -usr/lib/*/libxcb-sync.*
+      - -usr/lib/*/libxshmfence.*
+      - -usr/lib/*/libsensors.*
+      - -usr/lib/*/libXxf86vm.*
+
+  # yt-dlp for `mpv <url>`, kept apart so the shebang fixup below is obvious.
+  ytdl:
+    plugin: nil
+    stage-packages:
+      - yt-dlp
+    # In build, not prime: a prime scriptlet records an empty file set.
+    override-build: |
+      craftctl default
+      # The deb hard codes /usr/bin/python3, which the base snap does not have.
+      sed -i '1s|^#!.*python3.*$|#!/usr/bin/env python3|' \
+        "${CRAFT_PART_INSTALL}/usr/bin/yt-dlp"
+    prime:
+      - -usr/include
+      - -usr/lib/*/pkgconfig
+      - -usr/share/doc
+      - -usr/share/man
+      - -usr/share/lintian
+
+  launcher:
+    plugin: dump
+    source: snap/local
+    organize:
+      mpv-launch: bin/mpv-launch

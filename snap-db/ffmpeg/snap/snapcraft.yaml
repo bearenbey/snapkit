@@ -1,0 +1,390 @@
+name: ffmpeg
+title: FFmpeg
+base: core26
+adopt-info: ffmpeg
+summary: Cross-platform tools to record, convert and stream audio and video
+description: |
+  FFmpeg is the leading multimedia framework, able to decode, encode,
+  transcode, mux, demux, stream, filter and play almost anything that humans
+  and machines have created.
+
+  This snap ships the three command line tools built from the upstream release
+  tarball against a wide set of codecs and filters:
+
+    * `ffmpeg`  — the transcoder
+    * `ffprobe` — the stream analyser (`ffmpeg.ffprobe`)
+    * `ffplay`  — the SDL based player (`ffmpeg.ffplay`)
+
+  Notes for this snap:
+
+    * Encoders include x264, x265, OpenH264, VP8/VP9, AV1 (SVT-AV1 and
+      libaom), Opus, Vorbis, LAME, Theora, WebP and JPEG XL; AV1 decoding uses
+      VideoLAN's dav1d. Filters include libass subtitles, zimg, rubberband,
+      vidstab and libplacebo.
+
+    * Hardware acceleration is available through VAAPI, VDPAU, Vulkan, Intel
+      QSV (libvpl) and NVIDIA NVENC/NVDEC/CUDA. The GPU userspace comes from
+      the `mesa-2604` content snap, so install it and connect `opengl`:
+
+          sudo snap install mesa-2604
+          sudo snap connect ffmpeg:opengl
+
+    * The `home` interface covers ordinary files in your home directory but
+      not dot-directories at its top level. Connect `removable-media` for
+      `/media` and `/mnt`.
+
+    * Capture interfaces are opt-in: connect `camera` for V4L2 webcams,
+      `audio-record` for microphone and monitor sources, `alsa` for raw ALSA
+      devices and `optical-drive` for CD/DVD input.
+
+    * Built with `--enable-gpl --enable-version3` and without `--enable-nonfree`,
+      so the result is redistributable GPL-3.0-or-later. The non-free AAC
+      encoder (libfdk-aac) is deliberately absent; use the built-in `aac`
+      encoder instead.
+
+license: GPL-3.0-or-later
+website: https://ffmpeg.org/
+source-code: https://git.ffmpeg.org/ffmpeg.git
+contact: https://ffmpeg.org/contact.html
+issues: https://trac.ffmpeg.org/
+
+grade: stable
+confinement: strict
+# lzo over xz: a bigger .snap for a faster start, invoked over and over.
+compression: lzo
+
+# libvpl and the NVENC headers are x86 only, and the flags below assume them.
+platforms:
+  amd64:
+
+# No /usr/share/fonts layout: it collides with snapd's own host font sharing.
+
+plugs:
+  # Mesa by hand: the gpu extension exits 3 and kills software transcoding too.
+  gpu-2604:
+    interface: content
+    target: $SNAP/gpu-2604
+    default-provider: mesa-2604
+
+apps:
+  ffmpeg:
+    command: bin/ffmpeg-launch ffmpeg
+    plugs: &tool-plugs
+      - home
+      - removable-media
+      - network
+      - network-bind
+      - audio-playback
+      - audio-record
+      - alsa
+      - camera
+      - optical-drive
+      - opengl
+      - hardware-observe
+
+  ffprobe:
+    command: bin/ffmpeg-launch ffprobe
+    plugs: *tool-plugs
+
+  ffplay:
+    command: bin/ffmpeg-launch ffplay
+    plugs:
+      - home
+      - removable-media
+      - network
+      - network-bind
+      - audio-playback
+      - audio-record
+      - alsa
+      - camera
+      - optical-drive
+      - opengl
+      - hardware-observe
+      - desktop
+      - wayland
+      - x11
+
+parts:
+  ffmpeg:
+    plugin: autotools
+    source: https://ffmpeg.org/releases/ffmpeg-9.0.1.tar.xz
+    source-checksum: sha256/cf38e0e28c7e5605942c4a77755349b0145804a397af37eb1fb4c77cb237f635
+    # ffmpeg's configure is hand written and only knows the flags below.
+    autotools-configure-parameters:
+      - --prefix=/usr
+      - --disable-static
+      - --enable-shared
+      - --disable-debug
+      - --disable-doc
+      - --enable-gpl
+      - --enable-version3
+      - --enable-runtime-cpudetect
+      # Video encoders and decoders
+      - --enable-libx264
+      - --enable-libx265
+      - --enable-libvpx
+      - --enable-libaom
+      - --enable-libdav1d
+      - --enable-libsvtav1
+      - --enable-libxvid
+      - --enable-libopenh264
+      - --enable-libwebp
+      - --enable-libopenjpeg
+      - --enable-libjxl
+      # Audio encoders and decoders
+      - --enable-libopus
+      - --enable-libvorbis
+      - --enable-libmp3lame
+      - --enable-libtheora
+      - --enable-libspeex
+      - --enable-libtwolame
+      - --enable-libgsm
+      - --enable-libcodec2
+      - --enable-libopencore-amrnb
+      - --enable-libopencore-amrwb
+      - --enable-libvo-amrwbenc
+      # Text, subtitles and fonts
+      - --enable-libass
+      - --enable-libfreetype
+      - --enable-libfontconfig
+      - --enable-libfribidi
+      - --enable-libharfbuzz
+      - --enable-libaribb24
+      - --enable-libzvbi
+      # Filters
+      - --enable-libzimg
+      - --enable-librubberband
+      - --enable-libsoxr
+      - --enable-libvidstab
+      - --enable-libmysofa
+      - --enable-libqrencode
+      - --enable-chromaprint
+      # Container and disc sources
+      - --enable-libbluray
+      - --enable-libopenmpt
+      - --enable-libgme
+      - --enable-libcdio
+      - --enable-libdvdnav
+      - --enable-libdvdread
+      # Protocols
+      - --enable-gnutls
+      - --enable-libssh
+      - --enable-libxml2
+      - --enable-libsrt
+      - --enable-librist
+      - --enable-libzmq
+      - --enable-libsnappy
+      - --enable-lzma
+      - --enable-zlib
+      - --enable-bzlib
+      # NVENC/NVDEC/CUDA dlopen the driver, so nothing proprietary is linked in.
+      - --enable-vaapi
+      - --enable-vdpau
+      - --enable-vulkan
+      - --enable-libplacebo
+      - --enable-libvpl
+      - --enable-opencl
+      - --enable-libdrm
+      - --enable-ffnvcodec
+      - --enable-nvenc
+      - --enable-nvdec
+      - --enable-cuvid
+      - --enable-cuda-llvm
+      # Capture and playback devices
+      - --enable-sdl2
+      - --enable-libpulse
+      - --enable-libjack
+      - --enable-libv4l2
+      - --enable-libxcb
+      - --enable-libxcb-shm
+      - --enable-libxcb-xfixes
+      - --enable-libxcb-shape
+      - --enable-libcaca
+    build-packages:
+      - clang            # --enable-cuda-llvm compiles the CUDA kernels to PTX
+      - nasm
+      - yasm
+      - pkg-config
+      - libx264-dev
+      - libx265-dev
+      - libnuma-dev
+      - libvpx-dev
+      - libaom-dev
+      - libdav1d-dev
+      - libsvtav1enc-dev
+      - libxvidcore-dev
+      - libopenh264-dev
+      - libwebp-dev
+      - libopenjp2-7-dev
+      - libjxl-dev
+      - libopus-dev
+      - libvorbis-dev
+      - libmp3lame-dev
+      - libtheora-dev
+      - libspeex-dev
+      - libtwolame-dev
+      - libgsm1-dev
+      - libcodec2-dev
+      - libopencore-amrnb-dev
+      - libopencore-amrwb-dev
+      - libvo-amrwbenc-dev
+      - libass-dev
+      - libfreetype-dev
+      - libfontconfig-dev
+      - libfribidi-dev
+      - libharfbuzz-dev
+      - libaribb24-dev
+      - libzvbi-dev
+      - libzimg-dev
+      - librubberband-dev
+      - libsoxr-dev
+      - libvidstab-dev
+      - libmysofa-dev
+      - libqrencode-dev
+      - libchromaprint-dev
+      - libbluray-dev
+      - libopenmpt-dev
+      - libgme-dev
+      - libcdio-dev
+      - libcdio-paranoia-dev
+      - libdvdnav-dev
+      - libdvdread-dev
+      - libgnutls28-dev
+      - libssh-dev
+      - libxml2-dev
+      - libsrt-gnutls-dev
+      - librist-dev
+      - libzmq3-dev
+      - libsnappy-dev
+      - liblzma-dev
+      - zlib1g-dev
+      - libbz2-dev
+      - libva-dev
+      - libvdpau-dev
+      - libdrm-dev
+      - libvulkan-dev
+      - libplacebo-dev
+      - libvpl-dev
+      # ffmpeg 9 compiles its Vulkan shaders at build time with external glslc.
+      - glslc
+      - spirv-headers
+      - ocl-icd-opencl-dev
+      # nv-codec-headers 12.1.14.0: newer ones demand a driver 610 or later.
+      - libffmpeg-nvenc-dev
+      - libsdl2-dev
+      - libpulse-dev
+      - libasound2-dev
+      - libjack-jackd2-dev
+      - libv4l-dev
+      - libxcb1-dev
+      - libxcb-shm0-dev
+      - libxcb-xfixes0-dev
+      - libxcb-shape0-dev
+      - libcaca-dev
+    stage-packages:
+      - libx264-165
+      - libx265-215
+      - libnuma1
+      - libvpx12
+      - libaom3
+      - libdav1d7
+      - libsvtav1enc2
+      - libxvidcore4
+      - libopenh264-8
+      - libwebp7
+      - libwebpmux3
+      - libwebpdemux2
+      - libopenjp2-7
+      - libjxl0.11
+      - libopus0
+      - libvorbis0a
+      - libvorbisenc2
+      - libvorbisfile3
+      - libmp3lame0
+      - libtheora1
+      - libtheoradec2
+      - libtheoraenc2
+      - libspeex1
+      - libtwolame0
+      - libgsm1
+      - libcodec2-1.2
+      - libopencore-amrnb0
+      - libopencore-amrwb0
+      - libvo-amrwbenc0
+      - libass9
+      - libfreetype6
+      - libfontconfig1
+      - libfribidi0
+      - libharfbuzz0b
+      - libaribb24-0t64
+      - libzvbi0t64
+      - libzimg2
+      - librubberband3
+      - libsoxr0
+      - libvidstab1.1
+      - libmysofa1
+      - libqrencode4
+      - libchromaprint1
+      - libbluray3
+      - libopenmpt0t64
+      - libgme0
+      - libcdio19t64
+      - libcdio-paranoia2t64
+      - libdvdnav4
+      - libdvdread8t64
+      - libgnutls30t64
+      - libssh-4
+      - libxml2-16
+      - libsrt1.5-gnutls
+      - librist4
+      - libzmq5
+      - libsnappy1v5
+      - liblzma5
+      - zlib1g
+      - libbz2-1.0
+      - libva2
+      - libva-drm2
+      - libva-x11-2
+      - libvdpau1
+      - libdrm2
+      - libvulkan1
+      - libplacebo360
+      - libvpl2
+      # --enable-opencl makes the ICD loader a hard DT_NEEDED of libavutil.
+      - ocl-icd-libopencl1
+      - libsdl2-2.0-0
+      # configure takes these from SDL2 and makes them hard DT_NEEDED entries.
+      - libxv1
+      - libsndio7.0
+      - libpulse0
+      - libasound2t64
+      - libasound2-data
+      - libjack-jackd2-0
+      - libv4l-0t64
+      - libv4lconvert0t64
+      - libxcb1
+      - libxcb-shm0
+      - libxcb-xfixes0
+      - libxcb-shape0
+      - libcaca0
+      # Fonts for drawtext, and for libass when a track names none.
+      - fontconfig-config
+      - fonts-dejavu-core
+    override-build: |
+      craftctl default
+      craftctl set version="$(cat "${CRAFT_PART_SRC}/RELEASE")"
+    prime:
+      - -usr/include
+      - -usr/lib/pkgconfig
+      - -usr/lib/*/pkgconfig
+      - -usr/share/doc
+      - -usr/share/man
+      - -usr/share/ffmpeg/examples
+      # libcaca's GL driver wants a GLUT stack; its ncurses and X11 ones remain.
+      - -usr/lib/*/caca/libgl_plugin.*
+
+  launcher:
+    plugin: dump
+    source: snap/local
+    organize:
+      ffmpeg-launch: bin/ffmpeg-launch

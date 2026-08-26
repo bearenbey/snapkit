@@ -1,0 +1,91 @@
+name: godot
+title: Godot Engine
+base: core24
+version: '4.7.2'
+summary: 2D and 3D cross-platform game engine
+description: |
+  Godot Engine is a feature-packed, cross-platform game engine to create 2D
+  and 3D games from a unified interface. It provides a comprehensive set of
+  common tools, so that users can focus on making games without having to
+  reinvent the wheel.
+
+  This snap is a repack of the official upstream editor build
+  (Godot_v4.7.2-stable_linux.x86_64.zip) and is not published or endorsed by
+  the Godot Engine project.
+
+license: MIT
+source-code: https://github.com/godotengine/godot
+issues: https://github.com/godotengine/godot/issues
+website: https://godotengine.org
+contact: https://github.com/godotengine/godot/issues
+
+icon: share/icons/hicolor/128x128/apps/godot.png
+
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+apps:
+  godot:
+    command: bin/launcher
+    common-id: org.godotengine.Godot
+    # The zip is a bare binary with no desktop entry, so this is the overlay's.
+    desktop: share/applications/godot.desktop
+    # The extension brings the command chain, desktop plugs and hooks.
+    extensions: [gnome]
+    plugs:
+      - unity7
+      - network
+      - network-bind
+      - home
+      - removable-media
+      - audio-playback
+      - audio-record
+      - joystick
+      - screen-inhibit-control
+    environment:
+      TMPDIR: $XDG_RUNTIME_DIR
+
+# libdecor is not in the platform, so the Wayland backend needs it here.
+layout:
+  /usr/lib/x86_64-linux-gnu/libdecor:
+    bind: $SNAP/usr/lib/x86_64-linux-gnu/libdecor
+
+parts:
+  godot:
+    plugin: dump
+    source: Godot_v4.7.2-stable_linux.x86_64.zip
+    source-type: zip
+    # A glob, not a literal: update repoints `source:` and nothing else.
+    organize:
+      '*_linux.x86_64': bin/godot
+    stage:
+      - bin/godot
+    override-build: |
+      craftctl default
+      chmod 755 "${CRAFT_PART_INSTALL}"/*_linux.x86_64
+
+  # Was two vendored .debs; noble's archive supplies the same libraries.
+  libdecor:
+    plugin: nil
+    stage-packages:
+      - libdecor-0-0
+      - libdecor-0-plugin-1-gtk
+    # An exclusion list, not an `rm`: see the craft-parts trap in ../README.md.
+    prime:
+      - -usr/share/doc
+
+  launcher:
+    plugin: dump
+    source: overlay
+    organize:
+      meta/gui/godot.desktop: share/applications/godot.desktop
+      meta/gui/godot.png: share/icons/hicolor/128x128/apps/godot.png
+    stage:
+      - bin/launcher
+      - share/applications/godot.desktop
+      - share/icons

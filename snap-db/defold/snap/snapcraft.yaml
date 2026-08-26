@@ -1,0 +1,90 @@
+name: defold
+title: Defold
+base: core24
+version: '1.13.1'
+summary: Cross-platform game engine for 2D and 3D games
+description: |
+  Defold is a cross-platform game engine with a full-featured editor for
+  building 2D and 3D games, shipping as a single self-contained toolchain
+  with its own runtime, build pipeline and asset editors.
+
+  This snap is a repack of the official upstream editor build
+  (Defold-x86_64-linux.zip) and is not published or endorsed by the Defold
+  Foundation.
+
+source-code: https://github.com/defold/defold
+issues: https://github.com/defold/defold/issues
+website: https://defold.com
+contact: https://github.com/defold/defold/issues
+# No `license:`: the Defold License has no SPDX id and snapd refuses one.
+
+# Resolved against the prime directory, so no copy is kept in the repository.
+icon: opt/Defold/logo_blue.png
+
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+apps:
+  defold:
+    command: bin/launcher
+    common-id: com.defold.editor
+    desktop: share/applications/defold.desktop
+    # The extension brings the command chain, desktop plugs and hooks.
+    extensions: [gnome]
+    plugs:
+      - unity7
+      - network
+      - network-bind
+      - home
+      - removable-media
+      - audio-playback
+      - joystick
+      - screen-inhibit-control
+
+layout:
+  # OpenAL looks its hrtf profiles up by absolute path, not beside the library.
+  /usr/share/openal:
+    symlink: $SNAP/usr/share/openal
+
+parts:
+  defold:
+    plugin: dump
+    source: Defold-x86_64-linux.zip
+    source-type: zip
+    # craft-parts does not strip a prefix from zips, so move the Defold/ dir.
+    organize:
+      Defold: opt/Defold
+    override-build: |
+      craftctl default
+      # A zip keeps no exec bits. Runs pre-organize, so the tree is at Defold/.
+      chmod 755 "${CRAFT_PART_INSTALL}/Defold/Defold"
+      for jdk in "${CRAFT_PART_INSTALL}"/Defold/packages/jdk-*; do
+        [ -d "$jdk" ] || continue
+        chmod 755 "$jdk"/bin/*
+        [ -f "$jdk/lib/jspawnhelper" ] && chmod 755 "$jdk/lib/jspawnhelper"
+      done
+      true
+
+  # dmengine needs libopenal, which no provider snap ships. Was vendored .debs.
+  openal:
+    plugin: nil
+    stage-packages:
+      - libopenal1
+      - libsndio7.0
+    # An exclusion list, not an `rm`: see the craft-parts trap in ../README.md.
+    prime:
+      - -usr/share/doc
+
+  overlay:
+    plugin: dump
+    source: overlay
+    organize:
+      meta/gui/defold.desktop: share/applications/defold.desktop
+    stage:
+      - bin/launcher
+      - share/applications/defold.desktop

@@ -1,0 +1,99 @@
+name: helium
+version: '0.15.7.1'
+summary: Private, fast, and honest web browser
+description: |
+  Helium is a private, fast, and honest web browser based on Chromium.
+  It prioritizes user privacy while maintaining excellent performance and
+  a clean browsing experience.
+
+  This snap repackages the official upstream amd64 .deb build from
+  https://github.com/imputnet/helium-linux
+
+title: Helium
+license: GPL-3.0-only
+contact: helium@imput.net
+website: https://github.com/imputnet/helium-linux
+source-code: https://github.com/imputnet/helium-linux
+issues: https://github.com/imputnet/helium-linux/issues
+
+base: core24
+grade: stable
+confinement: strict
+compression: lzo
+
+platforms:
+  amd64:
+
+lint:
+  ignore:
+    # Helium bundles its own swiftshader/vulkan loader next to the binary.
+    - gpu
+    - library:
+        # Optional Qt integration shims, dlopened only when Qt is present.
+        - usr/lib/helium/libqt5_shim.so
+        - usr/lib/helium/libqt6_shim.so
+
+apps:
+  helium:
+    command: bin/helium-launch
+    common-id: net.imput.helium
+    extensions: [gnome]
+    plugs:
+      - audio-playback
+      - audio-record
+      - browser-sandbox
+      - camera
+      - cups-control
+      - hardware-observe
+      - home
+      - joystick
+      - mount-observe
+      - network
+      - network-bind
+      - network-manager
+      - password-manager-service
+      - removable-media
+      - screen-inhibit-control
+      - system-packages-doc
+      - u2f-devices
+      - upower-observe
+    environment:
+      # Chromium's own libs (libEGL, swiftshader) live beside the binary.
+      LD_LIBRARY_PATH: $SNAP/usr/lib/helium:$LD_LIBRARY_PATH
+
+  chromedriver:
+    command: usr/lib/helium/chromedriver
+    extensions: [gnome]
+    plugs:
+      - browser-sandbox
+      - home
+      - network
+      - network-bind
+
+plugs:
+  browser-sandbox:
+    interface: browser-support
+    # Required for Chromium's namespace (zygote) sandbox.
+    allow-sandbox: true
+
+parts:
+  helium:
+    plugin: dump
+    source: helium-bin_0.15.7.1-1_amd64.deb
+    source-type: deb
+    organize:
+      opt/helium: usr/lib/helium
+    stage:
+      - usr/lib/helium
+      - usr/share/metainfo
+      - usr/share/icons
+    # No stage-packages: the platform snaps carry every library it links.
+    prime:
+      - -usr/lib/helium/helium.desktop
+      - -usr/lib/helium/apparmor.cfg
+
+  launcher:
+    plugin: dump
+    source: snap/local
+    organize:
+      helium-launch: bin/helium-launch

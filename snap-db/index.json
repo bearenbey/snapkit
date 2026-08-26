@@ -1,0 +1,879 @@
+{
+  "schema": 1,
+  "snaps": {
+    "btop": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "e54b46821be47b3eac91c14dd9f5ae242ba281001a89ef9817beb3367b0ab213"
+        },
+        "diagnose.py": {
+          "exec": true,
+          "sha256": "d96ec788ade91c26c591ff8173c1f77aa04d6ba9699c7ea8b85123d73e0e42b5"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "adabfad81748469a5f66544c2dbbdbab0574fdc743ef74a608db0c76eba47434"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "74aebca6efee2a627c3543951a2331d019735d500a095123ba822c7d2c3d8bae"
+        }
+      },
+      "name": "btop",
+      "pack": "pack.py",
+      "record": {
+        "asset": "btop-x86_64-unknown-linux-musl.tar.gz",
+        "asset_glob": "btop-x86_64-unknown-linux-musl.*",
+        "asset_pattern": "^btop\\-x86_64\\-unknown\\-linux\\-musl\\.tar\\.gz$",
+        "kind": "archive",
+        "pack": "pack.py",
+        "repo": "aristocratos/btop",
+        "style": "artifact",
+        "summary": "Resource monitor for processor, memory, disks, network and processes",
+        "url": "https://github.com/aristocratos/btop",
+        "version": "1.4.7",
+        "write_version": false
+      },
+      "summary": "Resource monitor for processor, memory, disks, network and processes",
+      "upstream": "aristocratos/btop",
+      "version": "1.4.7"
+    },
+    "defold": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "39890004e64118d45b7fdebe6e89568dd2655f621ec3ed85b734ff05146cfd77"
+        },
+        "overlay/bin/launcher": {
+          "exec": true,
+          "sha256": "4097114c45f32dac0a7eca6f88e835bf417c649d6cb409c3e6ca7787476c73f1"
+        },
+        "overlay/meta/gui/defold.desktop": {
+          "exec": false,
+          "sha256": "8388d608a758d3aa7f582be3dff81d10e23f6faf8634ce10c74806b640bfce4c"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "a803aaf3e89eccc866b2152a4e1f71e452c698cb9021e514b7681f812ef31fea"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "7548257b6a41610237a4c54ed9febec941a2b7be5b2e059aab763b0039f76405"
+        }
+      },
+      "name": "defold",
+      "pack": "pack.py",
+      "record": {
+        "asset": "Defold-x86_64-linux.zip",
+        "asset_glob": "Defold-x86_64-linux.zip",
+        "asset_pattern": "^Defold\\-x86_64\\-linux\\.zip$",
+        "kind": "archive",
+        "pack": "pack.py",
+        "repo": "defold/defold",
+        "style": "artifact",
+        "summary": "Cross-platform game engine for 2D and 3D games",
+        "url": "https://github.com/defold/defold",
+        "version": "1.13.1",
+        "write_version": false
+      },
+      "summary": "Cross-platform game engine for 2D and 3D games",
+      "upstream": "defold/defold",
+      "version": "1.13.1"
+    },
+    "discord": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "fe9469434401d4372bd72d12bc97a9950be0af40afef365f628286ca3aa4f3b5"
+        },
+        "launcher/discord-launch": {
+          "exec": true,
+          "sha256": "c46dfc89c9291cfdd6290082684c7c4e7c7093c5d96dc6cc734df703bb6c2500"
+        },
+        "snap/gui/discord.png": {
+          "exec": false,
+          "sha256": "40160b15802f2798447b80807108845507be88663128f9d1c7593139e2b05e15"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "e43fdccc2cdd93cdd2a44a4a56687dc1530e3234ee1b3eb956a9abae3541915f"
+        }
+      },
+      "name": "discord",
+      "pack": "",
+      "record": {
+        "asset": "discord-1.0.155.deb",
+        "asset_glob": "discord-*.deb",
+        "kind": "deb",
+        "style": "artifact",
+        "summary": "Chat for Communities and Friends",
+        "upstream": {
+          "asset": "discord-{version}.deb",
+          "download": "https://dl.discordapp.net/apps/linux/{version}/{asset}",
+          "kind": "redirect",
+          "pattern": "/apps/linux/([^/]+)/",
+          "url": "https://discord.com/api/download?platform=linux&format=deb"
+        },
+        "version": "1.0.155",
+        "write_version": false
+      },
+      "summary": "Chat for Communities and Friends",
+      "upstream": "redirect",
+      "version": "1.0.155"
+    },
+    "emacs": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "68172cf3013fcc68c87b61c38441319b11525a9e40f17a2e18f3623d3c30230f"
+        },
+        "snap/gui/emacs.png": {
+          "exec": false,
+          "sha256": "f6cedac6246b93ff336771efbcc97172bd1284e448039b7d2ddf38feca7a4091"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "6c9b679685ad2d0a6d568206555cbe79e30bd61e9341c18055216068d2810c9f"
+        }
+      },
+      "name": "emacs",
+      "pack": "",
+      "record": {
+        "asset": "emacs-31.1.tar.xz",
+        "asset_glob": "emacs-*.tar.xz",
+        "kind": "archive",
+        "style": "artifact",
+        "summary": "GNU Emacs \u2014 the extensible, customizable text editor",
+        "upstream": {
+          "asset": "emacs-{version}.tar.xz",
+          "kind": "index",
+          "pattern": "emacs-(\\d+\\.\\d+(?:\\.\\d+)?)\\.tar\\.xz\"",
+          "url": "https://ftp.gnu.org/gnu/emacs/"
+        },
+        "verify": {
+          "kind": "gpg",
+          "suffix": ".sig"
+        },
+        "version": "31.1",
+        "write_version": false
+      },
+      "summary": "GNU Emacs \u2014 the extensible, customizable text editor",
+      "upstream": "index",
+      "version": "31.1"
+    },
+    "ffmpeg": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "f7b1eecdc5ce70623954fa801d0da7be664254e0249a37c77af2e07e1dbde29a"
+        },
+        "snap/local/ffmpeg-launch": {
+          "exec": true,
+          "sha256": "5c356b595cc7cc7ab26ed7cb235287d7524d55d821513bb8506201da263dee36"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "657aec0b070b0aa072067fdf9c21e3564ff382f4cc06b78ea959adaa5c28e9a2"
+        }
+      },
+      "name": "ffmpeg",
+      "pack": "",
+      "record": {
+        "asset": "ffmpeg-9.0.1.tar.xz",
+        "kind": "archive",
+        "source_anchor": "^(\\s*source:\\s*).*/ffmpeg-.*\\.tar\\.xz\\s*$",
+        "style": "recipe",
+        "summary": "Cross-platform tools to record, convert and stream audio and video",
+        "upstream": {
+          "asset": "ffmpeg-{version}.tar.xz",
+          "kind": "index",
+          "pattern": "ffmpeg-(\\d+\\.\\d+(?:\\.\\d+)?)\\.tar\\.xz",
+          "url": "https://ffmpeg.org/releases/"
+        },
+        "verify": {
+          "kind": "gpg",
+          "suffix": ".asc"
+        },
+        "version": "9.0.1",
+        "write_version": false
+      },
+      "summary": "Cross-platform tools to record, convert and stream audio and video",
+      "upstream": "index",
+      "version": "9.0.1"
+    },
+    "floorp": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "abd4a93249c4f0848ef4fd33b1107c14b882a12d1a4def0591d11544c25c7f25"
+        },
+        "overlay/bin/launcher": {
+          "exec": true,
+          "sha256": "44c519db016d5a43e2d67122facbd20ab453b9f66a54c7a8eff1d40afabff4a0"
+        },
+        "overlay/meta/gui/floorp.desktop": {
+          "exec": false,
+          "sha256": "f2fde79fd84d878a40bda0e0040e736ce99b37c38df62d8793fc9308b3472142"
+        },
+        "overlay/usr/lib/floorp/distribution/policies.json": {
+          "exec": false,
+          "sha256": "e977c3d690224dd727d8761d2c0a66ba41bfd02ae0fd7850c4545d06b5a8e63c"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "27e9c848f067705bda82f9d7bb674ad8a7777d83cf976162f13ba11890959d44"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "0d52c303bc6212edbfc927b1ad510b967f97e6c99cb7abf5e53a1cd6a9ad5bd0"
+        }
+      },
+      "name": "floorp",
+      "pack": "pack.py",
+      "record": {
+        "asset": "floorp-linux-x86_64.tar.xz",
+        "asset_glob": "floorp-linux-x86_64.tar.xz",
+        "asset_pattern": "^floorp\\-linux\\-x86_64\\.tar\\.xz$",
+        "checksums": {
+          "required": false,
+          "url": "{base}/hashes.txt"
+        },
+        "kind": "archive",
+        "pack": "pack.py",
+        "repo": "Floorp-Projects/Floorp",
+        "style": "artifact",
+        "summary": "A Firefox-based browser built around vertical tabs and workspaces",
+        "url": "https://github.com/Floorp-Projects/Floorp",
+        "version": "12.17.0",
+        "write_version": false
+      },
+      "summary": "A Firefox-based browser built around vertical tabs and workspaces",
+      "upstream": "Floorp-Projects/Floorp",
+      "version": "12.17.0"
+    },
+    "freetube": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "c277214247f41fd0e87be011a635699cc061642e8b540ea2b46b15116396496c"
+        },
+        "overlay/bin/launcher": {
+          "exec": true,
+          "sha256": "b8ca2cf1dbde6ce23e2d1d4a678d217e5dc554aacc406efd7864eb6814cf9d28"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "12402f3ba4379dbba27a5b89038acb8c7149aff02308d4bf2797506c0219ec49"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "843dd8ce89f92fcb12a038d5dbad6adf9e68aec0e71537842300d4c67b9b85b3"
+        }
+      },
+      "name": "freetube",
+      "pack": "pack.py",
+      "record": {
+        "asset": "freetube_0.25.2_beta_amd64.deb",
+        "asset_glob": "freetube_*_amd64.deb",
+        "asset_pattern": "^freetube_[0-9][0-9A-Za-z.+~_-]*_amd64\\.deb$",
+        "kind": "deb",
+        "pack": "pack.py",
+        "repo": "FreeTubeApp/FreeTube",
+        "style": "artifact",
+        "summary": "A private YouTube client",
+        "tag": "v0.25.2-beta",
+        "url": "https://github.com/FreeTubeApp/FreeTube",
+        "version": "0.25.2-beta",
+        "write_version": false
+      },
+      "summary": "A private YouTube client",
+      "upstream": "FreeTubeApp/FreeTube",
+      "version": "0.25.2-beta"
+    },
+    "godot": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "4dcb2ae0d33a8a36229548b6ae7d176468577ae463478727f116b1fc631d844b"
+        },
+        "overlay/bin/launcher": {
+          "exec": true,
+          "sha256": "d62b3da3e13c4680e8c84db3d4c7caf3d7acc8180ace46a81bf00587c81f268c"
+        },
+        "overlay/meta/gui/godot.desktop": {
+          "exec": false,
+          "sha256": "76c198a1af4c4c6dc128207da968ce6201f0d4cdfff5f3cfd89175d3badb2734"
+        },
+        "overlay/meta/gui/godot.png": {
+          "exec": false,
+          "sha256": "bc626acf7b04ab704d55911d955f83959ee5921c5f3914d89c5bc1d8332159f7"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "1ae71a57ccca2b65f98fed8bc6ad1b16db04df1477346845517f834a91fead4e"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "418116b6916080fc104bc53c940843f42ce716321b764fc2985833cc96562a26"
+        }
+      },
+      "name": "godot",
+      "pack": "pack.py",
+      "record": {
+        "asset": "Godot_v4.7.2-stable_linux.x86_64.zip",
+        "asset_glob": "Godot_v*_linux.x86_64.zip",
+        "asset_pattern": "^Godot_v[0-9][0-9A-Za-z.+~_-]*\\-stable_linux\\.x86_64\\.zip$",
+        "kind": "archive",
+        "pack": "pack.py",
+        "repo": "godotengine/godot",
+        "style": "artifact",
+        "summary": "2D and 3D cross-platform game engine",
+        "tag": "4.7.2-stable",
+        "url": "https://github.com/godotengine/godot",
+        "version": "4.7.2",
+        "write_version": false
+      },
+      "summary": "2D and 3D cross-platform game engine",
+      "upstream": "godotengine/godot",
+      "version": "4.7.2"
+    },
+    "helium": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "59d473ea1f8ed78876f51f90a1770eba661ed5c3e862bc6df0e2c251220c9596"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "19edb3f9c305539eb9faebbe4104310585ff493099fe6daa12b704e2c5e993db"
+        },
+        "snap/gui/helium.desktop": {
+          "exec": false,
+          "sha256": "3694f64e83c8c9219e4ca1659dfca6f6203a3b8f5b3c0789407214febe494b64"
+        },
+        "snap/gui/helium.png": {
+          "exec": false,
+          "sha256": "51ecc7eafa0775036b19a64bb20600eedffd35ba5ee716fa2130d1d6edeeee5d"
+        },
+        "snap/local/helium-launch": {
+          "exec": true,
+          "sha256": "6f5adeec97f7b62e2d14ea34e91aae2d809f11e8a2266b85582d3f81811a14dc"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "9116faf80d77bf54a9332f95ca4641417ad9eeb12386c37d24fdf79a471a7244"
+        }
+      },
+      "name": "helium",
+      "pack": "pack.py",
+      "record": {
+        "asset": "helium-bin_0.15.7.1-1_amd64.deb",
+        "asset_glob": "helium-bin_*_amd64.deb",
+        "asset_pattern": "^helium\\-bin_[0-9][0-9A-Za-z.+~_-]*\\-1_amd64\\.deb$",
+        "kind": "deb",
+        "pack": "pack.py",
+        "repo": "imputnet/helium-linux",
+        "style": "artifact",
+        "summary": "Private, fast, and honest web browser",
+        "url": "https://github.com/imputnet/helium-linux",
+        "version": "0.15.7.1",
+        "write_version": false
+      },
+      "summary": "Private, fast, and honest web browser",
+      "upstream": "imputnet/helium-linux",
+      "version": "0.15.7.1"
+    },
+    "irssi": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "67e81c7d3e70f4dd88643ad33ab8e1e319b4ac4695e703e9a0ea327e08a8bb51"
+        },
+        "snap/local/irssi-launch": {
+          "exec": true,
+          "sha256": "1fc874a684efe9d69ab0292076a9f6ea799f96a88b249ef5d3b741629fe1bfd8"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "2cd6de3e6171276e25e1d5841bbde0905a344246e2f33830eff9952e9dd5b20c"
+        }
+      },
+      "name": "irssi",
+      "pack": "",
+      "record": {
+        "asset": "irssi-1.4.5.tar.xz",
+        "asset_pattern": "^irssi\\-[0-9][0-9A-Za-z.+~_-]*\\.tar\\.xz$",
+        "kind": "archive",
+        "repo": "irssi/irssi",
+        "source_anchor": "^(\\s*source:\\s*).*/irssi-.*\\.tar\\.xz\\s*$",
+        "style": "recipe",
+        "summary": "Modular text mode IRC client",
+        "url": "https://github.com/irssi/irssi",
+        "version": "1.4.5",
+        "write_version": false
+      },
+      "summary": "Modular text mode IRC client",
+      "upstream": "irssi/irssi",
+      "version": "1.4.5"
+    },
+    "mpv": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "4aed3a2d788d195824c1f85721858efb10b4e697d24480ca7e810f91309f888e"
+        },
+        "snap/local/mpv-launch": {
+          "exec": true,
+          "sha256": "0c5e4dbb58362c22067b7720c186e171c6525fd05073073722c6f39a87aba021"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "61d3c2b2c9d41d282703d719dd9b4c1224f356ab91ae2fef51add996ee28a13b"
+        }
+      },
+      "name": "mpv",
+      "pack": "",
+      "record": {
+        "asset": "v0.41.0.tar.gz",
+        "kind": "archive",
+        "repo": "mpv-player/mpv",
+        "source_anchor": "^(\\s*source:\\s*).*/archive/refs/tags/v.*\\.tar\\.gz\\s*$",
+        "style": "recipe",
+        "summary": "Media player for the command line and the desktop",
+        "upstream": {
+          "asset": "mpv-{version}.tar.gz",
+          "download": "https://github.com/mpv-player/mpv/archive/refs/tags/{tag}.tar.gz",
+          "kind": "tag-archive",
+          "prefix": "v",
+          "repo": "mpv-player/mpv"
+        },
+        "url": "https://github.com/mpv-player/mpv",
+        "verify": {
+          "kind": "tar-member",
+          "member": "mpv-{version}/MPV_VERSION"
+        },
+        "version": "0.41.0",
+        "write_version": false
+      },
+      "summary": "Media player for the command line and the desktop",
+      "upstream": "mpv-player/mpv",
+      "version": "0.41.0"
+    },
+    "nvim": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "cb90418139adb845123a0c71985ab804bb1343f60550625ce899545f87ce5d5a"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "89c5a9486c4af1acd6923fb6836bd6d680f46cd801fee03995f7d3a05974a805"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "297d7806c2cbe3a98c6e443f414549f408d47c1052611825073d5e146e1a1e1c"
+        }
+      },
+      "name": "nvim",
+      "pack": "pack.py",
+      "record": {
+        "asset": "nvim-linux-x86_64.tar.gz",
+        "asset_glob": "nvim-linux-x86_64.tar.gz",
+        "asset_pattern": "^nvim\\-linux\\-x86_64\\.tar\\.gz$",
+        "kind": "archive",
+        "pack": "pack.py",
+        "repo": "neovim/neovim",
+        "style": "artifact",
+        "summary": "Hyperextensible Vim-based text editor",
+        "url": "https://github.com/neovim/neovim",
+        "version": "0.12.5",
+        "write_version": false
+      },
+      "summary": "Hyperextensible Vim-based text editor",
+      "upstream": "neovim/neovim",
+      "version": "0.12.5"
+    },
+    "ollama": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "e8261e9d48810cf95c8aca12147c90eed3ef3acc0cc2b6099e469b0a50fdb180"
+        },
+        "snap/hooks/configure": {
+          "exec": true,
+          "sha256": "0b688967d3d5aaab2621b93e49c1e55bd29f8952fee82a1fecdda121c40a44cf"
+        },
+        "snap/local/ollama-launch": {
+          "exec": true,
+          "sha256": "55cbe8f9196a14e3f78569b15269c363ba98f992b264d93bd3b54043e12f5a2b"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "8627ffec9c337e61b6a59918befce89810107681f1a9f52d10966b27f85da9ac"
+        }
+      },
+      "name": "ollama",
+      "pack": "",
+      "record": {
+        "asset": "ollama-linux-amd64.tar.zst",
+        "asset_pattern": "^ollama\\-linux\\-amd64\\.tar\\.zst$",
+        "checksums": {
+          "url": "{base}/sha256sum.txt"
+        },
+        "kind": "archive",
+        "repo": "ollama/ollama",
+        "source_anchor": "^(\\s*source:\\s*).*/ollama-linux-amd64\\.tar\\.zst\\s*$",
+        "style": "recipe",
+        "summary": "Get up and running with large language models",
+        "url": "https://github.com/ollama/ollama",
+        "version": "0.32.15",
+        "write_version": false
+      },
+      "summary": "Get up and running with large language models",
+      "upstream": "ollama/ollama",
+      "version": "0.32.15"
+    },
+    "retroarch": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "b62088f524d32cb7f903beeb2d07e9e526e51b74499c4bedd89091edfef03311"
+        },
+        "snap/gui/retroarch.svg": {
+          "exec": false,
+          "sha256": "66df7002b0a90a6c7f921d48f57841278d5c5ea278cb6cdc7a3e9e630b2ddcfa"
+        },
+        "snap/local/launcher": {
+          "exec": true,
+          "sha256": "923301a672124245eb51d17429aff8c0dbbcbc3a0c7fdbae9e6b71cb7d9bfcbc"
+        },
+        "snap/local/retroarch.cfg": {
+          "exec": false,
+          "sha256": "36db014bdb7da102da58ce4ac4b5ddc0de5f5982f5779f68ada9ffb6f479c36e"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "7d02c249a5c2324a4561d10f9b2e5c307a7f5c8b1dba98ec9ceba1e290d85d3b"
+        }
+      },
+      "name": "retroarch",
+      "pack": "",
+      "record": {
+        "asset": "v1.22.2.tar.gz",
+        "kind": "archive",
+        "repo": "libretro/RetroArch",
+        "source_anchor": "^(\\s*source:\\s*).*/RetroArch/archive/refs/tags/v.*\\.tar\\.gz\\s*$",
+        "style": "recipe",
+        "summary": "RetroArch is the official reference frontend for the libretro API.",
+        "upstream": {
+          "asset": "retroarch-{version}.tar.gz",
+          "download": "https://github.com/libretro/RetroArch/archive/refs/tags/{tag}.tar.gz",
+          "kind": "tag-archive",
+          "prefix": "v",
+          "repo": "libretro/RetroArch"
+        },
+        "url": "https://github.com/libretro/RetroArch",
+        "verify": {
+          "kind": "tar-member",
+          "member": "RetroArch-{version}/version.all"
+        },
+        "version": "1.22.2",
+        "write_version": false
+      },
+      "summary": "RetroArch is the official reference frontend for the libretro API.",
+      "upstream": "libretro/RetroArch",
+      "version": "1.22.2"
+    },
+    "signal-desktop": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "da9eb0ece06608c1246c8b06555b026f3c15d6f17ff99a6510824a3ac55079d3"
+        },
+        "snap/gui/signal-desktop.png": {
+          "exec": false,
+          "sha256": "3b1614bba636297f1cd78701bee4bc0dc618fa0b02da5c7a4c45ed1984789114"
+        },
+        "snap/local/signal-launch": {
+          "exec": true,
+          "sha256": "051410f36df94eb619f2dbdd8dbdf69154a1b31f628e9ac85506809cb03a2d2b"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "970ee5650ae70bea49f95eeaff1448d9c6d70217075962c7eedb2c2edef727a8"
+        }
+      },
+      "name": "signal-desktop",
+      "pack": "",
+      "record": {
+        "asset": "signal-desktop_8.24.1_amd64.deb",
+        "kind": "deb",
+        "repo": "signalapp/Signal-Desktop",
+        "source_anchor": "^(\\s*source:\\s*).*/signal-desktop_.*\\.deb\\s*$",
+        "style": "recipe",
+        "summary": "Private messaging from your desktop",
+        "upstream": {
+          "base": "https://updates.signal.org/desktop/apt",
+          "index": "https://updates.signal.org/desktop/apt/dists/xenial/main/binary-amd64/Packages",
+          "kind": "apt",
+          "package": "signal-desktop"
+        },
+        "url": "https://github.com/signalapp/Signal-Desktop",
+        "version": "8.24.1",
+        "write_version": true
+      },
+      "summary": "Private messaging from your desktop",
+      "upstream": "signalapp/Signal-Desktop",
+      "version": "8.24.1"
+    },
+    "spotube": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "6554ea8e87ea6fecd983a2fa94bc36cdcdf8bf50cab5d180f322ba6e1c887ca2"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "e87461f150e10e86f1dc1d93208983cf6a587065be2dc49a86245fac77053179"
+        }
+      },
+      "name": "spotube",
+      "pack": "",
+      "record": {
+        "asset": "Spotube-linux-x86_64.deb",
+        "asset_glob": "Spotube-linux-x86_64.deb",
+        "asset_pattern": "^Spotube\\-linux\\-x86_64\\.deb$",
+        "checksums": {
+          "required": false,
+          "url": "{base}/RELEASE.sha256sum"
+        },
+        "kind": "deb",
+        "repo": "KRTirtho/spotube",
+        "style": "artifact",
+        "summary": "Open source music streaming client",
+        "url": "https://github.com/KRTirtho/spotube",
+        "version": "5.1.2",
+        "write_version": false
+      },
+      "summary": "Open source music streaming client",
+      "upstream": "KRTirtho/spotube",
+      "version": "5.1.2"
+    },
+    "sublime-text": {
+      "files": {
+        "snap/gui/sublime-text.desktop": {
+          "exec": false,
+          "sha256": "0e29932dbf58908aa8f3ee93a7545700a845dc62f8e382d93e8e3f92d170ab19"
+        },
+        "snap/gui/sublime-text.png": {
+          "exec": false,
+          "sha256": "04842a7e7e791ec7439283f9e47b48fd3b62fe4fb13db978f1676d53d046aa57"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "6fbbd85886deb64f95bf28c3df67e86222062183b50d88121c0dfaf6b2f38c3f"
+        }
+      },
+      "name": "sublime-text",
+      "pack": "",
+      "record": {
+        "asset": "sublime-text_build-4200_amd64.deb",
+        "asset_glob": "sublime-text_build-*_amd64.deb",
+        "kind": "deb",
+        "style": "artifact",
+        "summary": "Sophisticated text editor for code, markup and prose",
+        "upstream": {
+          "base": "https://download.sublimetext.com",
+          "index": "https://download.sublimetext.com/apt/stable/Packages",
+          "kind": "apt",
+          "package": "sublime-text"
+        },
+        "version": "4200",
+        "write_version": false
+      },
+      "summary": "Sophisticated text editor for code, markup and prose",
+      "upstream": "apt",
+      "version": "4200"
+    },
+    "transmission": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "c26e64c03a81024144489d327af7b4fe5f2ce9207b584de690f1326b464c26ff"
+        },
+        "overlay/bin/launcher": {
+          "exec": true,
+          "sha256": "abc04040fb9fa451d712932ff4ef65587e6e0d8a7209359e511bca9fcc5c08da"
+        },
+        "overlay/meta/gui/transmission.desktop": {
+          "exec": false,
+          "sha256": "2f3fd92ab8a576163800cb6d39e2ef698a0cb1bc0e82257d84b8a171ff475866"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "2db2430516753dc6d12f0013be4125dbadcf4e56dcc3d022342318e5129232ad"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "06a75e574c836c6476cd2998a1d99af2d115adebb938aedc53267d6a1b21a3b0"
+        }
+      },
+      "incomplete": [
+        "vendor/gtkmm-4.12.0.tar.xz"
+      ],
+      "name": "transmission",
+      "pack": "pack.py",
+      "record": {
+        "asset": "transmission-4.1.3.tar.xz",
+        "asset_glob": "transmission-*.tar.xz",
+        "asset_pattern": "^transmission\\-[0-9][0-9A-Za-z.+~_-]*\\.tar\\.xz$",
+        "kind": "archive",
+        "pack": "pack.py",
+        "repo": "transmission/transmission",
+        "style": "artifact",
+        "summary": "A fast, easy and free BitTorrent client",
+        "url": "https://github.com/transmission/transmission",
+        "version": "4.1.3",
+        "write_version": false
+      },
+      "summary": "A fast, easy and free BitTorrent client",
+      "upstream": "transmission/transmission",
+      "version": "4.1.3"
+    },
+    "ungoogled-chromium": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "e54bbc5c74ac44455a952bab40adcb7bb7130e159fb8995fab43d5e3a4834406"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "3666848b3ab8c3c42e925db046d6a946f2edb0dea8d0a66c0f792022b7a47256"
+        },
+        "snap/gui/ungoogled-chromium.desktop": {
+          "exec": false,
+          "sha256": "58ce2f6cd348f9efcbc9fda205b2035bf384b1ff503cebeecf0054a8d335208d"
+        },
+        "snap/gui/ungoogled-chromium.png": {
+          "exec": false,
+          "sha256": "e14120fdefb8eb455f44eac572f34bda75c32c9404e5c3745d44793dae217331"
+        },
+        "snap/local/ungoogled-chromium-launch": {
+          "exec": true,
+          "sha256": "59c1e6769d634343438d6355468c5b8907e4e229da922fcf33c0182a2b6a50e4"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "0c845223cfc46037f4fb4a1bfd2d091281d9e000da352757744bc7484b17fb22"
+        }
+      },
+      "name": "ungoogled-chromium",
+      "pack": "pack.py",
+      "record": {
+        "asset": "ungoogled-chromium-151.0.7922.173-1-x86_64_linux.tar.xz",
+        "asset_glob": "ungoogled-chromium-*-x86_64_linux.tar.xz",
+        "asset_pattern": "^ungoogled\\-chromium\\-[0-9][0-9A-Za-z.+~_-]*\\-x86_64_linux\\.tar\\.xz$",
+        "kind": "archive",
+        "pack": "pack.py",
+        "repo": "ungoogled-software/ungoogled-chromium-portablelinux",
+        "style": "artifact",
+        "summary": "Google Chromium, sans integration with Google",
+        "url": "https://github.com/ungoogled-software/ungoogled-chromium-portablelinux",
+        "version": "151.0.7922.173-1",
+        "write_version": false
+      },
+      "summary": "Google Chromium, sans integration with Google",
+      "upstream": "ungoogled-software/ungoogled-chromium-portablelinux",
+      "version": "151.0.7922.173-1"
+    },
+    "unityhub": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "6a5f41cfd5156076f369e891594932db4577dd753b142d1e361e603ca748447c"
+        },
+        "overlay/bin/launcher": {
+          "exec": true,
+          "sha256": "d715256f45a73489de4cc3ee989c61bceabd97c5fe8a262966a25b6a54c73317"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "725b3b3f5d560b4ec955b6eb5013fec82806f0ab52f8c3b8cf5286705853b2cf"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "2de56caff8fb81e891284b53b6a1ff9e5d0ec77cdc1e268baf177e5908333b63"
+        }
+      },
+      "name": "unityhub",
+      "pack": "pack.py",
+      "record": {
+        "asset": "UnityHubSetup-amd64.deb",
+        "asset_glob": "UnityHubSetup-amd64.deb",
+        "kind": "deb",
+        "local_asset": "UnityHubSetup-amd64.deb",
+        "pack": "pack.py",
+        "style": "artifact",
+        "summary": "The official Unity Hub",
+        "upstream": {
+          "base": "https://hub.unity3d.com/linux/repos/deb",
+          "index": "https://hub.unity3d.com/linux/repos/deb/dists/stable/main/binary-amd64/Packages",
+          "kind": "apt",
+          "package": "unityhub"
+        },
+        "version": "3.21.0",
+        "write_version": false
+      },
+      "summary": "The official Unity Hub",
+      "upstream": "apt",
+      "version": "3.21.0"
+    },
+    "zen": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "5af4e28d19978b71b197f6d79101ae444595f642595551d05a9d8fc9f157515c"
+        },
+        "overlay/bin/launcher": {
+          "exec": true,
+          "sha256": "01e75c900e026030552720e49763ab694a9d41231dd5267a2648cb648f67e731"
+        },
+        "overlay/meta/gui/zen.desktop": {
+          "exec": false,
+          "sha256": "b987619c3b70e7c4de72ea8117e0d650a7f18bf4a17861b85f9de7c97057b536"
+        },
+        "overlay/opt/zen/distribution/policies.json": {
+          "exec": false,
+          "sha256": "35b68797094749f1d0553b3bc9f4154f323729c0d37345e472f249aab73be1bf"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "8d186dbfc5c36f3c2158df5d431526b4e2cb96b418a2fb6bb52566ed9b9f1cc6"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "8086f296a13f5c1d61b4bea509865dc238f5f7a712114df07ec3cd487b5a3de6"
+        }
+      },
+      "name": "zen",
+      "pack": "pack.py",
+      "record": {
+        "asset": "zen.linux-x86_64.tar.xz",
+        "asset_glob": "zen.linux-x86_64.tar.xz",
+        "asset_pattern": "^zen\\.linux\\-x86_64\\.tar\\.xz$",
+        "kind": "archive",
+        "pack": "pack.py",
+        "repo": "zen-browser/desktop",
+        "style": "artifact",
+        "summary": "A calmer way to browse the web",
+        "url": "https://github.com/zen-browser/desktop",
+        "version": "1.21.15b",
+        "write_version": false
+      },
+      "summary": "A calmer way to browse the web",
+      "upstream": "zen-browser/desktop",
+      "version": "1.21.15b"
+    }
+  }
+}

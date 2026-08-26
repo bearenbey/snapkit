@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Defold
+GenericName=Game Engine
+Exec=defold %F
+Terminal=false
+Type=Application
+Icon=${SNAP}/meta/gui/defold.png
+StartupWMClass=com.defold.editor.Main
+Comment=Cross-platform game engine for 2D and 3D games
+Categories=Development;IDE;
+Keywords=game;engine;defold;gamedev;2D;3D;lua;

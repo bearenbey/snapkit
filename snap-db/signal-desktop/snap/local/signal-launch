@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e
+
+args=()
+
+# Native Wayland with X11 fallback; SIGNAL_FORCE_X11=1 stays on XWayland.
+if [ -z "${SIGNAL_FORCE_X11:-}" ]; then
+    args+=(--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations)
+fi
+
+# Probe for user namespaces, and only give the sandbox up when there are none.
+if ! unshare --user --map-root-user true 2>/dev/null; then
+    args+=(--no-sandbox)
+fi
+
+exec "$SNAP/opt/Signal/signal-desktop" "${args[@]}" "$@"

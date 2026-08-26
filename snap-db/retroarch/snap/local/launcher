@@ -1,0 +1,33 @@
+#!/bin/bash
+# command-chain wrapper: fixes up $HOME and the PulseAudio socket path.
+
+set -eu
+
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/retroarch"
+main_config="$config_dir/retroarch.cfg"
+
+# Point the content browser at the real home; $HOME is not where roms live.
+if [ ! -f "$main_config" ] && [ -n "${SNAP_REAL_HOME:-}" ]; then
+    mkdir -p "$config_dir"
+    printf 'rgui_browser_directory = "%s"\n' "$SNAP_REAL_HOME" >> "$main_config"
+fi
+
+# The Wayland socket sits one level up from the snap's XDG_RUNTIME_DIR.
+if [ -n "${WAYLAND_DISPLAY:-}" ] && [ -n "${XDG_RUNTIME_DIR:-}" ]; then
+    case "$WAYLAND_DISPLAY" in
+        /*) ;;  # already an absolute path; libwayland uses it as-is
+        *)
+            if [ ! -e "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ] \
+               && [ -S "$XDG_RUNTIME_DIR/../$WAYLAND_DISPLAY" ]; then
+                ln -sf "../$WAYLAND_DISPLAY" "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
+            fi
+            ;;
+    esac
+fi
+
+# Reach the host PulseAudio socket from the snap's own XDG_RUNTIME_DIR.
+if [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -S "$XDG_RUNTIME_DIR/../pulse/native" ]; then
+    export PULSE_SERVER="unix:$XDG_RUNTIME_DIR/../pulse/native"
+fi
+
+exec "$@"

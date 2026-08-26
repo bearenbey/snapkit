@@ -1,0 +1,19 @@
+#!/bin/bash
+set -eu
+
+# A read-only squashfs honours no setuid bit, so Electron's helper cannot work.
+opts=(--no-sandbox)
+
+# The keyring is out of reach until password-manager-service is connected.
+if ! snapctl is-connected password-manager-service 2>/dev/null; then
+  opts+=(--password-store=basic)
+fi
+
+# electron-builder moves this between /opt and /usr/lib, so look in both.
+app=
+for dir in "$SNAP/opt/FreeTube" "$SNAP/usr/lib/freetube"; do
+  if [ -x "$dir/freetube" ]; then app=$dir/freetube; break; fi
+done
+[ -n "$app" ] || { echo "the freetube binary is not in this snap" >&2; exit 1; }
+
+exec "$app" "${opts[@]}" "$@"

@@ -1,0 +1,103 @@
+name: floorp
+title: Floorp
+base: core24
+version: '12.17.0'
+summary: A Firefox-based browser built around vertical tabs and workspaces
+description: |
+  Floorp is a Gecko browser from Ablaze, built on Firefox with vertical tabs,
+  workspaces, a panel sidebar and split view added, and Mozilla's telemetry
+  and studies turned off in the defaults.
+
+  This snap is a repack of the official upstream Linux tarball
+  (floorp-linux-x86_64.tar.xz) and is not published or endorsed by Ablaze.
+
+license: MPL-2.0
+source-code: https://github.com/Floorp-Projects/Floorp
+issues: https://github.com/Floorp-Projects/Floorp/issues
+website: https://floorp.app
+contact: https://github.com/Floorp-Projects/Floorp/issues
+
+# 128px is the largest in the tarball; there is no hicolor tree to pick from.
+icon: usr/lib/floorp/browser/chrome/icons/default/default128.png
+
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+apps:
+  floorp:
+    command: bin/launcher
+    common-id: one.ablaze.floorp
+    desktop: share/applications/floorp.desktop
+    # The extension brings the command chain, desktop plugs and hooks.
+    extensions: [gnome]
+    plugs:
+      - unity7
+      - browser-sandbox
+      - network
+      - network-bind
+      - home
+      - removable-media
+      - audio-playback
+      - audio-record
+      - camera
+      - cups-control
+      - hardware-observe
+      - joystick
+      - mount-observe
+      - screen-inhibit-control
+      - password-manager-service
+      - system-packages-doc
+      - u2f-devices
+      - upower-observe
+    slots:
+      - dbus-floorp
+    environment:
+      TMPDIR: $XDG_RUNTIME_DIR
+
+plugs:
+  browser-sandbox:
+    interface: browser-support
+    # Gecko's sandbox needs user namespaces, and this does not auto-connect.
+    allow-sandbox: true
+
+slots:
+  dbus-floorp:
+    interface: dbus
+    bus: session
+    # Gecko's remoting owns org.mozilla.floorp plus a per-profile suffix.
+    name: org.mozilla.floorp
+
+layout:
+  # Gecko's spell checker reads its dictionaries from this path and no other.
+  /usr/share/hunspell:
+    bind: $SNAP/gnome-platform/usr/share/hunspell
+
+parts:
+  floorp:
+    plugin: dump
+    source: floorp-linux-x86_64.tar.xz
+    source-type: tar
+    # craft-parts strips the floorp/ dir, so put the payload back under usr/lib.
+    organize:
+      '*': usr/lib/floorp/
+    # The updater cannot write a squashfs; policies.json turns the offer off.
+    prime:
+      - -usr/lib/floorp/updater
+      - -usr/lib/floorp/updater.ini
+      - -usr/lib/floorp/precomplete
+      - -usr/lib/floorp/removed-files
+
+  overlay:
+    plugin: dump
+    source: overlay
+    organize:
+      meta/gui/floorp.desktop: share/applications/floorp.desktop
+    stage:
+      - bin/launcher
+      - share/applications/floorp.desktop
+      - usr/lib/floorp/distribution/policies.json

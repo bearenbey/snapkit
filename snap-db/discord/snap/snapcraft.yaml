@@ -1,0 +1,134 @@
+name: discord
+title: Discord
+base: core24
+version: '1.0.155'
+summary: Chat for Communities and Friends
+contact: https://support.discord.com
+license: Proprietary
+website: https://discord.com
+description: |
+  Discord is the easiest way to communicate over voice, video, and text. Chat,
+  hang out, and stay close with your friends and communities.
+
+  Built from Discord's official .deb package. That package ships Discord's
+  bootstrap/updater rather than the application itself, so the Discord client
+  (~120 MB) is downloaded from updates.discord.com on first launch into the
+  snap's private data directory, and Discord keeps itself up to date from
+  there. The first start therefore needs a network connection and takes a
+  minute; later starts are immediate.
+
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+
+apps:
+  discord:
+    command: bin/discord-launch
+    extensions:
+      - gnome
+    common-id: com.discordapp.Discord
+    desktop: usr/share/discord/discord.desktop
+    plugs:
+      - network
+      - network-bind
+      - browser-support
+      - audio-playback
+      - audio-record
+      - camera
+      - home
+      - removable-media
+      - screen-inhibit-control
+      - password-manager-service
+      - hardware-observe
+      - system-observe
+      - process-control
+      - unity7
+
+parts:
+  discord:
+    plugin: dump
+    source: discord-1.0.155.deb
+    source-type: deb
+    override-build: |
+      craftctl default
+
+      # discord falls back to $(dirname $0)/updater_bootstrap, so put it there.
+      bootstrap="${CRAFT_PART_INSTALL}/usr/share/discord/updater_bootstrap"
+      [ -f "$bootstrap" ] || {
+        echo "updater_bootstrap is not at usr/share/discord in this deb:" \
+             "the payload layout changed" >&2
+        exit 1
+      }
+      ln -sf ../share/discord/updater_bootstrap \
+        "${CRAFT_PART_INSTALL}/usr/bin/updater_bootstrap"
+
+      # Path= and the icon name both point at the host, and neither resolves.
+      sed -i -e '/^Path=/d' \
+        -e 's|^Icon=.*|Icon=${SNAP}/usr/share/discord/discord.png|' \
+        "${CRAFT_PART_INSTALL}/usr/share/discord/discord.desktop"
+
+      # dpkg-time leftovers with no meaning inside a snap
+      rm -rf "${CRAFT_PART_INSTALL}/etc/apparmor.d" \
+        "${CRAFT_PART_INSTALL}/usr/share/lintian" \
+        "${CRAFT_PART_INSTALL}/usr/share/doc" \
+        "${CRAFT_PART_INSTALL}/usr/share/discord/postinst.sh"
+    stage-packages:
+      # The .deb's Depends: the client downloads later, nothing is detectable.
+      - libasound2t64
+      - libatk1.0-0t64
+      - libatk-bridge2.0-0t64
+      - libatspi2.0-0t64
+      - libatomic1
+      - libcairo2
+      - libdbus-1-3
+      - libexpat1
+      - libgbm1
+      - libglib2.0-0t64
+      - libgtk-3-0t64
+      - libnotify4
+      - libnspr4
+      - libnss3
+      - libpango-1.0-0
+      - libstdc++6
+      - libudev1
+      - libx11-6
+      - libxcb1
+      - libxcomposite1
+      - libxdamage1
+      - libxext6
+      - libxfixes3
+      - libxkbcommon0
+      - libxrandr2
+      # Recommends: hardware video decode and screen sharing
+      - libva2
+      - libva-drm2
+      - libva-x11-2
+      - libpipewire-0.3-0
+      # updater_bootstrap shells out to `zenity --progress` while downloading
+      - zenity
+      - ca-certificates
+
+  launcher:
+    plugin: dump
+    source: launcher
+    organize:
+      discord-launch: bin/discord-launch
+
+  cleanup:
+    after:
+      - discord
+      - launcher
+    plugin: nil
+    build-snaps:
+      - core24
+      - gnome-46-2404
+    override-prime: |
+      # Drop what the platform provides, so GTK is loaded once from it.
+      set -eu
+      for snapdir in /snap/core24/current /snap/gnome-46-2404/current; do
+        [ -d "$snapdir" ] || continue
+        cd "$snapdir"
+        find . -type f,l -exec rm -f "${CRAFT_PRIME}/{}" \;
+      done

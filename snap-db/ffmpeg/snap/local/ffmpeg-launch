@@ -1,0 +1,50 @@
+#!/bin/sh
+# Wrapper for the ffmpeg tools; the first argument picks which one to run.
+set -eu
+
+tool="$1"
+shift
+
+bin="$SNAP/usr/bin/$tool"
+[ -x "$bin" ] || { echo "ffmpeg snap: no such tool: $tool" >&2; exit 1; }
+
+# libpulse's DT_RUNPATH points into the base snap, so put ours ahead of it.
+for d in "$SNAP"/usr/lib/*/pulseaudio; do
+	[ -d "$d" ] || continue
+	LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}$d"
+done
+export LD_LIBRARY_PATH
+
+# Fontconfig: generate a config, since a layout would break host font sharing.
+fc_conf="$SNAP_USER_DATA/.config/ffmpeg-snap-fonts.conf"
+if ! grep -qF "<dir>$SNAP/usr/share/fonts</dir>" "$fc_conf" 2>/dev/null; then
+	if mkdir -p "${fc_conf%/*}" 2>/dev/null; then
+		cat > "$fc_conf" <<EOF || true
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+<fontconfig>
+  <dir>$SNAP/usr/share/fonts</dir>
+  <dir>/usr/share/fonts</dir>
+  <cachedir>$SNAP_USER_DATA/.cache/fontconfig</cachedir>
+  <include ignore_missing="yes">$SNAP/etc/fonts/conf.d</include>
+</fontconfig>
+EOF
+	fi
+fi
+if [ -s "$fc_conf" ]; then
+	export FONTCONFIG_FILE="$fc_conf"
+	export FONTCONFIG_PATH="$SNAP/etc/fonts"
+fi
+
+# libasound compiles in /usr/share/alsa/alsa.conf, which core24 lacks.
+if [ -f "$SNAP/usr/share/alsa/alsa.conf" ]; then
+	export ALSA_CONFIG_PATH="$SNAP/usr/share/alsa/alsa.conf"
+fi
+
+# Use mesa-2604's wrapper when connected, and run directly when it is not.
+gpu_wrapper="$SNAP/gpu-2604/bin/gpu-2604-provider-wrapper"
+if [ -x "$gpu_wrapper" ]; then
+	exec "$gpu_wrapper" "$bin" "$@"
+fi
+
+exec "$bin" "$@"

@@ -1,0 +1,59 @@
+name: unityhub
+title: Unity Hub
+base: core24
+version: '3.21.0'
+summary: The official Unity Hub
+description: |
+  Unity Hub is the launcher and version manager for the Unity engine. It
+  signs you in, manages licences, installs and updates Unity Editor versions
+  and their build-support modules, and opens your projects with the editor
+  version each one expects.
+
+  This snap is classically confined: the Hub installs editors into your real
+  home directory and launches them against the host toolchain, exactly as the
+  official `.deb` does.
+
+  This snap is a repack of the official upstream `.deb` release
+  (UnityHubSetup-amd64.deb) and is not published or endorsed by Unity
+  Technologies. Use of Unity Hub and the Unity Editor is governed by the Unity
+  Terms of Service.
+
+license: Proprietary
+website: https://unity.com/unity-hub
+contact: https://support.unity.com
+
+# Resolved against the prime directory, so this is the icon the .deb ships.
+icon: usr/share/icons/hicolor/256x256/apps/unityhub.png
+
+grade: stable
+confinement: classic
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+apps:
+  unityhub:
+    command: bin/launcher
+    common-id: com.unity.hub
+    # Without this the snap ships no desktop entry and vanishes from the menu.
+    desktop: usr/share/applications/unityhub.desktop
+
+parts:
+  unityhub:
+    plugin: dump
+    source: UnityHubSetup-amd64.deb
+    source-type: deb
+    override-build: |
+      craftctl default
+      # Without StartupWMClass the window does not match its launcher icon.
+      grep -q '^StartupWMClass=' "${CRAFT_PART_INSTALL}/usr/share/applications/unityhub.desktop" \
+        || echo 'StartupWMClass=unityhub' >> "${CRAFT_PART_INSTALL}/usr/share/applications/unityhub.desktop"
+
+  # Only bin/launcher is left in the overlay; the rest is this file's job now.
+  launcher:
+    plugin: dump
+    source: overlay
+    stage:
+      - bin/launcher

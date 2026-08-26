@@ -1,0 +1,27 @@
+[Desktop Entry]
+Version=1.0
+Name=Floorp
+GenericName=Web Browser
+Comment=Browse the World Wide Web
+Exec=floorp %u
+Icon=${SNAP}/meta/gui/floorp.png
+Terminal=false
+Type=Application
+StartupNotify=true
+StartupWMClass=floorp
+Categories=Network;WebBrowser;
+Keywords=Internet;WWW;Browser;Web;Explorer;Gecko;Firefox;
+MimeType=text/html;text/xml;application/xhtml+xml;application/vnd.mozilla.xul+xml;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;application/pdf;
+Actions=new-window;new-private-window;profile-manager;
+
+[Desktop Action new-window]
+Name=Open a New Window
+Exec=floorp --new-window %u
+
+[Desktop Action new-private-window]
+Name=Open a New Private Window
+Exec=floorp --private-window %u
+
+[Desktop Action profile-manager]
+Name=Open the Profile Manager
+Exec=floorp --ProfileManager

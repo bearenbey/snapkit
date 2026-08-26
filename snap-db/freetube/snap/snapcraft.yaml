@@ -1,0 +1,72 @@
+name: freetube
+title: FreeTube
+base: core24
+version: '0.25.2-beta'
+summary: A private YouTube client
+description: |
+  FreeTube is an open source desktop YouTube player built with privacy in
+  mind. Watch, subscribe and build playlists without an account and without
+  the tracking that comes with the official site.
+
+  This snap is a repack of the official upstream `.deb` release
+  (freetube_0.25.2_beta_amd64.deb) and is not published or endorsed by the
+  FreeTube team.
+
+license: AGPL-3.0-or-later
+source-code: https://github.com/FreeTubeApp/FreeTube
+issues: https://github.com/FreeTubeApp/FreeTube/issues
+website: https://freetubeapp.io
+contact: https://github.com/FreeTubeApp/FreeTube/issues
+
+# The icon the .deb ships, rather than a copy kept in the repository.
+icon: usr/share/icons/hicolor/scalable/apps/freetube.svg
+
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+apps:
+  freetube:
+    command: bin/launcher
+    common-id: io.freetubeapp.FreeTube
+    # Without this the snap ships no desktop entry and vanishes from the menu.
+    desktop: usr/share/applications/freetube.desktop
+    # The extension brings the command chain, desktop plugs, content and hooks.
+    extensions: [gnome]
+    plugs:
+      - unity7
+      - browser-support
+      - network
+      - network-bind
+      - home
+      - removable-media
+      - audio-playback
+      - screen-inhibit-control
+      - password-manager-service
+    environment:
+      TMPDIR: $XDG_RUNTIME_DIR
+      DISABLE_WAYLAND_LIBDECOR: '1'
+      # Electron loads its bundled libraries from beside the binary.
+      LD_LIBRARY_PATH: $SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib:$SNAP/lib/x86_64-linux-gnu:$SNAP/lib:$LD_LIBRARY_PATH
+
+parts:
+  freetube:
+    plugin: dump
+    source: freetube_0.25.2_beta_amd64.deb
+    source-type: deb
+    override-build: |
+      craftctl default
+      # Upstream files it under Network only, and it is a video player.
+      sed -i 's|^Categories=.*|Categories=Network;AudioVideo;Video;|' \
+        "${CRAFT_PART_INSTALL}/usr/share/applications/freetube.desktop"
+
+  # Only bin/launcher is left in the overlay; the rest is this file's job now.
+  launcher:
+    plugin: dump
+    source: overlay
+    stage:
+      - bin/launcher

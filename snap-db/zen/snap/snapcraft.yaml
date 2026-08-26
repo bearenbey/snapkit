@@ -1,0 +1,101 @@
+name: zen
+title: Zen Browser
+base: core24
+version: '1.21.15b'
+summary: A calmer way to browse the web
+description: |
+  Zen is a Firefox fork built around a quieter reading experience: workspaces,
+  split view, vertical tabs and a compact mode that gets the chrome out of the
+  way, on top of Gecko and Firefox's own privacy defaults.
+
+  This snap is a repack of the official upstream Linux tarball
+  (zen.linux-x86_64.tar.xz) and is not published or endorsed by the Zen
+  Browser team.
+
+license: MPL-2.0
+source-code: https://github.com/zen-browser/desktop
+issues: https://github.com/zen-browser/desktop/issues
+website: https://zen-browser.app
+contact: https://github.com/zen-browser/desktop/issues
+
+# Gecko's window icon, the largest size the tarball ships.
+icon: opt/zen/browser/chrome/icons/default/default128.png
+
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+apps:
+  zen:
+    command: bin/launcher
+    common-id: app.zen_browser.zen
+    desktop: share/applications/zen.desktop
+    # The extension brings the command chain, desktop plugs and hooks.
+    extensions: [gnome]
+    plugs:
+      - unity7
+      - browser-sandbox
+      - network
+      - network-bind
+      - home
+      - removable-media
+      - audio-playback
+      - audio-record
+      - camera
+      - cups-control
+      - joystick
+      - hardware-observe
+      - mount-observe
+      - screen-inhibit-control
+      - upower-observe
+      - u2f-devices
+      - password-manager-service
+    slots:
+      - dbus-zen
+
+plugs:
+  browser-sandbox:
+    interface: browser-support
+    # Gecko's sandbox needs user namespaces, and this does not auto-connect.
+    allow-sandbox: true
+
+slots:
+  dbus-zen:
+    interface: dbus
+    bus: session
+    # Gecko's remoting owns org.mozilla.zen plus a per-profile suffix.
+    name: org.mozilla.zen
+
+layout:
+  # Gecko's spell checker reads its dictionaries from this path and no other.
+  /usr/share/hunspell:
+    bind: $SNAP/gnome-platform/usr/share/hunspell
+
+parts:
+  zen:
+    plugin: dump
+    source: zen.linux-x86_64.tar.xz
+    source-type: tar
+    # craft-parts strips the zen/ dir, so put the payload back under opt/zen.
+    organize:
+      '*': opt/zen/
+    # The updater cannot write a squashfs; policies.json turns the offer off.
+    prime:
+      - -opt/zen/updater
+      - -opt/zen/updater.ini
+      - -opt/zen/precomplete
+      - -opt/zen/removed-files
+
+  overlay:
+    plugin: dump
+    source: overlay
+    organize:
+      meta/gui/zen.desktop: share/applications/zen.desktop
+    stage:
+      - bin/launcher
+      - share/applications/zen.desktop
+      - opt/zen/distribution/policies.json

@@ -1,0 +1,12 @@
+#!/bin/bash
+set -eu
+
+# No libdecor plugin means no Wayland decorations, so fall back to X11.
+if [ -n "${WAYLAND_DISPLAY:-}" ] &&
+   ! ls "$SNAP"/usr/lib/x86_64-linux-gnu/libdecor/plugins-1/*.so >/dev/null 2>&1 &&
+   [ -n "${DISPLAY:-}" ]; then
+  echo "launcher: libdecor plugin missing, falling back to the X11 backend" >&2
+  set -- --display-driver x11 "$@"
+fi
+
+exec "$SNAP/bin/godot" "$@"

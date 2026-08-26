@@ -1,0 +1,23 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=ungoogled-chromium
+GenericName=Web Browser
+Comment=Google Chromium, sans integration with Google
+Exec=ungoogled-chromium %U
+Icon=${SNAP}/meta/gui/ungoogled-chromium.png
+Terminal=false
+StartupNotify=true
+StartupWMClass=chromium
+Categories=Network;WebBrowser;
+Keywords=web;browser;internet;chromium;ungoogled;
+MimeType=text/html;text/xml;application/xhtml+xml;application/xml;application/rdf+xml;image/gif;image/jpeg;image/png;image/webp;x-scheme-handler/http;x-scheme-handler/https;
+Actions=new-window;new-private-window;
+
+[Desktop Action new-window]
+Name=New Window
+Exec=ungoogled-chromium
+
+[Desktop Action new-private-window]
+Name=New Incognito Window
+Exec=ungoogled-chromium --incognito

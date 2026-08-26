@@ -1,0 +1,135 @@
+name: irssi
+title: Irssi
+base: core24
+adopt-info: irssi
+summary: Modular text mode IRC client
+description: |
+  Irssi is a modular text mode chat client. It comes with IRC support built
+  in, and other protocols are available as third party modules.
+
+  Features include SSL/TLS connections, multiple server and channel support,
+  a Perl scripting engine, configurable key bindings, paste detection,
+  a built-in IRC proxy, true colour support and OTR message encryption.
+
+  Notes for this snap:
+
+    * Configuration and logs live in `~/snap/irssi/current/.irssi` by default.
+      To use your existing `~/.irssi` instead, connect the opt-in
+      personal-files plug:
+
+          sudo snap connect irssi:dot-irssi
+
+    * The `home` and `removable-media` interfaces let irssi read and write
+      files outside its own directory (`/upload`, `/dcc get`, log paths).
+      `home` does not cover dot-directories at the top of your home — that
+      is what `dot-irssi` above is for.
+
+    * Perl scripting is enabled and the Perl runtime ships inside the snap.
+
+license: GPL-2.0-or-later
+source-code: https://github.com/irssi/irssi
+issues: https://github.com/irssi/irssi/issues
+contact: https://github.com/irssi/irssi/issues
+website: https://irssi.org/
+
+grade: stable
+confinement: strict
+compression: lzo
+
+# irssi bakes its module and data paths in, with no variable to override them.
+layout:
+  /usr/lib/irssi:
+    bind: $SNAP/usr/lib/irssi
+  /usr/share/irssi:
+    bind: $SNAP/usr/share/irssi
+
+lint:
+  ignore:
+    - library:
+        # Each rides along in a package irssi needs and links against neither.
+        - usr/lib/*/libgthread-2.0.so.*
+        - usr/lib/*/libtic.so.*
+
+platforms:
+  amd64:
+  arm64:
+  armhf:
+  ppc64el:
+  s390x:
+
+apps:
+  irssi:
+    command: bin/irssi-launch
+    plugs:
+      - network
+      - network-bind
+      - home
+      - removable-media
+      - dot-irssi
+
+plugs:
+  # Opt-in ~/.irssi: personal-files is privileged and never auto-connects.
+  dot-irssi:
+    interface: personal-files
+    write:
+      - $HOME/.irssi
+
+parts:
+  irssi:
+    plugin: meson
+    source: https://github.com/irssi/irssi/releases/download/1.4.5/irssi-1.4.5.tar.xz
+    source-checksum: sha256/72a951cb0ad622785a8962801f005a3a412736c7e7e3ce152f176287c52fe062
+    meson-parameters:
+      - --prefix=/usr
+      - --libdir=lib
+      - --buildtype=release
+      - -Dwith-perl=yes
+      - -Dwith-proxy=yes
+      - -Dwith-otr=yes
+      - -Dwith-bot=no
+      - -Denable-true-color=yes
+      - -Ddisable-utf8proc=no
+      - -Dwith-capsicum=no
+      - -Ddocdir=/usr/share/doc/irssi
+    build-packages:
+      - gcc
+      - meson
+      - ninja-build
+      - pkg-config
+      - libglib2.0-dev
+      - libssl-dev
+      - libncurses-dev
+      - libperl-dev
+      - libutf8proc-dev
+      - libotr5-dev
+      - libgcrypt20-dev
+    stage-packages:
+      - libglib2.0-0t64
+      - libssl3t64
+      # irssi uses terminfo only, so the rest of ncurses is dead weight.
+      - libtinfo6
+      - libutf8proc3
+      - libotr5
+      - libgcrypt20
+      - libgpg-error0
+      - ncurses-term
+      - perl
+    override-build: |
+      craftctl default
+      craftctl set version="$(sed -n "s/^ *version *: *'\([^']*\)'.*/\1/p" \
+        "${CRAFT_PART_SRC}/meson.build" | head -n 1)"
+    prime:
+      # Nothing compiles in here, so headers and .pc files are dead weight.
+      - -usr/include
+      - -usr/lib/*/pkgconfig
+      - -usr/share/doc
+      - -usr/share/lintian
+      - -usr/share/man
+      - -usr/lib/*/perl/*/**/*.pod
+      - -usr/share/perl/*/**/*.pod
+
+  launcher:
+    plugin: dump
+    source: snap/local
+    organize:
+      irssi-launch: bin/irssi-launch

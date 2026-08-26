@@ -1,0 +1,14 @@
+#!/bin/bash
+set -eu
+
+# JavaFX's glass backend is X11 only, so go through XWayland.
+export GDK_BACKEND=x11
+
+# desktop-launch redirects the other XDG dirs but not XDG_STATE_HOME.
+export XDG_STATE_HOME="$SNAP_USER_DATA/.local/state"
+
+# The JVM reads user.home from passwd, not $HOME, so point it here too.
+export JAVA_TOOL_OPTIONS="-Duser.home=$SNAP_USER_DATA${JAVA_TOOL_OPTIONS:+ $JAVA_TOOL_OPTIONS}"
+
+# It finds the jar via /proc/self/exe, so exec the real binary.
+exec "$SNAP/opt/Defold/Defold" "$@"

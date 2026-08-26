@@ -1,0 +1,19 @@
+#!/bin/bash
+set -eu
+
+HERE="$SNAP/opt/zen"
+
+# The forked capability probes carry no RUNPATH, so name the directory.
+export LD_LIBRARY_PATH="$HERE${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+# Keep the profile in SNAP_USER_COMMON so a refresh does not copy it forward.
+export HOME="$SNAP_USER_COMMON"
+
+# Without browser-support connected the content sandbox kills every process.
+if ! snapctl is-connected browser-sandbox 2>/dev/null; then
+  echo "zen: browser-sandbox is not connected, so Gecko's own content sandbox" >&2
+  echo "     is off. Connect it with:  sudo snap connect zen:browser-sandbox" >&2
+  export MOZ_DISABLE_CONTENT_SANDBOX=1
+fi
+
+exec "$HERE/zen" "$@"

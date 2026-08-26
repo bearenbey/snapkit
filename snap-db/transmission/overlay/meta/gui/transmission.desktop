@@ -1,0 +1,22 @@
+[Desktop Entry]
+Name=Transmission
+GenericName=BitTorrent Client
+Comment=Download and share files over BitTorrent
+Keywords=torrents;downloading;uploading;share;sharing;
+Exec=transmission %U
+Icon=${SNAP}/meta/gui/transmission.svg
+Terminal=false
+Type=Application
+StartupNotify=true
+StartupWMClass=transmission-gtk
+MimeType=application/x-bittorrent;x-scheme-handler/magnet;
+Categories=Network;FileTransfer;P2P;GTK;
+Actions=Pause;Minimize;
+
+[Desktop Action Pause]
+Name=Start Transmission with All Torrents Paused
+Exec=transmission --paused
+
+[Desktop Action Minimize]
+Name=Start Transmission Minimized
+Exec=transmission --minimized

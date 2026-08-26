@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Godot Engine
+Exec=godot %f
+Terminal=false
+Type=Application
+Icon=${SNAP}/meta/gui/godot.png
+StartupWMClass=Godot
+Comment=2D and 3D cross-platform game engine
+MimeType=application/x-godot-project;
+Categories=Development;IDE;
+Keywords=game;engine;godot;gamedev;2D;3D;

@@ -1,0 +1,201 @@
+name: spotube
+base: core24
+version: '5.1.2'
+title: Spotube
+license: BSD-4-Clause
+summary: Open source music streaming client
+website: https://spotube.krtirtho.dev
+source-code: https://github.com/KRTirtho/spotube
+issues: https://github.com/KRTirtho/spotube/issues
+contact: https://github.com/KRTirtho/spotube/issues
+description: |
+  Spotube is a music streaming app that uses Spotify's metadata and plays the
+  audio from YouTube and other public sources, so it needs no Spotify Premium
+  subscription and ships no proprietary client.
+
+  Built from Spotube's official .deb release (Spotube-linux-x86_64.deb). The
+  Flutter payload is upstream's own build; only libmpv (the playback engine
+  media_kit talks to) and libappindicator (the tray icon) are added, because
+  the GNOME platform snap does not carry them.
+
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+
+apps:
+  spotube:
+    command: usr/share/spotube/spotube
+    extensions:
+      - gnome
+    common-id: oss.krtirtho.spotube
+    desktop: usr/share/applications/spotube.desktop
+    slots:
+      - mpris
+      - dbus-application
+    plugs:
+      - network
+      - network-bind
+      - home
+      - removable-media
+      - audio-playback
+      - screen-inhibit-control
+      - password-manager-service
+      - browser-support
+      - unity7
+      - avahi-observe
+      - avahi-control
+    environment:
+      # WebKit's sandbox wants user namespaces snapd denies; login goes blank.
+      WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS: '1'
+      # The dmabuf renderer does not survive confinement on every session.
+      WEBKIT_DISABLE_DMABUF_RENDERER: '1'
+
+slots:
+  # GtkApplication owns its app id on the bus; AppArmor refuses without this.
+  dbus-application:
+    interface: dbus
+    bus: session
+    name: oss.krtirtho.spotube
+
+  # The MPRIS name, so media keys find it; the pid suffix is covered.
+  mpris:
+    interface: mpris
+    name: spotube
+
+parts:
+  spotube:
+    plugin: dump
+    source: Spotube-linux-x86_64.deb
+    source-type: deb
+    override-build: |
+      craftctl default
+
+      # The asset name has no version, so read it out of the payload instead.
+      desktop="${CRAFT_PART_INSTALL}/usr/share/applications/spotube.desktop"
+      payload_version=$(sed -n 's/^Version=//p' "$desktop" | head -n1)
+      if [ "${payload_version%%+*}" != "5.1.2" ]; then
+        echo "version mismatch: snapcraft.yaml says 5.1.2," \
+             "the deb ships ${payload_version:-nothing}" >&2
+        exit 1
+      fi
+
+      # The Flutter bundle finds data/ and lib/ next to the executable.
+      [ -x "${CRAFT_PART_INSTALL}/usr/share/spotube/spotube" ] || {
+        echo "no spotube binary at usr/share/spotube: the payload layout changed" >&2
+        exit 1
+      }
+
+      # Icon= names a host theme icon, which a snap does not get.
+      sed -i -e 's|^Icon=.*|Icon=${SNAP}/usr/share/icons/hicolor/256x256/apps/spotube.png|' \
+             "$desktop"
+
+      # No StartupWMClass, and the entry ends without a trailing newline.
+      [ -z "$(tail -c1 "$desktop")" ] || printf '\n' >> "$desktop"
+      grep -q '^StartupWMClass=' "$desktop" ||
+        echo 'StartupWMClass=oss.krtirtho.spotube' >> "$desktop"
+    stage-packages:
+      # media_kit dlopens libmpv.so.2, so nothing in the payload declares it.
+      - libmpv2
+      # tray_manager needs libappindicator3.so.1, not the platform's fork.
+      - libappindicator3-1
+
+  cleanup:
+    after:
+      - spotube
+    plugin: nil
+    build-packages:
+      - squashfs-tools
+      - binutils
+    override-prime: |
+      set -eu
+
+      # Drop what the platform provides; read the squashfs, nothing is mounted.
+      snap_list() {
+        img=$(ls -1 "/var/lib/snapd/snaps/$1"_*.snap 2>/dev/null | head -n1)
+        [ -n "$img" ] || { echo "no $1 image in the build container" >&2; exit 1; }
+        unsquashfs -l "$img" | grep '^squashfs-root/'
+      }
+
+      list=$(mktemp)
+      snap_list core24 > "$list"
+      snap_list gnome-46-2404 >> "$list"
+
+      # The dirs a snap really searches; subdirectories are not on that path.
+      libdirs="usr/lib/x86_64-linux-gnu usr/lib lib/x86_64-linux-gnu lib"
+
+      # Same paths, but never a library: those are the soname pass's business.
+      grep -vE '/lib[^/]*\.so($|\.)' "$list" |
+        sed "s|^squashfs-root|${CRAFT_PRIME}|" |
+        xargs -d '\n' -r rm -f 2>/dev/null || true
+
+      # Match on soname, not file name: patch levels differ, the ABI does not.
+      soname() { sed -E 's/(\.so\.[0-9]+).*/\1/'; }
+
+      sonames=$(mktemp)
+      for d in $libdirs; do
+        grep -E "^squashfs-root/$d/lib[^/]*\.so\.[0-9]" "$list" || true
+      done | sed 's|.*/||' | soname | sort -u > "$sonames"
+
+      for d in $libdirs; do
+        [ -d "${CRAFT_PRIME}/$d" ] || continue
+        find "${CRAFT_PRIME}/$d" -maxdepth 1 -name 'lib*.so.*' | while read -r lib; do
+          if grep -qxF "$(basename "$lib" | soname)" "$sonames"; then rm -f "$lib"; fi
+        done
+        find "${CRAFT_PRIME}/$d" -maxdepth 1 -xtype l -delete
+      done
+
+      # What ldconfig would do: link subdirectory libs somewhere searched.
+      for d in $libdirs; do
+        [ -d "${CRAFT_PRIME}/$d" ] || continue
+        find "${CRAFT_PRIME}/$d" -mindepth 2 -name 'lib*.so.*' | while read -r lib; do
+          link="${CRAFT_PRIME}/$d/$(basename "$lib")"
+          [ -e "$link" ] || ln -s "${lib#${CRAFT_PRIME}/$d/}" "$link"
+        done
+      done
+
+      # libmpv and libappindicator are why anything is staged at all.
+      for keep in libmpv.so.2 libappindicator3.so.1; do
+        find "${CRAFT_PRIME}/usr/lib" -name "$keep*" | grep -q . || {
+          echo "cleanup removed $keep, which is the point of staging it" >&2
+          exit 1
+        }
+      done
+
+      # Resolve the whole NEEDED closure here, or it fails in a dlopen instead.
+      resolvable=$(mktemp)
+      {
+        for d in $libdirs; do
+          find "${CRAFT_PRIME}/$d" -maxdepth 1 -name '*.so*' -printf '%f\n' 2>/dev/null || true
+        done
+        # the Flutter payload's own plugins, reached through RUNPATH $ORIGIN/lib
+        find "${CRAFT_PRIME}/usr/share/spotube/lib" -name '*.so*' -printf '%f\n' 2>/dev/null || true
+        # the base, the gnome platform and the mesa provider
+        { cat "$list"; snap_list mesa-2404; } |
+          grep -E "^squashfs-root/($(echo $libdirs | tr ' ' '|'))/[^/]*\.so" |
+          sed 's|.*/||'
+      } | sort -u > "$resolvable"
+
+      missing=$(mktemp)
+      {
+        echo "${CRAFT_PRIME}/usr/share/spotube/spotube"
+        find "${CRAFT_PRIME}/usr/share/spotube/lib" -name '*.so*' 2>/dev/null || true
+        for d in $libdirs; do
+          find "${CRAFT_PRIME}/$d" -maxdepth 1 -name 'lib*.so*' 2>/dev/null || true
+        done
+      } | while read -r elf; do
+        [ -f "$elf" ] || continue
+        readelf -d "$elf" 2>/dev/null |
+          sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p' |
+          while read -r need; do
+            grep -qxF "$need" "$resolvable" || echo "  $need <- $(basename "$elf")"
+          done
+      done | sort -u > "$missing"
+
+      if [ -s "$missing" ]; then
+        echo "these libraries are in nothing the snap can search at runtime:" >&2
+        cat "$missing" >&2
+        exit 1
+      fi
+      echo "cleanup: NEEDED closure resolves against the runtime search path"

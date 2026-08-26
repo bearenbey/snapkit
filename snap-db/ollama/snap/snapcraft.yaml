@@ -1,0 +1,96 @@
+name: ollama
+title: Ollama
+base: core24
+adopt-info: ollama
+summary: Get up and running with large language models
+description: |
+  Ollama runs large language models locally. It bundles model weights,
+  configuration and data into a single package and exposes an HTTP API on
+  127.0.0.1:11434 plus a command line client.
+
+  This snap packages the official upstream Linux build (the same tarball that
+  https://ollama.com/install.sh downloads) and runs the server as a background
+  service.
+
+    snap install ollama
+    snap connect ollama:opengl              # NVIDIA / Vulkan acceleration
+    snap connect ollama:hardware-observe    # GPU discovery
+    ollama run llama3.2
+
+  Models are stored in /var/snap/ollama/common/models.
+
+  The server is configured with `snap set`, for example:
+
+    snap set ollama host=0.0.0.0:11434
+    snap set ollama keep-alive=30m
+    snap set ollama debug=true
+
+  Run `snap get ollama` to see every supported key.
+
+license: MIT
+website: https://ollama.com
+source-code: https://github.com/ollama/ollama
+contact: https://github.com/ollama/ollama/issues
+issues: https://github.com/ollama/ollama/issues
+
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+
+lint:
+  ignore:
+    # libcuda and libvulkan are the host's, bind mounted in by `opengl`.
+    - library:
+        - lib/ollama/cuda_v12/libggml-cuda.so
+        - lib/ollama/cuda_v13/libggml-cuda.so
+        - lib/ollama/vulkan/libggml-vulkan.so
+
+apps:
+  # `ollama` in the snap `ollama` is exposed on PATH as plain `ollama`.
+  ollama:
+    command: bin/ollama-launch
+    plugs:
+      - network
+      - home
+      - removable-media
+
+  daemon:
+    command: bin/ollama-launch serve
+    daemon: simple
+    install-mode: enable
+    restart-condition: always
+    restart-delay: 3s
+    plugs:
+      - network
+      - network-bind
+      - opengl
+      - hardware-observe
+
+parts:
+  ollama:
+    plugin: nil
+    # `snapkit update ollama` bumps both the URL and the checksum.
+    source: https://github.com/ollama/ollama/releases/download/v0.32.15/ollama-linux-amd64.tar.zst
+    source-type: file
+    source-checksum: sha256/50539c5fe9bf85887733355098dcdb266b433cb8c73fa180713417e9ed6e42bb
+    build-packages:
+      - zstd
+    override-build: |
+      set -eu
+      # The tarball is already laid out the way the binary expects.
+      zstd -dc "${CRAFT_PART_SRC}/ollama-linux-amd64.tar.zst" \
+        | tar -xf - -C "${CRAFT_PART_INSTALL}"
+
+      # `--version` reports "client version is X" when no server is reachable.
+      version="$("${CRAFT_PART_INSTALL}/bin/ollama" --version 2>&1 \
+        | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
+      [ -n "$version" ] || { echo "could not determine ollama version" >&2; exit 1; }
+      craftctl set version="$version"
+
+  launcher:
+    plugin: dump
+    source: snap/local
+    organize:
+      ollama-launch: bin/ollama-launch

@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e
+
+# Marks the build in about: pages / crash reports so bug reports are traceable.
+export CHROME_VERSION_EXTRA=snap
+
+HERE="$SNAP/usr/lib/helium"
+export CHROME_WRAPPER="$HERE/helium"
+export LD_LIBRARY_PATH="$HERE:$HERE/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+# Chromium looks for the Vulkan ICD through the standard search path.
+export XDG_DATA_DIRS="$SNAP/usr/share${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
+export VK_ICD_FILENAMES="${VK_ICD_FILENAMES:-$HERE/vk_swiftshader_icd.json}"
+
+# Keep the profile inside the snap's own data dir so `snap revert` keeps it.
+exec "$HERE/helium" --user-data-dir="$SNAP_USER_COMMON/helium" "$@"

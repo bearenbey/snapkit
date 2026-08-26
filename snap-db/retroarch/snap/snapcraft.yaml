@@ -1,0 +1,384 @@
+# RetroArch, from the Flathub recipe but on release tarballs. See README.md.
+
+name: retroarch
+title: RetroArch
+version: '1.22.2'
+summary: RetroArch is the official reference frontend for the libretro API.
+description: |
+  The official reference frontend for the libretro API.
+
+  RetroArch provides a variety of advanced user-facing features and powerful
+  configuration capabilities to programs that target the libretro API. While a
+  majority of these programs are emulators for retro gaming consoles, various
+  gaming engines and other multimedia applications are also represented. The
+  programs, known as "cores", can be downloaded and updated directly from
+  RetroArch's built-in Online Updater.
+
+  RetroArch defaults to a gamepad-friendly 10-foot/leanback interface that is
+  perfect for use with living-room and home theater PCs, but there is also a
+  more traditional keyboard-and-mouse interface available by pressing F5.
+
+  This package is built from the Flathub recipe for org.libretro.RetroArch and
+  bundles the same assets, databases, core info files, joypad autoconfigs,
+  shaders, overlays and audio/video filters as the Flatpak.
+
+license: GPL-3.0-or-later
+icon: snap/gui/retroarch.svg
+
+website: https://www.retroarch.com
+contact: https://forums.libretro.com
+source-code: https://github.com/libretro/RetroArch
+issues: https://github.com/libretro/RetroArch/issues
+
+base: core24
+confinement: strict
+grade: stable
+
+platforms:
+  amd64:
+  arm64:
+
+plugs:
+  # Graphics userspace comes from a content snap, like the Flatpak runtime.
+  gpu-2404:
+    interface: content
+    target: $SNAP/gpu-2404
+    default-provider: mesa-2404
+  # Some cores (dolphin, swanstation, ...) need POSIX shared memory.
+  shared-memory:
+    private: true
+
+layout:
+  # RetroArch bakes these paths in at compile time, so bind them into place.
+  /usr/share/libretro:
+    bind: $SNAP/usr/share/libretro
+  /usr/lib/retroarch:
+    bind: $SNAP/usr/lib/retroarch
+  # The skeleton config copied to the user's directory on first run.
+  /etc/retroarch.cfg:
+    bind-file: $SNAP/etc/retroarch.cfg
+  # ALSA reads this absolute path and core24 does not ship it.
+  /usr/share/alsa:
+    bind: $SNAP/usr/share/alsa
+  /usr/share/X11/XErrorDB:
+    symlink: $SNAP/gpu-2404/X11/XErrorDB
+  # libxkbcommon needs its keymaps here or Qt's wayland plugin segfaults.
+  /usr/share/X11/xkb:
+    bind: $SNAP/usr/share/X11/xkb
+
+apps:
+  retroarch:
+    command: usr/bin/retroarch
+    command-chain:
+      - bin/gpu-2404-wrapper
+      - bin/launcher
+    common-id: com.libretro.RetroArch
+    desktop: usr/share/applications/com.libretro.RetroArch.desktop
+    environment:
+      LD_LIBRARY_PATH: $LD_LIBRARY_PATH:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/pulseaudio:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libproxy:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/blas:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/lapack
+      QT_PLUGIN_PATH: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/qt6/plugins
+      # The parent dir: espeak-ng appends /espeak-ng-data to it itself.
+      ESPEAK_DATA_PATH: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR
+      # libdecor dlopens its plugins from a path the snap does not have.
+      LIBDECOR_PLUGIN_DIR: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libdecor/plugins-1
+      XKB_CONFIG_ROOT: $SNAP/usr/share/X11/xkb
+    plugs:
+      # --share=network
+      - network
+      - network-bind
+      # --socket=fallback-x11, --socket=wayland
+      - x11
+      - wayland
+      - opengl
+      - desktop
+      - desktop-legacy
+      - unity7
+      # --socket=pulseaudio
+      - audio-playback
+      - audio-record
+      - alsa
+      # --device=all
+      - joystick
+      - raw-usb
+      - bluez
+      - camera
+      - optical-drive
+      # --filesystem=/run/udev:ro
+      - hardware-observe
+      - mount-observe
+      - system-observe
+      # --talk-name=org.freedesktop.ScreenSaver / PowerManagement.Inhibit
+      - screen-inhibit-control
+      # --filesystem=host (as close as strict confinement gets)
+      - home
+      - removable-media
+
+parts:
+  # ------------------------------- frontend, Flathub module "retroarch" ------
+  retroarch:
+    plugin: nil
+    source: https://github.com/libretro/RetroArch/archive/refs/tags/v1.22.2.tar.gz
+    source-type: tar
+    source-checksum: sha256/245ef18c8fa8fbd9fbb5eb25cf43e17c6aace2f95c1ed99873cbd794012bb232
+    override-build: |
+      # No --enable-libusb and no DESTDIR: both get baked into the binary.
+      ./configure \
+        --prefix=/usr \
+        --sysconfdir=/etc \
+        --enable-dbus \
+        --enable-udev \
+        --enable-kms \
+        --enable-x11 \
+        --enable-xvideo \
+        --enable-xinerama \
+        --enable-wayland \
+        --enable-libdecor \
+        --enable-vulkan \
+        --enable-ffmpeg \
+        --enable-ssa \
+        --enable-qt \
+        --enable-pipewire \
+        --enable-pulse \
+        --enable-alsa \
+        --enable-jack \
+        --enable-sdl2 \
+        --disable-sdl \
+        --enable-bluetooth \
+        --enable-cdrom \
+        --enable-networking \
+        --enable-ssl \
+        --enable-discord \
+        --disable-coreaudio \
+        --disable-roar \
+        --disable-rsound \
+        --disable-vg \
+        --disable-v4l2
+
+      # make-args from the Flathub manifest.
+      make -j"${CRAFT_PARALLEL_BUILD_COUNT}" \
+        HAVE_TRANSLATE=1 \
+        HAVE_ACCESSIBILITY=1 \
+        HAVE_UPDATE_ASSETS=0 \
+        HAVE_UPDATE_CORE_INFO=0
+
+      make install DESTDIR="${CRAFT_PART_INSTALL}"
+
+      # Drop TryExec: unresolvable means the menu must ignore the whole entry.
+      sed -i '/^TryExec=/d' \
+        "${CRAFT_PART_INSTALL}/usr/share/applications/com.libretro.RetroArch.desktop"
+
+      # The icon belongs in hicolor, not pixmaps, so Icon= resolves.
+      install -Dm644 media/com.libretro.RetroArch.svg \
+        "${CRAFT_PART_INSTALL}/usr/share/icons/hicolor/scalable/apps/com.libretro.RetroArch.svg"
+      rm -rf "${CRAFT_PART_INSTALL}/usr/share/pixmaps"
+
+      # The Flatpak's config, which points at the bundled read-only assets.
+      install -Dm644 "${CRAFT_PROJECT_DIR}/snap/local/retroarch.cfg" \
+        "${CRAFT_PART_INSTALL}/etc/retroarch.cfg"
+    build-packages:
+      - gcc
+      - g++
+      - make
+      - pkg-config
+      - libasound2-dev
+      - libass-dev
+      - libavcodec-dev
+      - libavdevice-dev
+      - libavformat-dev
+      - libavutil-dev
+      - libbluetooth-dev
+      - libcdio-dev
+      - libdbus-1-dev
+      - libdecor-0-dev
+      - libdrm-dev
+      - libegl1-mesa-dev
+      - libfreetype6-dev
+      - libgbm-dev
+      - libgl1-mesa-dev
+      - libglu1-mesa-dev
+      - libjack-jackd2-dev
+      - libpipewire-0.3-dev
+      - libpulse-dev
+      - libsdl2-dev
+      - libswresample-dev
+      - libswscale-dev
+      - libudev-dev
+      - libusb-1.0-0-dev
+      - libvulkan-dev
+      - libwayland-dev
+      - libx11-xcb-dev
+      - libxext-dev
+      - libxi-dev
+      - libxinerama-dev
+      - libxkbcommon-dev
+      - libxml2-dev
+      - libxrandr-dev
+      - libxv-dev
+      - libxxf86vm-dev
+      - mesa-common-dev
+      - qmake6-bin
+      - qt6-base-dev
+      - wayland-protocols
+      - zlib1g-dev
+    stage-packages:
+      - fonts-dejavu-core
+      - libaio1t64
+      - libasound2t64
+      - libasound2-data
+      - libass9
+      - libavcodec60
+      - libavdevice60
+      - libavformat60
+      - libavutil58
+      - libblas3
+      - libbluetooth3
+      - libbz2-1.0
+      - libcdio19
+      - libdbus-1-3
+      - libdecor-0-0
+      - libdecor-0-plugin-1-cairo
+      - libflac12t64
+      - libfreetype6
+      - libfribidi0
+      - libgbm1
+      - libglu1-mesa
+      - libjack-jackd2-0
+      - liblzma5
+      - libminizip1t64
+      - libnotify-bin
+      - libpipewire-0.3-0
+      - libpulse0
+      - libqt6concurrent6t64
+      - libqt6core6t64
+      - libqt6gui6t64
+      - libqt6network6t64
+      - libqt6widgets6t64
+      - libsdl2-2.0-0
+      - libspeexdsp1
+      - libswresample4
+      - libswscale7
+      - libudev1
+      - libusb-1.0-0
+      - libvulkan1
+      - libxext6
+      - libxi6
+      - libxinerama1
+      - libxkbcommon0
+      - xkb-data
+      - libxrandr2
+      - libxv1
+      - libzstd1
+      - qt6-wayland
+      - zlib1g
+      # HAVE_ACCESSIBILITY=1 exec()s a binary literally named "espeak".
+      - espeak-ng-espeak
+      - espeak-ng-data
+
+  # Flathub module: "retroarch-filters-video"
+  retroarch-filters-video:
+    plugin: nil
+    after: [retroarch]
+    source: https://github.com/libretro/RetroArch/archive/refs/tags/v1.22.2.tar.gz
+    source-type: tar
+    source-checksum: sha256/245ef18c8fa8fbd9fbb5eb25cf43e17c6aace2f95c1ed99873cbd794012bb232
+    override-build: |
+      cd "${CRAFT_PART_BUILD}/gfx/video_filters"
+      ./configure --prefix=/usr
+      make -j"${CRAFT_PARALLEL_BUILD_COUNT}"
+      make install PREFIX=/usr DESTDIR="${CRAFT_PART_INSTALL}"
+    build-packages:
+      - gcc
+      - make
+
+  # Flathub module: "retroarch-filters-audio"
+  retroarch-filters-audio:
+    plugin: nil
+    after: [retroarch]
+    source: https://github.com/libretro/RetroArch/archive/refs/tags/v1.22.2.tar.gz
+    source-type: tar
+    source-checksum: sha256/245ef18c8fa8fbd9fbb5eb25cf43e17c6aace2f95c1ed99873cbd794012bb232
+    override-build: |
+      cd "${CRAFT_PART_BUILD}/libretro-common/audio/dsp_filters"
+      ./configure --prefix=/usr
+      make -j"${CRAFT_PARALLEL_BUILD_COUNT}"
+      make install PREFIX=/usr DESTDIR="${CRAFT_PART_INSTALL}"
+    build-packages:
+      - gcc
+      - make
+
+  # --------- data modules, all under $(PREFIX)/share/libretro/ ---------------
+
+  # Flathub module: "retroarch-assets"
+  retroarch-assets:
+    plugin: make
+    source: https://github.com/libretro/retroarch-assets.git
+    source-type: git
+    make-parameters: [PREFIX=/usr]
+
+  # Flathub module: "libretro-database"
+  libretro-database:
+    plugin: make
+    source: https://github.com/libretro/libretro-database.git
+    source-type: git
+    make-parameters: [PREFIX=/usr]
+
+  # Flathub module: "libretro-core-info"
+  libretro-core-info:
+    plugin: make
+    source: https://github.com/libretro/libretro-core-info.git
+    source-type: git
+    make-parameters: [PREFIX=/usr]
+
+  # Flathub module: "retroarch-joypad-autoconfig"
+  retroarch-joypad-autoconfig:
+    plugin: make
+    source: https://github.com/libretro/retroarch-joypad-autoconfig.git
+    source-type: git
+    make-parameters: [PREFIX=/usr]
+
+  # Flathub module: "slang-shaders"
+  slang-shaders:
+    plugin: make
+    source: https://github.com/libretro/slang-shaders.git
+    source-type: git
+    make-parameters: [PREFIX=/usr]
+
+  # Flathub module: "glsl-shaders"
+  glsl-shaders:
+    plugin: make
+    source: https://github.com/libretro/glsl-shaders.git
+    source-type: git
+    make-parameters: [PREFIX=/usr]
+
+  # Flathub module: "common-overlays"
+  common-overlays:
+    plugin: make
+    source: https://github.com/libretro/common-overlays.git
+    source-type: git
+    make-parameters: [PREFIX=/usr]
+
+  # -------------------------------------------------------- snap plumbing --
+  launcher:
+    plugin: dump
+    source: snap/local
+    organize:
+      launcher: bin/launcher
+    stage:
+      - bin/launcher
+
+  # Two parts on purpose: a prime scriptlet records an empty file set.
+  gpu-2404:
+    after: [retroarch]
+    source: https://github.com/canonical/gpu-snap.git
+    plugin: dump
+    prime:
+      - bin/gpu-2404-wrapper
+
+  # Stages nothing, so its empty file set is true; strips mesa and nvidia.
+  gpu-2404-cleanup:
+    after: [retroarch, gpu-2404]
+    source: https://github.com/canonical/gpu-snap.git
+    plugin: nil
+    override-prime: |
+      "${CRAFT_PART_SRC}/bin/gpu-2404-cleanup" mesa-2404 nvidia-2404
+      rm -rf "${CRAFT_PRIME}/usr/share/doc" "${CRAFT_PRIME}/usr/share/man"

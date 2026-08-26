@@ -1,0 +1,172 @@
+name: transmission
+title: Transmission
+base: core24
+version: '4.1.3'
+summary: A fast, easy and free BitTorrent client
+description: |
+  Transmission is a cross-platform BitTorrent client that is easy, lean and
+  powerful. This snap ships the GTK 4 desktop client together with the
+  daemon, the web UI and the command-line utilities.
+
+  Built from the official upstream source release
+  (transmission-4.1.3.tar.xz); not published or endorsed by the Transmission
+  project.
+
+license: GPL-2.0-or-later
+source-code: https://github.com/transmission/transmission
+issues: https://github.com/transmission/transmission/issues
+website: https://transmissionbt.com
+contact: https://github.com/transmission/transmission/issues
+
+# Resolved against the prime directory: the icon the build installs.
+icon: usr/share/icons/hicolor/scalable/apps/transmission-gtk.svg
+
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+environment:
+  TRANSMISSION_WEB_HOME: $SNAP/usr/share/transmission/public_html
+
+apps:
+  transmission:
+    command: bin/launcher
+    common-id: com.transmissionbt.Transmission
+    desktop: share/applications/transmission.desktop
+    # The extension brings the command chain, desktop plugs and hooks.
+    extensions: [gnome]
+    plugs:
+      - unity7
+      - network
+      - network-bind
+      - home
+      - removable-media
+      - screen-inhibit-control
+    slots:
+      - dbus-transmission
+    environment:
+      TMPDIR: $XDG_RUNTIME_DIR
+
+  daemon:
+    command: usr/bin/transmission-daemon
+    plugs: &cli-plugs
+      - network
+      - network-bind
+      - home
+      - removable-media
+  remote:
+    command: usr/bin/transmission-remote
+    plugs: *cli-plugs
+  cli:
+    command: usr/bin/transmission-cli
+    plugs: *cli-plugs
+  create:
+    command: usr/bin/transmission-create
+    plugs: *cli-plugs
+  edit:
+    command: usr/bin/transmission-edit
+    plugs: *cli-plugs
+  show:
+    command: usr/bin/transmission-show
+    plugs: *cli-plugs
+
+slots:
+  # The GApplication id carries a suffix snapd's bind rule already covers.
+  dbus-transmission:
+    interface: dbus
+    bus: session
+    name: com.transmissionbt.transmission
+
+parts:
+  # Transmission 4.1 wants gtkmm 4.11+; noble has 4.10, so build it into /opt.
+  gtkmm:
+    plugin: meson
+    source: vendor/gtkmm-4.12.0.tar.xz
+    source-type: tar
+    meson-parameters:
+      - --prefix=/opt/gtkmm-4.12
+      - --libdir=lib
+      - --buildtype=release
+      - -Dbuild-demos=false
+      - -Dbuild-tests=false
+      - -Dbuild-documentation=false
+    build-packages:
+      - libgtkmm-4.0-dev
+    override-build: |
+      craftctl default
+      # Only the library ships, where bin/launcher points the loader first.
+      install -d "${CRAFT_PART_INSTALL}/usr/lib/x86_64-linux-gnu"
+      cp -P "${CRAFT_PART_INSTALL}"/opt/gtkmm-4.12/lib/libgtkmm-4.0.so.* \
+            "${CRAFT_PART_INSTALL}/usr/lib/x86_64-linux-gnu/"
+      strip --strip-unneeded \
+        "${CRAFT_PART_INSTALL}"/usr/lib/x86_64-linux-gnu/libgtkmm-4.0.so.0.0.0
+    # /opt stays staged to build against; this keeps it out of the snap.
+    prime:
+      - usr/lib/x86_64-linux-gnu/libgtkmm-4.0.so*
+
+  transmission:
+    after: [gtkmm]
+    plugin: cmake
+    source: transmission-4.1.3.tar.xz
+    source-type: tar
+    cmake-parameters:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_PREFIX=/usr
+      - -DENABLE_GTK=ON
+      - -DUSE_GTK_VERSION=4
+      - -DENABLE_QT=OFF
+      - -DENABLE_DAEMON=ON
+      - -DENABLE_CLI=ON
+      - -DENABLE_UTILS=ON
+      - -DENABLE_TESTS=OFF
+      - -DINSTALL_DOC=OFF
+      - -DINSTALL_WEB=ON
+      - -DENABLE_NLS=ON
+      - -DWITH_SYSTEMD=OFF
+      - -DREBUILD_WEB=OFF
+      - -DRUN_CLANG_TIDY=OFF
+      # Transmission vendors these, and upstream expects its own copies.
+      - -DUSE_SYSTEM_EVENT2=OFF
+      - -DUSE_SYSTEM_DEFLATE=OFF
+      - -DUSE_SYSTEM_DHT=OFF
+      - -DUSE_SYSTEM_MINIUPNPC=OFF
+      - -DUSE_SYSTEM_NATPMP=OFF
+      - -DUSE_SYSTEM_UTP=OFF
+      - -DUSE_SYSTEM_B64=OFF
+      - -DUSE_SYSTEM_PSL=OFF
+    build-environment:
+      # Our 4.12 ahead of noble's 4.10.
+      - PKG_CONFIG_PATH: $CRAFT_STAGE/opt/gtkmm-4.12/lib/pkgconfig
+      - LD_LIBRARY_PATH: $CRAFT_STAGE/opt/gtkmm-4.12/lib
+    build-packages:
+      - libssl-dev
+      - libcurl4-openssl-dev
+      - zlib1g-dev
+      - libgtkmm-4.0-dev
+      - gettext
+      - libglib2.0-bin
+    override-build: |
+      craftctl default
+      strip --strip-unneeded "${CRAFT_PART_INSTALL}"/usr/bin/* || true
+      # Nothing runs glib-compile-schemas at install time, so do it here.
+      if [ -d "${CRAFT_PART_INSTALL}/usr/share/glib-2.0/schemas" ]; then
+        glib-compile-schemas "${CRAFT_PART_INSTALL}/usr/share/glib-2.0/schemas"
+      fi
+    # An exclusion list, not an `rm`: see the craft-parts trap in ../README.md.
+    prime:
+      - -usr/share/man
+      - -usr/share/doc
+      - -usr/lib/x86_64-linux-gnu/pkgconfig
+
+  overlay:
+    plugin: dump
+    source: overlay
+    organize:
+      meta/gui/transmission.desktop: share/applications/transmission.desktop
+    stage:
+      - bin/launcher
+      - share/applications/transmission.desktop

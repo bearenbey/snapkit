@@ -1,0 +1,87 @@
+name: btop
+title: btop
+base: core24
+version: '1.4.7'
+summary: Resource monitor for processor, memory, disks, network and processes
+description: |
+  btop++ is a C++ resource monitor with a game-inspired terminal UI. It shows
+  usage and statistics for the processor, memory, disks, network and processes.
+
+  Features:
+    * Easy to use, with a game inspired menu system.
+    * Full mouse support, all buttons with a highlighted key is clickable.
+    * Fast and responsive UI with UP, DOWN keys process selection.
+    * Function for showing detailed stats for selected process.
+    * Ability to filter processes, and send signals to them.
+    * 36 bundled themes plus 24-bit truecolor support.
+
+  This snap packages the upstream statically linked musl x86_64 build, so it
+  carries no library dependencies.
+
+  Because btop inspects the whole system, several interfaces have to be
+  connected manually after install:
+
+      sudo snap connect btop:system-observe
+      sudo snap connect btop:process-control
+      sudo snap connect btop:hardware-observe
+      sudo snap connect btop:mount-observe
+      sudo snap connect btop:network-observe
+
+  Configuration and user themes live under ~/snap/btop/current/.config/btop
+  rather than ~/.config/btop, since snaps get a private home directory.
+
+license: Apache-2.0
+# Without this snapcraft installs no icon and `Icon=btop` resolves to nothing.
+icon: share/icons/hicolor/48x48/apps/btop.png
+source-code: https://github.com/aristocratos/btop
+issues: https://github.com/aristocratos/btop/issues
+website: https://github.com/aristocratos/btop
+contact: https://github.com/aristocratos/btop/issues
+
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+apps:
+  btop:
+    command: bin/btop
+    desktop: share/applications/btop.desktop
+    environment:
+      # No locale archive in the base, and btop will not start without UTF-8.
+      LC_ALL: C.UTF-8
+      LANG: C.UTF-8
+    plugs:
+      # Required: without it seccomp blocks getifaddrs() and btop segfaults.
+      - network
+      - system-observe      # read /proc for every process, not just our own
+      - process-control     # send signals / renice from the process menu
+      - hardware-observe    # disk devices and temperature sensors
+      - mount-observe       # mount table, for the disks panel
+      - network-observe     # per-interface network counters
+      - home                # disk usage for paths under the real home
+      - removable-media     # disk usage for /media and /run/media
+
+parts:
+  btop:
+    plugin: dump
+    source: btop-x86_64-unknown-linux-musl.tar.gz
+    source-type: tar
+    organize:
+      # bin/ and share/ must sit together; keys are the stripped root.
+      bin/btop: bin/btop
+      themes: share/btop/themes
+      Img/icon.png: share/icons/hicolor/48x48/apps/btop.png
+      btop.desktop: share/applications/btop.desktop
+      README.md: share/doc/btop/README.md
+      CHANGES.md: share/doc/btop/CHANGES.md
+      LICENSE: share/doc/btop/LICENSE
+    stage:
+      - bin/btop
+      - share/btop/themes
+      - share/icons
+      - share/applications
+      - share/doc/btop

@@ -1,0 +1,47 @@
+#!/bin/bash
+# Launcher for client and daemon: GPU drivers, writable paths, snap set keys.
+set -eu
+
+export LD_LIBRARY_PATH="/var/lib/snapd/lib/gl:/var/lib/snapd/lib/gl32:/var/lib/snapd/lib/vulkan:$SNAP/lib/ollama${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+# `snapctl get` exits non-zero for a key never set; that means unset.
+export_config() {
+    local key="$1" var="$2" value
+    value="$(snapctl get "$key" 2>/dev/null || true)"
+    if [ -n "$value" ]; then
+        export "$var=$value"
+    fi
+}
+
+export_config host             OLLAMA_HOST
+export_config origins          OLLAMA_ORIGINS
+export_config models           OLLAMA_MODELS
+export_config keep-alive       OLLAMA_KEEP_ALIVE
+export_config context-length   OLLAMA_CONTEXT_LENGTH
+export_config num-parallel     OLLAMA_NUM_PARALLEL
+export_config max-loaded-models OLLAMA_MAX_LOADED_MODELS
+export_config max-queue        OLLAMA_MAX_QUEUE
+export_config flash-attention  OLLAMA_FLASH_ATTENTION
+export_config kv-cache-type    OLLAMA_KV_CACHE_TYPE
+export_config no-prune         OLLAMA_NOPRUNE
+export_config sched-spread     OLLAMA_SCHED_SPREAD
+export_config gpu-overhead     OLLAMA_GPU_OVERHEAD
+export_config debug            OLLAMA_DEBUG
+
+if [ "${1:-}" = "serve" ]; then
+    # The service runs as root out of SNAP_COMMON; a user gets their own.
+    if [ "$(id -u)" -eq 0 ]; then
+        state_dir="$SNAP_COMMON"
+    else
+        state_dir="$SNAP_USER_COMMON"
+    fi
+
+    # Upstream keeps the signing keypair in $HOME/.ollama.
+    export HOME="$state_dir"
+    export OLLAMA_MODELS="${OLLAMA_MODELS:-$state_dir/models}"
+    export OLLAMA_TMPDIR="${OLLAMA_TMPDIR:-$state_dir/tmp}"
+
+    mkdir -p "$OLLAMA_MODELS" "$OLLAMA_TMPDIR"
+fi
+
+exec "$SNAP/bin/ollama" "$@"

@@ -1,0 +1,60 @@
+name: nvim
+title: Neovim
+base: core24
+version: '0.12.5'
+summary: Hyperextensible Vim-based text editor
+description: |
+  Neovim is a refactor of Vim that keeps its editing model and configuration
+  while adding a built-in LSP client, tree-sitter parsing, Lua scripting and
+  an asynchronous job and RPC API.
+
+  This snap is classically confined, which for an editor is the point: it
+  reads your real ~/.config/nvim, runs the language servers, formatters,
+  compilers and git already on your PATH, and opens files anywhere on the
+  system, exactly as a distro-packaged nvim does.
+
+  This snap is a repack of the official upstream release tarball
+  (nvim-linux-x86_64.tar.gz) and is not published or endorsed by the Neovim
+  project.
+
+license: Apache-2.0 AND Vim
+source-code: https://github.com/neovim/neovim
+issues: https://github.com/neovim/neovim/issues
+website: https://neovim.io
+contact: https://github.com/neovim/neovim/issues
+
+# Upstream's bare `Icon=nvim` looks up a host theme that has no nvim in it.
+icon: usr/share/icons/hicolor/128x128/apps/nvim.png
+
+grade: stable
+confinement: classic
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+apps:
+  nvim:
+    command: usr/bin/nvim
+    common-id: io.neovim.nvim
+    desktop: usr/share/applications/nvim.desktop
+    environment:
+      # Classic: only the runtime is ours, the rest is deliberately the host's.
+      VIMRUNTIME: $SNAP/usr/share/nvim/runtime
+
+parts:
+  nvim:
+    plugin: dump
+    source: nvim-linux-x86_64.tar.gz
+    source-type: tar
+    # craft-parts strips the top dir; nvim wants its tree FHS-style under usr/.
+    organize:
+      bin: usr/bin
+      lib: usr/lib
+      share: usr/share
+    override-build: |
+      craftctl default
+      # `TryExec=nvim` reads as broken. Pre-organize, so it is still at share/.
+      sed -i 's|^TryExec=.*|TryExec=/snap/bin/nvim|' \
+        "${CRAFT_PART_INSTALL}/share/applications/nvim.desktop"

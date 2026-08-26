@@ -1,0 +1,104 @@
+name: ungoogled-chromium
+version: '151.0.7922.173-1'
+summary: Google Chromium, sans integration with Google
+description: |
+  ungoogled-chromium is Google Chromium with all Google web-service
+  integration removed, plus a set of tweaks that improve control over
+  privacy and transparency:
+
+    * No connections to Google on startup or during browsing
+    * Binary blobs and pre-built Google components stripped from the tree
+    * Substituted or blocked Google URLs in the source
+    * Extra flags and switches to disable remaining phone-home behaviour
+
+  This snap repackages the official upstream amd64 portable tarball from
+  https://github.com/ungoogled-software/ungoogled-chromium-portablelinux
+
+  Chromium's own sandbox needs an interface that does not auto-connect:
+
+    sudo snap connect ungoogled-chromium:browser-sandbox
+
+title: ungoogled-chromium
+license: BSD-3-Clause
+contact: https://github.com/ungoogled-software/ungoogled-chromium/issues
+website: https://github.com/ungoogled-software/ungoogled-chromium
+source-code: https://github.com/ungoogled-software/ungoogled-chromium
+issues: https://github.com/ungoogled-software/ungoogled-chromium/issues
+
+base: core24
+grade: stable
+confinement: strict
+compression: lzo
+
+platforms:
+  amd64:
+
+lint:
+  ignore:
+    # It bundles its own swiftshader and vulkan loader beside the binary.
+    - gpu
+    - library:
+        # Optional Qt integration shims, dlopened only when Qt is present.
+        - usr/lib/ungoogled-chromium/libqt5_shim.so
+        - usr/lib/ungoogled-chromium/libqt6_shim.so
+
+apps:
+  ungoogled-chromium:
+    command: bin/ungoogled-chromium-launch
+    common-id: io.github.ungoogled_software.ungoogled_chromium
+    extensions: [gnome]
+    plugs:
+      - audio-playback
+      - audio-record
+      - bluez
+      - browser-sandbox
+      - camera
+      - cups-control
+      - hardware-observe
+      - home
+      - joystick
+      - mount-observe
+      - network
+      - network-bind
+      - network-manager
+      - password-manager-service
+      - removable-media
+      - screen-inhibit-control
+      - system-packages-doc
+      - u2f-devices
+      - upower-observe
+    environment:
+      # Chromium's own libs (libEGL, swiftshader) live beside the binary.
+      LD_LIBRARY_PATH: $SNAP/usr/lib/ungoogled-chromium:$LD_LIBRARY_PATH
+      CHROME_DESKTOP: ungoogled-chromium_ungoogled-chromium.desktop
+
+  chromedriver:
+    command: usr/lib/ungoogled-chromium/chromedriver
+    extensions: [gnome]
+    plugs:
+      - browser-sandbox
+      - home
+      - network
+      - network-bind
+
+plugs:
+  browser-sandbox:
+    interface: browser-support
+    # Required for Chromium's namespace (zygote) sandbox.
+    allow-sandbox: true
+
+parts:
+  ungoogled-chromium:
+    plugin: dump
+    source: ungoogled-chromium-151.0.7922.173-1-x86_64_linux.tar.xz
+    organize:
+      '*': usr/lib/ungoogled-chromium/
+    # No stage-packages: the platform snaps carry every library it links.
+    prime:
+      - -usr/lib/ungoogled-chromium/chrome-wrapper
+
+  launcher:
+    plugin: dump
+    source: snap/local
+    organize:
+      ungoogled-chromium-launch: bin/ungoogled-chromium-launch

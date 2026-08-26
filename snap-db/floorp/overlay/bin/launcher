@@ -1,0 +1,20 @@
+#!/bin/bash
+set -eu
+
+HERE="$SNAP/usr/lib/floorp"
+
+# The forked capability probes carry no RUNPATH, so name the directory.
+export LD_LIBRARY_PATH="$HERE${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+# Keep the profile in SNAP_USER_COMMON so a refresh does not copy it forward.
+export HOME="$SNAP_USER_COMMON"
+
+# Without browser-support connected the content sandbox kills every process.
+if ! snapctl is-connected browser-sandbox 2>/dev/null; then
+  echo "floorp: browser-sandbox is not connected, so Gecko's own content" >&2
+  echo "        sandbox is off. Connect it with:" >&2
+  echo "        sudo snap connect floorp:browser-sandbox" >&2
+  export MOZ_DISABLE_CONTENT_SANDBOX=1
+fi
+
+exec "$HERE/floorp" "$@"

@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+# zenity (the bootstrap's download dialog) and the bootstrap itself
+export PATH="$SNAP/usr/bin:$PATH"
+
+# Default XDG_CONFIG_HOME too, in case the desktop helpers did not run.
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$SNAP_USER_DATA/.config}"
+mkdir -p "$XDG_CONFIG_HOME/discord"
+
+# A stock Electron build snapcraft never relocated, so set the paths here.
+export LD_LIBRARY_PATH="$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib:${LD_LIBRARY_PATH:-}"
+
+# Chromium's namespace sandbox is out of reach; snapd confines this instead.
+exec "$SNAP/usr/bin/discord" --no-sandbox "$@"

@@ -1,0 +1,34 @@
+#!/bin/sh
+# Points ncurses and Perl at the copies in $SNAP, and picks the config dir.
+set -eu
+
+# Prefer the extended terminfo staged here, then the base snap's.
+TERMINFO_DIRS="$SNAP/usr/share/terminfo:/usr/share/terminfo"
+export TERMINFO_DIRS
+
+# Perl's compiled-in @INC is wrong here, so rebuild it from what is present.
+perl5lib=""
+for d in "$SNAP"/usr/lib/*/perl5/* \
+         "$SNAP"/usr/lib/*/perl/* \
+         "$SNAP"/usr/lib/*/perl-base \
+         "$SNAP"/usr/share/perl/* \
+         "$SNAP"/usr/share/perl5; do
+	[ -d "$d" ] || continue
+	perl5lib="${perl5lib:+$perl5lib:}$d"
+done
+if [ -n "$perl5lib" ]; then
+	export PERL5LIB="${PERL5LIB:+$PERL5LIB:}$perl5lib"
+fi
+
+# Only point at the real ~/.irssi once dot-irssi is connected.
+case " $* " in
+*" --home"*) ;;
+*)
+	if snapctl is-connected dot-irssi 2>/dev/null; then
+		mkdir -p "$SNAP_REAL_HOME/.irssi"
+		set -- --home="$SNAP_REAL_HOME/.irssi" "$@"
+	fi
+	;;
+esac
+
+exec "$SNAP/usr/bin/irssi" "$@"

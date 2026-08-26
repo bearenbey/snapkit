@@ -1,0 +1,155 @@
+name: emacs
+base: core24
+version: '31.1'
+summary: GNU Emacs — the extensible, customizable text editor
+description: |
+  GNU Emacs is an extensible, customizable, free/libre text editor — and
+  more. At its core is an interpreter for Emacs Lisp, a dialect of the Lisp
+  programming language with extensions to support text editing.
+
+  This snap is built from the emacs-31.1 source tarball as a PGTK (pure
+  GTK) build, so it is a native Wayland client and falls back to GDK's X11
+  backend on an X11 session. Tree-sitter, GnuTLS, SQLite, libxml2, dynamic
+  modules and Cairo/HarfBuzz text rendering are enabled. Both the graphical
+  (emacs) and terminal (emacs -nw) interfaces work.
+
+  Because this is a strictly confined snap, Emacs sees your home directory
+  but treats ~/snap/emacs/current as $HOME, so your configuration lives in
+  ~/snap/emacs/current/.emacs.d.
+
+title: GNU Emacs
+license: GPL-3.0-or-later
+contact: https://lists.gnu.org/mailman/listinfo/help-gnu-emacs
+issues: https://debbugs.gnu.org/cgi/pkgreport.cgi?package=emacs
+source-code: https://git.savannah.gnu.org/cgit/emacs.git
+website: https://www.gnu.org/software/emacs/
+icon: snap/gui/emacs.png
+
+grade: stable
+confinement: strict
+compression: lzo
+
+platforms:
+  amd64:
+
+parts:
+  emacs:
+    plugin: autotools
+    source: emacs-31.1.tar.xz
+    source-type: tar
+    # Emacs bakes absolute paths in, so build against where it will be mounted.
+    autotools-configure-parameters:
+      - --prefix=/snap/emacs/current/usr
+      # PGTK, not X11: desktop-launch sets GDK_BACKEND=wayland on Wayland.
+      - --with-pgtk
+      - --with-cairo
+      - --with-harfbuzz
+      - --with-tree-sitter
+      - --with-gnutls
+      - --with-xml2
+      - --with-sqlite3
+      - --with-modules
+      - --with-threads
+      - --with-jpeg
+      - --with-png
+      - --with-gif
+      - --with-tiff
+      - --with-rsvg
+      - --with-webp
+      - --with-gpm=no
+      - --with-native-compilation=no
+      - --with-xwidgets=no
+      - --with-imagemagick=no
+      - --without-libsystemd
+      - --without-selinux
+    # In build, not prime: an override-prime once left 30.2's emacs behind.
+    override-build: |
+      craftctl default
+      # snapcraft's icon resolver skips hicolor, so spell the path out.
+      sed -i 's|^Icon=emacs$|Icon=${SNAP}/usr/share/icons/hicolor/128x128/apps/emacs.png|' \
+        "$CRAFT_PART_INSTALL/snap/emacs/current/usr/share/applications/emacs.desktop"
+    organize:
+      snap/emacs/current/usr: usr
+    build-packages:
+      - autoconf
+      - build-essential
+      - libacl1-dev
+      - libcairo2-dev
+      - libdbus-1-dev
+      - libgif-dev
+      - libgtk-3-dev
+      - libgnutls28-dev
+      - libharfbuzz-dev
+      - libjpeg-dev
+      - libncurses-dev
+      - libpng-dev
+      - librsvg2-dev
+      - libsqlite3-dev
+      - libtiff-dev
+      - libtree-sitter-dev
+      - libwebp-dev
+      - libxml2-dev
+      - libxpm-dev
+      - pkg-config
+      - texinfo
+    stage-packages:
+      - libacl1
+      - libgif7
+      - libgnutls30t64
+      - libncursesw6
+      - libsqlite3-0
+      - libtiff6
+      - libtinfo6
+      - libtree-sitter0
+      - libwebp7
+      - libwebpdemux2
+      - libxml2
+      - libxpm4
+
+  cleanup:
+    after: [emacs]
+    plugin: nil
+    build-snaps: [gnome-46-2404]
+    override-prime: |
+      set -eux
+      # Drop anything already provided by the gnome-46-2404 content snap.
+      for f in $(find /snap/gnome-46-2404/current -name '*.so*' -printf '%P\n'); do
+        rm -f "$CRAFT_PRIME/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/${f##*/}"
+      done
+
+apps:
+  emacs:
+    command: usr/bin/emacs
+    desktop: usr/share/applications/emacs.desktop
+    extensions: [gnome]
+    environment:
+      # Emacs shells out for grep/find/diff/etc; keep the snap's tools first.
+      PATH: $SNAP/usr/bin:$SNAP/usr/libexec:$PATH
+      INFOPATH: $SNAP/usr/share/info
+    plugs:
+      - home
+      - network
+      - network-bind
+      - removable-media
+      - browser-support
+      - audio-playback
+      - cups
+      - password-manager-service
+      - mount-observe
+
+  emacsclient:
+    command: usr/bin/emacsclient
+    extensions: [gnome]
+    plugs:
+      - home
+      - network
+      - removable-media
+
+  # Emacs 31 ships no ctags; upstream points at `etags --ctags` instead.
+  etags:
+    command: usr/bin/etags
+    plugs: [home, removable-media]
+
+  ebrowse:
+    command: usr/bin/ebrowse
+    plugs: [home, removable-media]

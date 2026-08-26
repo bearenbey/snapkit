@@ -1,0 +1,40 @@
+#!/bin/bash
+# Validates `snap set ollama <key>=<value>` and restarts the server.
+set -eu
+
+get() { snapctl get "$1" 2>/dev/null || true; }
+
+reject() {
+    echo "$*" >&2
+    exit 1
+}
+
+host="$(get host)"
+if [ -n "$host" ] && ! echo "$host" | grep -qE '^([A-Za-z0-9.:_-]+|\[[0-9A-Fa-f:]+\])(:[0-9]{1,5})?$'; then
+    reject "\"host\" must look like 0.0.0.0:11434 or 127.0.0.1"
+fi
+
+for key in flash-attention no-prune sched-spread debug; do
+    value="$(get "$key")"
+    case "${value:-unset}" in
+        unset|true|false|0|1) ;;
+        *) reject "\"$key\" must be true or false" ;;
+    esac
+done
+
+for key in context-length num-parallel max-loaded-models max-queue gpu-overhead; do
+    value="$(get "$key")"
+    if [ -n "$value" ] && ! echo "$value" | grep -qE '^[0-9]+$'; then
+        reject "\"$key\" must be a non-negative integer"
+    fi
+done
+
+models="$(get models)"
+if [ -n "$models" ] && [ "${models#/}" = "$models" ]; then
+    reject "\"models\" must be an absolute path"
+fi
+
+# Absent on first install, when the service has not been started yet.
+if snapctl services ollama.daemon 2>/dev/null | grep -q active; then
+    snapctl restart ollama.daemon
+fi
