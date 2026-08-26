@@ -217,7 +217,7 @@ class Build:
         return destination
 
     def copy_overlay(self, *relative):
-        """Copy overlay/<path> to prime/<path>, which is what overlay/ is for."""
+        """Copy overlay/<path> into prime/<path>."""
         for name in relative:
             self.copy(self.directory / "overlay" / name, self.prime / name)
 

@@ -237,7 +237,7 @@ class Dashboard:
             self.picking = None
 
     def pull_database(self):
-        """Offer to write every snap the shared database has and this has not."""
+        """Offer to write every snap the database has and this does not."""
         def work():
             reporter = DashboardReporter(self, None)
             self.status = "reading the database"

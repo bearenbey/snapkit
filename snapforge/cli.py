@@ -282,7 +282,7 @@ def _read_choice(found):
 
 
 def cmd_search(db, args, reporter):
-    """Find something already registered, by whatever part of it is remembered."""
+    """Find something registered, by whatever part of it is remembered."""
     if not args.rest:
         die("search needs something to look for")
     found = db.search(" ".join(args.rest))

@@ -104,7 +104,7 @@ def version_from(source, artifact):
 
 
 def source_in(text):
-    """The first `source:` in a recipe, which is where an adopted version hides."""
+    """The first `source:` in a recipe, where an adopted version hides."""
     found = re.search(r"(?m)^\s*source:\s*(\S+)", text)
     return found.group(1) if found else ""
 
