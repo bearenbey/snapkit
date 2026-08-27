@@ -4,6 +4,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import arch
+
 DEB = "deb"
 ARCHIVE = "archive"
 APPIMAGE = "appimage"
@@ -20,19 +22,18 @@ FOREIGN = (".rpm", ".exe", ".msi", ".dmg", ".pkg", ".apk", ".ipa", ".snap",
 ARCHIVES = (".tar.gz", ".tgz", ".tar.xz", ".txz", ".tar.bz2", ".tbz",
             ".tbz2", ".tar.zst", ".tar", ".zip")
 
-# Matched on boundaries: splitting turns x86_64 into x86 and reads as 32-bit.
-WANTED_ARCH = re.compile(
-    r"(?<![a-z0-9])(?:amd64|x86[_-]?64|x8664|x64|linux64|64bit)(?![a-z0-9])", re.I)
+# Which architecture counts as ours is a question about this machine, so both
+# of these are built per-host in arch.py rather than written out here.
 
-# `x86` is only 32-bit when it is not the front of x86_64, hence the lookahead.
-OTHER_ARCH = re.compile(
-    r"(?<![a-z0-9])(?:"
-    r"aarch64|arm64|armv[0-9]+[a-z]?|armhf|armel|arm|"
-    r"i[3-6]86|x86(?![_-]?64)|ia32|32bit|"
-    r"riscv64|riscv|ppc64le|ppc64|powerpc64|powerpc|ppc|s390x|"
-    r"mips64el|mips64|mipsel|mips|m68k|sparc64|sparc|"
-    r"loongarch64|loong64|alpha|hppa|sh4|universal"
-    r")(?![a-z0-9])", re.I)
+
+def wanted_arch():
+    """Matches the architecture being built for, however upstream spells it."""
+    return arch.wanted(arch.host())
+
+
+def other_arch():
+    """Matches every architecture that is not the one being built for."""
+    return arch.other(arch.host())
 
 # A Windows build does not always say so: mpv ships -w64-mingw32.zip.
 OTHER_OS = re.compile(
@@ -109,8 +110,8 @@ def rejection(name):
     foreign = _match(name, OTHER_OS)
     if foreign:
         return f"built for {foreign}"
-    other = _match(name, OTHER_ARCH)
-    if other and not _match(name, WANTED_ARCH):
+    other = _match(name, other_arch())
+    if other and not _match(name, wanted_arch()):
         return f"built for {other}"
     if not kind_of(name):
         return "not a package or an archive"
@@ -128,11 +129,11 @@ def score(name):
                APPIMAGE: "an AppImage, which has to be unpacked first"}
     why = [reasons[kind]]
 
-    arch = _match(name, WANTED_ARCH)
-    if arch:
+    spelled = _match(name, wanted_arch())
+    if spelled:
         points += 25
-        why.append(f"x86_64 ({arch})")
-    elif not _match(name, OTHER_ARCH):
+        why.append(f"{arch.canonical(arch.host())} ({spelled})")
+    elif not _match(name, other_arch()):
         # Names no architecture at all. Usually means the only build there is.
         points += 10
         why.append("no architecture in the name")

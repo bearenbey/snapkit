@@ -66,6 +66,7 @@ $ snapkit create aristocratos/btop
 | [Projects you already have](#snap-projects-you-already-have) | importing packaging that predates this |
 | [Packaging something again](#packaging-something-again) | rebuilding from the register alone |
 | [Updating](#updating) | how a new release reaches the packaging |
+| [Architectures](#architectures) | how it knows which build is the one to take |
 | [Commands](#commands) | the whole interface, in one list |
 | [Tests](#tests) | what is covered, and the bugs behind it |
 | [Building this](#building-this) | making the snapkit snap itself |
@@ -563,6 +564,72 @@ is nothing better to say. A project whose artifact has gone missing reads as
 behind rather than as up to date and broken, because fetching it back is
 exactly what an update does.
 
+## Architectures
+
+Nothing here is compiled, so the architecture only ever matters as a
+question about somebody else's filenames: of the nine files in a release,
+which one is for this machine? That question was answered with `x86_64`
+written into a regex, which meant that on anything else every asset in every
+release read as foreign and nothing could be packaged at all.
+
+`snapforge/arch.py` answers it instead. It asks `dpkg --print-architecture`,
+because that is what snapd agrees with, and falls back to `uname` where dpkg
+is not installed. From the Debian name it builds two patterns: the spellings
+that mean *this* machine, and the spellings that mean somebody else's.
+Upstreams do not agree on those, so the table carries all of them:
+
+| Debian name | what a release calls it |
+| --- | --- |
+| `amd64` | `amd64`, `x86_64`, `x86-64`, `x8664`, `x64`, `linux64`, `64bit` |
+| `arm64` | `arm64`, `aarch64`, `armv8l`, `armv8` |
+| `armhf` | `armhf`, `armv7l`, `armv7`, `armv6l`, `armv6`, `arm` |
+| `i386` | `i386`, `i486`, `i586`, `i686`, `ia32`, `x86`, `32bit` |
+| `ppc64el` | `ppc64el`, `ppc64le`, `powerpc64le` |
+| `riscv64` | `riscv64`, `riscv` |
+| `s390x` | `s390x` |
+| `loong64` | `loong64`, `loongarch64` |
+
+The spellings overlap in ways that bite. `x86` means 32-bit, but only when it
+is not the front of `x86_64`, so it carries a lookahead the others do not
+need. `arm` is 32-bit, but `arm64` is not `arm` with something after it. Both
+were bugs here once and both are matched on boundaries now.
+
+Set `SNAPKIT_ARCH` to answer the question differently, which is how the tests
+check all of this without eight machines. Against one real btop release:
+
+```console
+$ SNAPKIT_ARCH=arm64   snapkit create aristocratos/btop --no-build
+    chose btop-aarch64-unknown-linux-musl.tar.gz
+$ SNAPKIT_ARCH=riscv64 snapkit create aristocratos/btop --no-build
+    chose btop-riscv64-unknown-linux-musl.tar.gz
+$ SNAPKIT_ARCH=s390x   snapkit create aristocratos/btop --no-build
+    chose btop-s390x-ibm-linux-musl.tar.gz
+```
+
+An asset that names no architecture at all is still taken, whatever the host
+is, because that is usually the only build there is.
+
+The same question turns up in three other places. An apt index is per
+architecture, so `{arch}` stays in the recorded URL rather than being filled
+in when it is written down: a record travels through the shared database, and
+one with `binary-amd64` baked in would have every port reading amd64's index
+and quietly never updating. `{arch}` works in `url`, `asset`, `download` and
+`local` too, for the upstreams that put it in a path. A written recipe names
+the architecture it was written on under `platforms:`, and a packed snap is
+named for it. Where an upstream publishes nothing for this machine, that is
+an error and it says so, rather than fetching a build that will not run:
+
+```console
+$ SNAPKIT_ARCH=arm64 snapkit check signal-desktop unityhub sublime-text
+NAME             BUILT     UPSTREAM  STATUS
+signal-desktop   8.25.0    ?         .../dists/xenial/main/binary-arm64/Packages: HTTP 404
+unityhub         3.21.0    3.21.0    up to date
+sublime-text     4200      4200      up to date
+```
+
+Signal publishes amd64 only. Unity and Sublime Text publish arm64, and the
+same three records found it without being edited.
+
 ## Commands
 
 | command | what it does |
@@ -616,9 +683,9 @@ the tool does. The offline tests build their own `.deb` rather than
 downloading one, so the archive reader is checked against bytes the test file
 made and knows the shape of.
 
-One function per subject: upstreams, recipes, register, payloads, projects,
-checking, dashboard, updater, from_a_file, database, tracking. A failure names
-the area before it names the case.
+One function per subject: upstreams, architectures, recipes, register,
+payloads, projects, checking, dashboard, updater, from_a_file, database,
+tracking. A failure names the area before it names the case.
 
 Several exist because of bugs that were in here:
 
@@ -656,6 +723,10 @@ Several exist because of bugs that were in here:
   at update time were two lists that could disagree, so the tracking tests
   put every upstream in `seed.py` back through `configure()` and require it
   to come out unchanged
+- `x86_64` was written into the classifier's regex, so on any other machine
+  every asset in every release read as built for somewhere else and there was
+  nothing left to package; `SNAPKIT_ARCH` lets the tests check eight
+  architectures without eight machines
 - the terminal and the dashboard each had their own copy of the rule that an
   upstream which resolves to nothing must not be written down, which is the
   one rule here that cannot be got wrong quietly: it now lives in
@@ -683,7 +754,8 @@ do neither.
   however large those snaps are, and Electron apps run to a hundred megabytes
   each, all sitting in `projects/`. Nothing here prunes them.
 
-- amd64 only, which is what the classifier looks for.
+- The 22 projects in `seed.py` name amd64 asset globs, because that is
+  what this machine is. The tool is not tied to it; that list is.
 - `grade: devel` on the generated recipes' sibling, because this tool is new.
 - A snap built from someone else's release is not published or endorsed by
   them, and every recipe it writes says so in its description.

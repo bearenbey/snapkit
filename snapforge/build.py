@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from .arch import host as host_arch
 from .net import download, sha256_file
 from .versions import deb_compare, yaml_version
 
@@ -262,8 +263,9 @@ class Build:
 
     # -- output --------------------------------------------------------------
 
-    def pack(self, name=None, arch="amd64"):
-        filename = name or f"{self.app}_{self.version}_{arch}.snap"
+    def pack(self, name=None, arch=None):
+        filename = name or (f"{self.app}_{self.version}_"
+                            f"{arch or host_arch()}.snap")
         say(f"packing version {self.version}")
         self.run("snap", "pack", self.prime, f"--filename={filename}", ".")
         built = self.directory / filename

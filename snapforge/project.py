@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import build as buildlib
-from . import classify, github, inspect, local, net, recipe
+from . import arch, classify, github, inspect, local, net, recipe
 from .db import Snap, now
 
 
@@ -176,7 +176,7 @@ def plan_local(path, reporter, name=None, asset=None):
         doubt = classify.rejection(path.name)
         if doubt:
             reporter.warn(f"{path.name} looks like it is {doubt}, and this "
-                          f"builds amd64 snaps -- packaging it anyway")
+                          f"builds {arch.host()} snaps -- packaging it anyway")
         found = [one]
 
     candidates = [classify.Candidate(
@@ -469,7 +469,7 @@ project.
 
 ## Installing what you built
 
-    sudo snap install --dangerous {snap.name}_{snap.version}_amd64.snap
+    sudo snap install --dangerous {snap.name}_{snap.version}_{arch.host()}.snap
 
 ## Updating
 

@@ -1,6 +1,7 @@
 """HTTP, downloads and checksums."""
 
 import hashlib
+import platform
 import time
 import urllib.error
 import urllib.request
@@ -9,8 +10,10 @@ META_TIMEOUT = 30       # seconds for one metadata request
 DOWNLOAD_TIMEOUT = 60   # seconds of no progress at all on a download
 CHUNK = 1 << 18
 
-# urllib says it is Python, and some CDNs treat that differently.
-USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) snapkit/1"
+# urllib says it is Python, and some CDNs treat that differently. The machine
+# is the uname spelling, because that is what a browser puts there, and an
+# endpoint that picks a build off the user agent should pick this one.
+USER_AGENT = f"Mozilla/5.0 (X11; Linux {platform.machine()}) snapkit/1"
 
 
 class NetworkError(Exception):

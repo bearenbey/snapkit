@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from string import Formatter
 
-from . import github, local
+from . import arch, github, local
 from .net import NetworkError, download, get_text, head_location
 from .versions import apt_stanza, newest
 
@@ -33,7 +33,16 @@ class Release:
 
 
 def _fill(template, **values):
+    """A configured template, with the architecture always available to it."""
+    values.setdefault("arch", arch.host())
     return template.format(**values) if template else ""
+
+
+class _Partial(dict):
+    """A format mapping that leaves what it does not know for later."""
+
+    def __missing__(self, key):
+        return "{" + key + "}"
 
 
 def _release(config, version, asset, url, **extra):
@@ -47,24 +56,26 @@ def _release(config, version, asset, url, **extra):
 
 def _apt(config, want):
     """A release out of an apt Packages index."""
-    base, index = config["base"], config["index"]
-    version, filename, sha = apt_stanza(index, config["package"], want or "")
+    base = _fill(config["base"])
+    index = _fill(config["index"], base=base)
+    version, filename, sha = apt_stanza(index, config["package"], want or "",
+                                        want_arch=arch.host())
     return _release(config, version, filename.rsplit("/", 1)[1],
                     f"{base}/{filename}", sha=sha)
 
 
 def _index(config, want):
     """A release read off a listing of every release published."""
+    listing_url = _fill(config["url"])
     version = want
     if not version:
-        listing = get_text(config["url"])
-        version = newest(re.findall(config["pattern"], listing))
+        version = newest(re.findall(config["pattern"], get_text(listing_url)))
     if not version:
         raise NetworkError(f"nothing matching {config['pattern']} in "
-                           f"{config['url']}")
+                           f"{listing_url}")
     asset = _fill(config["asset"], version=version)
     url = _fill(config.get("download", ""), version=version, asset=asset) \
-        or config["url"].rstrip("/") + "/" + asset
+        or listing_url.rstrip("/") + "/" + asset
     return _release(config, version, asset, url)
 
 
@@ -72,7 +83,7 @@ def _redirect(config, want):
     """A version read off where a download endpoint redirects to."""
     version = want
     if not version:
-        location = head_location(config["url"])
+        location = head_location(_fill(config["url"]))
         found = re.search(config["pattern"], location)
         if not found:
             raise NetworkError(f"could not read a version out of {location}")
@@ -166,13 +177,14 @@ COMMON = {
 
 SPECS = (
     Shape(kind="apt",
-          summary="the newest amd64 stanza in an apt Packages index",
+          summary="the newest stanza for this architecture in an apt index",
           keys={"base": "the repository root that Filename: is relative to",
                 "package": "the Package: name to take out of the index",
                 "index": "the Packages file itself"},
           required=("base", "package", "index"),
-          defaults={"index": "{base}/dists/stable/main/binary-amd64/Packages"},
-          templates={"local": ("version",)},
+          defaults={"index": "{base}/dists/stable/main/binary-{arch}/Packages"},
+          templates={"base": ("arch",), "index": ("arch", "base"),
+                     "local": ("version", "arch")},
           example="snapkit track signal-desktop apt"
                   " base=https://updates.signal.org/desktop/apt"
                   " package=signal-desktop"),
@@ -184,9 +196,9 @@ SPECS = (
                 "asset": "the file to fetch, once the version is known",
                 "download": "where that file is, if not under the listing"},
           required=("url", "pattern", "asset"),
-          templates={"asset": ("version",),
-                     "download": ("version", "asset"),
-                     "local": ("version",)},
+          templates={"url": ("arch",), "asset": ("version", "arch"),
+                     "download": ("version", "asset", "arch"),
+                     "local": ("version", "arch")},
           patterns=("pattern",),
           example="snapkit track emacs index url=https://ftp.gnu.org/gnu/emacs/"
                   " 'pattern=emacs-(\\d+\\.\\d+)\\.tar\\.xz\"'"
@@ -199,9 +211,9 @@ SPECS = (
                 "asset": "the file that version is published as",
                 "download": "where to fetch it from"},
           required=("url", "pattern", "asset", "download"),
-          templates={"asset": ("version",),
-                     "download": ("version", "asset"),
-                     "local": ("version",)},
+          templates={"url": ("arch",), "asset": ("version", "arch"),
+                     "download": ("version", "asset", "arch"),
+                     "local": ("version", "arch")},
           patterns=("pattern",),
           example="snapkit track discord redirect"
                   " 'url=https://discord.com/api/download?platform=linux&format=deb'"
@@ -215,9 +227,9 @@ SPECS = (
                 "asset": "what to call the archive here",
                 "download": "where GitHub serves that tag's archive"},
           required=("repo", "asset", "download"),
-          templates={"asset": ("version", "tag"),
-                     "download": ("version", "tag", "asset"),
-                     "local": ("version",)},
+          templates={"asset": ("version", "tag", "arch"),
+                     "download": ("version", "tag", "asset", "arch"),
+                     "local": ("version", "arch")},
           example="snapkit track mpv tag-archive repo=mpv-player/mpv prefix=v"
                   " asset=mpv-{version}.tar.gz download=https://github.com/"
                   "mpv-player/mpv/archive/refs/tags/{tag}.tar.gz"),
@@ -225,7 +237,7 @@ SPECS = (
     Shape(kind="local",
           summary="the newest package file sitting in the project folder",
           keys={},
-          templates={"local": ("version",)},
+          templates={"local": ("version", "arch")},
           example="snapkit track demo local glob='demo_*_amd64.deb'"),
 )
 
@@ -260,10 +272,9 @@ def configure(kind, values):
     config.update({key: value for key, value in values.items() if value})
     for key, template in shape.defaults.items():
         if not config.get(key):
-            try:
-                config[key] = template.format(**config)
-            except KeyError:
-                pass                       # a missing part; `required` says so
+            # {arch} is left standing: the record has to work on any machine,
+            # not just the one it was written on.
+            config[key] = template.format_map(_Partial(config))
 
     # A key with a default only goes missing when what it is built from did.
     missing = [key for key in shape.required

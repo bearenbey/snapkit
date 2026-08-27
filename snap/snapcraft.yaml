@@ -43,8 +43,15 @@ source-code: https://github.com/bearen/snapkit
 issues: https://github.com/bearen/snapkit/issues
 contact: https://github.com/bearen/snapkit/issues
 
+# Pure python and two stage-packages that exist on every port, so this snap
+# is not tied to one architecture. snapcraft builds the one it is run on.
 platforms:
   amd64:
+  arm64:
+  armhf:
+  ppc64el:
+  riscv64:
+  s390x:
 
 apps:
   snapkit:

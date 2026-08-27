@@ -2,6 +2,7 @@
 
 import re
 
+from . import arch
 from .net import NetworkError, get_text
 
 
@@ -143,14 +144,16 @@ def _lines(path):
         return []
 
 
-def apt_stanza(index_url, package, want=""):
+def apt_stanza(index_url, package, want="", want_arch=""):
     """One package out of an apt Packages index."""
     rows = []
     fields = {}
+    # `all` is a package with no architecture in it, which installs anywhere.
+    architectures = {want_arch or arch.host(), "all"}
 
     def flush():
         if (fields.get("Package") == package
-                and fields.get("Architecture") == "amd64"
+                and fields.get("Architecture") in architectures
                 and all(fields.get(k) for k in ("Version", "Filename", "SHA256"))):
             rows.append((fields["Version"], fields["Filename"], fields["SHA256"]))
         fields.clear()
@@ -165,7 +168,9 @@ def apt_stanza(index_url, package, want=""):
     flush()
 
     if not rows:
-        raise NetworkError(f"no {package} stanza in {index_url}")
+        raise NetworkError(f"no {package} stanza for "
+                           f"{' or '.join(sorted(architectures))} "
+                           f"in {index_url}")
     if want:
         for row in rows:
             if row[0] == want:

@@ -1,5 +1,6 @@
 """A package that is already on disk, rather than one attached to a release."""
 
+import functools
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -37,12 +38,17 @@ def version_of(path, kind=""):
     return version_from("", path.name)
 
 
-# Where the name stops and the download's description starts.
-_ENDS_THE_NAME = re.compile(
-    r"(?<![a-z0-9])(?:v?\d+(?:[._]\d+)+|\d{2,}|"
-    + "|".join(classify.LINUX) + r")(?![a-z0-9])"
-    r"|" + classify.WANTED_ARCH.pattern + r"|" + classify.OTHER_ARCH.pattern
-    + r"|" + classify.OTHER_OS.pattern, re.I)
+@functools.lru_cache(maxsize=None)
+def _ends_the_name(spelled, missed):
+    """Where the name stops and the download's description starts.
+
+    Built per architecture rather than written out: which spellings are ours
+    and which are somebody else's is a question about the host.
+    """
+    return re.compile(
+        r"(?<![a-z0-9])(?:v?\d+(?:[._]\d+)+|\d{2,}|"
+        + "|".join(classify.LINUX) + r")(?![a-z0-9])"
+        r"|" + spelled + r"|" + missed + r"|" + classify.OTHER_OS.pattern, re.I)
 
 
 def name_from(path, kind=""):
@@ -63,7 +69,8 @@ def name_from(path, kind=""):
         if stem.lower().endswith(suffix):
             stem = stem[:-len(suffix)]
             break
-    found = _ENDS_THE_NAME.search(stem)
+    found = _ends_the_name(classify.wanted_arch().pattern,
+                           classify.other_arch().pattern).search(stem)
     if found and found.start():
         stem = stem[:found.start()]
     return stem.strip("-_. ")

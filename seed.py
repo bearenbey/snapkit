@@ -124,7 +124,7 @@ CONFIG = {
     "signal": dict(
         style="recipe", write_version=True,
         upstream=dict(kind="apt", base=SIGNAL_APT, package="signal-desktop",
-                      index=f"{SIGNAL_APT}/dists/xenial/main/binary-amd64/"
+                      index=f"{SIGNAL_APT}/dists/xenial/main/binary-{{arch}}/"
                             f"Packages"),
         source_anchor=r"^(\s*source:\s*).*/signal-desktop_.*\.deb\s*$"),
 
@@ -151,7 +151,7 @@ CONFIG = {
         style="artifact", local_asset="UnityHubSetup-amd64.deb",
         asset_glob="UnityHubSetup-amd64.deb", pack="pack.py",
         upstream=dict(kind="apt", base=UNITY_APT, package="unityhub",
-                      index=f"{UNITY_APT}/dists/stable/main/binary-amd64/"
+                      index=f"{UNITY_APT}/dists/stable/main/binary-{{arch}}/"
                             f"Packages")),
 
     # Upstream publishes SHA2-256SUMS beside every asset of a release.

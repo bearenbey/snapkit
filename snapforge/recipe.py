@@ -3,7 +3,7 @@
 import re
 import textwrap
 
-from . import classify
+from . import arch, classify
 
 BASE = "core24"
 
@@ -130,7 +130,7 @@ def build(*, name, version, summary, description, license_id, kind, url,
                 f"contact: {repo_url}/issues"]
     out += ["",
             "platforms:",
-            "  amd64:",
+            f"  {arch.host()}:",
             "",
             "apps:",
             f"  {name}:",
