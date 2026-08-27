@@ -41,9 +41,16 @@ STATE_GLYPH = {
     "failed": "✕",
 }
 KIND_STYLE = {"deb": "magenta", "archive": "cyan", "appimage": "green"}
+# Off the shapes themselves, so a kind cannot be added and go unmentioned.
+_TRACK_HINTS = tuple(
+    [(" ".join([shape.kind] + [k + "=" for k in shape.required
+                               if k not in shape.defaults]), shape.summary)
+     for shape in sources.SPECS]
+    + [("repo owner/name", "the releases of a github repository"),
+       ("none", "stop checking it against anything")])
 KEYS = (("↑↓", "move"), ("n", "new or find"), ("r", "recheck"), ("u", "update"),
-        ("b", "build"), ("g", "get db"), ("d", "delete"), ("enter", "record"),
-        ("q", "quit"))
+        ("b", "build"), ("t", "track"), ("g", "get db"), ("d", "delete"),
+        ("enter", "record"), ("q", "quit"))
 SHORT_KEYS = (("↑↓", "move"), ("n", "find"), ("r", "recheck"), ("u", "update"),
               ("b", "build"), ("g", "get db"), ("q", "quit"))
 ACCENT = "#4ce0ff"          # the one colour that means "this, here"
@@ -90,21 +97,25 @@ class Screen:
 
         layout = Layout()
         layout.split_column(
-            Layout(self._header(), size=self._header_height()),
+            Layout(self._header(width), size=self._header_height()),
             body,
             Layout(self._log(), size=LOG_HEIGHT),
             Layout(self._footer(width), size=1))
         return layout
     def _header_height(self):
         """Tall enough for what the header has to say."""
+        if self.board.tracking:
+            return 2 + 1 + len(_TRACK_HINTS)
         if not self.board.prompting:
             return 3
         return 2 + 1 + min(len(self.board.matches), 5) + 1
-    def _header(self):
+    def _header(self, width=100):
         if self.board.asking:
             return self._asking_header()
         if self.board.confirm:
             return self._confirm_header()
+        if self.board.tracking:
+            return self._track_header(width)
         if self.board.prompting:
             return self._prompt_header()
         return Panel(Group(self._masthead()), box=box.ROUNDED,
@@ -157,6 +168,31 @@ class Screen:
                  "The project directory stays.  ", "bold"),
                 ("[y/N]", "bold red")),
             title="delete", box=box.ROUNDED, border_style="red", padding=(0, 1))
+    def _track_header(self, width=100):
+        """Typing where one snap's releases should be looked for."""
+        caret = "▌" if self.frame // 6 % 2 else " "
+        # One line, whatever is typed: a wrapped header is a header of the
+        # wrong height, and these specs run to a couple of hundred characters.
+        room = max(20, width - len(self.board.tracking) - 10)
+        typed = self.board.prompt
+        if len(typed) > room:
+            typed = "…" + typed[-(room - 1):]
+        lines = [Text.assemble(("▸ ", ACCENT),
+                               (f"{self.board.tracking}  ", "bold"),
+                               (typed, "bold " + ACCENT), (caret, ACCENT))]
+        column = max(len(form) for form, _ in _TRACK_HINTS) + 2
+        column = min(column, max(12, width - 20))
+        room = width - 6 - column
+        for form, what in _TRACK_HINTS:
+            line = Text("  ")
+            line.append(f"{_fit(form, column - 1):<{column}}",
+                        style="dim " + ACCENT)
+            if room >= 12:
+                line.append(_fit(what, room), style="dim")
+            lines.append(line)
+        return Panel(Group(*lines), title="track", box=box.ROUNDED,
+                     border_style=ACCENT, padding=(0, 1))
+
     def _prompt_header(self):
         caret = "▌" if self.frame // 6 % 2 else " "
         body = Text.assemble(("▸ ", ACCENT), ("find or add  ", "dim"),
@@ -380,6 +416,11 @@ def _gradient(text, start=(0x4C, 0xE0, 0xFF), end=(0xB9, 0x8C, 0xFF)):
         shade = tuple(int(a + (b - a) * mix) for a, b in zip(start, end))
         out.append(character, style="bold #%02x%02x%02x" % shade)
     return out
+def _fit(text, room):
+    """`text`, shortened to `room` columns, so a header cannot wrap."""
+    return text if len(text) <= room else text[:max(1, room - 1)] + "…"
+
+
 def _chip(glyph, count, label, style):
     return Text.assemble((glyph + " ", style), (str(count), "bold " + style),
                          (" " + label, "dim"))

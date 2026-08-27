@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import adopt, github, local, project, snapdb, sources, update
+from . import adopt, classify, github, local, project, snapdb, sources, update
 from .db import Database, NameTaken
 from .net import NetworkError
 from .report import PlainReporter
@@ -24,6 +24,9 @@ package file you already have, and keep it up to date afterwards.
   snapkit show <name>              one record, in full
   snapkit check [name ...]         what has a newer release upstream
   snapkit update <name> [...]      move a snap onto that release
+  snapkit track <name>             where its releases are looked for
+  snapkit track <name> <kind> ...  look for them somewhere else
+  snapkit track kinds              every kind of upstream, and what it needs
   snapkit build <name>             hand the project to snapcraft
   snapkit remove <name>            forget a snap, and its recipe with it
   snapkit db                       what the shared recipe database holds
@@ -46,6 +49,11 @@ given as one. Point `create` at a file instead and the file is what gets
 packaged: it is copied in beside the recipe that names it, and the snap is
 then tracked against that folder rather than against an upstream -- drop a
 newer one in and `snapkit check` says so.
+
+`track` covers the rest: an apt repository, a listing of every release, a
+download endpoint that redirects, or a GitHub tag with no release attached.
+The new setting is resolved once before it is written down, so a wrong regex
+is a refusal now rather than a silent "up to date" for a year.
 """
 
 
@@ -90,7 +98,9 @@ def parse_args(argv):
                         help="write the project but do not run snapcraft")
     parser.add_argument("--yes", action="store_true", help="do not ask before removing")
     parser.add_argument("--force", action="store_true",
-                        help="on update, redo a project that is already current")
+                        help="on update, redo a project that is already "
+                             "current; on track, record an upstream that did "
+                             "not resolve")
     parser.add_argument("--local", action="store_true",
                         help="on create, treat what was given as a package file "
                              "or a folder to look in, never as a repository")
@@ -119,7 +129,7 @@ def main(argv=None):
                 "build": cmd_build, "remove": cmd_remove, "rm": cmd_remove,
                 "search": cmd_search, "find": cmd_search, "package": cmd_package,
                 "import": cmd_import, "adopt": cmd_import,
-                "db": cmd_db, "install": cmd_install}
+                "db": cmd_db, "install": cmd_install, "track": cmd_track}
     handler = handlers.get(args.command)
     if handler is None:
         die(f"no such command: {args.command} (try --help)")
@@ -415,6 +425,9 @@ def cmd_show(db, args, reporter):
             continue
         if isinstance(value, list):
             value = ", ".join(str(v) for v in value) or "(none)"
+        elif isinstance(value, dict):
+            # A dict repr is not what the setting was typed in as.
+            value = sources.summarise(value) if value else ""
         print(f"{key:>16}  {value}")
     print(f"\n--- snap/snapcraft.yaml ---\n{snap.snapcraft_yaml}")
     return 0
@@ -487,6 +500,156 @@ def update_one(db, args, reporter, snap):
     if not args.no_build:
         project.build(snap, reporter)
         db.add(snap)
+    return 0
+
+
+# -- where a snap's releases are looked for -----------------------------------
+
+def cmd_track(db, args, reporter):
+    """Say where a registered snap's releases come from."""
+    if args.rest and args.rest[0] in ("kinds", "shapes"):
+        return print_shapes()
+    if not args.rest:
+        forms = (("snapkit track <name>", "what it tracks now"),
+                 ("snapkit track <name> <kind> name=value ...",
+                  "track it against that"),
+                 ("snapkit track <name> repo owner/name", "a GitHub release"),
+                 ("snapkit track <name> none", "stop checking it"),
+                 ("snapkit track kinds", "every kind, and what it needs"))
+        die("track needs a name:\n"
+            + "\n".join(f"           {form:<44}{what}" for form, what in forms))
+
+    snap = _one_of(db, args.rest[0])
+    words = args.rest[1:]
+    if not words:
+        return show_tracking(snap)
+
+    kind, rest = words[0], words[1:]
+    if kind in ("none", "off"):
+        return untrack(db, snap, reporter)
+    if kind in ("repo", "github"):
+        return track_repo(db, args, reporter, snap, rest)
+    # `folder` is what the rest of the tool calls it; `local` is the config.
+    wanted = sources.configure("local" if kind == "folder" else kind,
+                               sources.parse_pairs(rest))
+    return settle(db, args, reporter, snap, wanted)
+
+
+def track_repo(db, args, reporter, snap, rest):
+    """Point a snap back at GitHub releases, and relearn which file to take."""
+    if not rest:
+        die(f"track ... repo needs a repository: "
+            f"snapkit track {snap.name} repo owner/name")
+    repo = github.parse_repo(rest[0])
+    reporter.step(f"{snap.name}: reading the releases of {repo}")
+    release = github.release(repo, tag=args.tag)
+    candidates = classify.classify(release.assets)
+    if not candidates:
+        die(f"{repo} {release.tag} publishes nothing that can be packaged "
+            f"here -- `snapkit create {repo}` says what it does publish")
+
+    # Keep the kind this snap already is, unless nothing in the release is one.
+    same_kind = [c for c in candidates if c.kind == snap.kind] or candidates
+    chosen = project.choose(same_kind, args.asset)
+    if len(same_kind) > 1 and not args.asset:
+        reporter.detail("the rest of this release, if that is the wrong file "
+                        "(--asset takes a name or a number):")
+        for number, other in enumerate(same_kind[1:6], 2):
+            reporter.detail(f"  {number}. {other.name}")
+
+    if snap.kind and chosen.kind != snap.kind:
+        reporter.detail(f"{repo} publishes no {snap.kind}, so this snap is "
+                        f"built from {chosen.kind} now")
+    snap.upstream = {}
+    snap.repo, snap.url = repo, f"https://github.com/{repo}"
+    snap.kind, snap.asset = chosen.kind, chosen.name
+    snap.asset_pattern = classify.asset_pattern(chosen.name, release.version)
+    return settle(db, args, reporter, snap, None, release=release)
+
+
+def untrack(db, snap, reporter):
+    """Stop checking a snap against anything at all."""
+    snap.upstream, snap.repo, snap.url, snap.asset_pattern = {}, "", "", ""
+    db.add(snap, replace=True)
+    reporter.result(f"{snap.name} is not tracked against anything now")
+    reporter.detail(f"`snapkit check` will leave it alone until "
+                    f"`snapkit track {snap.name} ...` says where to look")
+    return 0
+
+
+def settle(db, args, reporter, snap, wanted, release=None):
+    """Resolve what was just set, then write it down -- or put it back."""
+    if wanted is not None:
+        reporter.step(f"{snap.name}: {sources.summarise(wanted)}")
+        try:
+            release = update.retrack(snap, wanted, args.force)
+        except (NetworkError, project.ForgeError) as exc:
+            die(f"{snap.name} was left as it was, because that upstream did "
+                f"not resolve:\n           {exc}\n\n"
+                f"           `snapkit track kinds` says what "
+                f"{wanted.get('kind', '')} takes; --force writes it down "
+                f"unresolved")
+        if release is None:
+            reporter.warn("written down without resolving it")
+
+    if release is not None:
+        reporter.detail(f"upstream has {release.version}")
+        asset = getattr(release, "asset", "") or getattr(snap, "asset", "")
+        if asset:
+            reporter.detail(f"which it publishes as {asset}")
+        for note in update.fitting(snap, release):
+            reporter.warn(note)
+
+    db.add(snap, replace=True)
+    reporter.result(f"{snap.name} is tracked against {upstream_of(snap)}")
+    if snap.upstream and snap.repo:
+        reporter.detail(f"{snap.repo} is left on the record but is no longer "
+                        f"what it is checked against")
+    if release is not None and release.version != snap.version:
+        reporter.detail(f"the record still says {snap.version or '(nothing)'}; "
+                        f"`snapkit update {snap.name}` moves it")
+    return 0
+
+
+def show_tracking(snap):
+    """What one snap is tracked against, and what that has right now."""
+    print(f"{snap.name} {snap.version or '(no version)'}")
+    if snap.upstream:
+        print(f"  tracked against  {sources.summarise(snap.upstream)}")
+    elif snap.repo:
+        print(f"  tracked against  the releases of {snap.repo}")
+        pattern = snap.asset_pattern or "(nothing, so it is not checked)"
+        print(f"  matching         {pattern}")
+    else:
+        print("  tracked against  nothing")
+        print(f"\n  snapkit track {snap.name} kinds  lists what it could be")
+        return 1
+
+    found = update.situation(snap)
+    print(f"  upstream now     {found.latest or found.problem or '?'}")
+    print(f"  status           {found.words}")
+    return 0
+
+
+def print_shapes():
+    """Every kind of upstream, what it needs, and one line that works."""
+    print("An upstream is a kind and some name=value settings:\n")
+    print("  snapkit track <name> <kind> name=value name=value\n")
+    for shape in sources.SPECS:
+        print(f"  {shape.kind}  --  {shape.summary}")
+        for key in (*shape.required, *shape.optional):
+            what = shape.keys[key]
+            if key in shape.defaults:
+                what += f", by default {shape.defaults[key]}"
+            needed = key in shape.required and key not in shape.defaults
+            print(f"    {'  ' if needed else ' ?'} {key:<9} {what}")
+        for key, what in sources.COMMON.items():
+            print(f"     ? {key:<9} {what}")
+        print(f"    e.g. {shape.example}\n")
+    print("  A ? marks a setting that can be left out.")
+    print("  {version}, {tag} and {asset} are filled in as the shape resolves.")
+    print("  snapkit track <name> repo owner/name  goes back to GitHub releases.")
+    print("  snapkit track <name> none             stops checking it at all.")
     return 0
 
 

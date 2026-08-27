@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from rich.live import Live
 from rich.text import Text
 
-from . import adopt, github, local, project, snapdb, update
+from . import adopt, github, local, project, snapdb, sources, update
 from .keys import Keyboard
 from .db import NameTaken
 from .net import NetworkError
@@ -55,6 +55,7 @@ class Dashboard:
     status: str = ""
     prompt: str = ""          # what is being typed, "" when not typing
     prompting: bool = False
+    tracking: str = ""        # a snap whose upstream is being typed, or ""
     confirm: str = ""         # a snap awaiting a yes before it is forgotten
     picking: object = None    # a Plan waiting for its asset to be chosen
     pick_cursor: int = 0
@@ -276,6 +277,51 @@ class Dashboard:
 
         self.run_job("pulling", work)
 
+    def track(self, name, text):
+        """Point a snap at a different upstream, typed in as `kind key=value`."""
+        snap = self.db.snaps.get(name)
+        if snap is None:
+            return
+        words = text.split()
+
+        def work():
+            row = self.row_for(name)
+            if not words or words[0] in ("none", "off"):
+                snap.upstream, snap.repo = {}, ""
+                snap.url, snap.asset_pattern = "", ""
+                self.db.add(snap, replace=True)
+                self.say(f"{name} is not tracked against anything now",
+                         "yellow")
+                if row:
+                    row.state, row.latest, row.note = "untracked", "", ""
+                return
+
+            kind = "local" if words[0] == "folder" else words[0]
+            wanted = sources.configure(kind, sources.parse_pairs(words[1:]))
+            self.status = f"resolving {sources.summarise(wanted)}"
+            try:
+                release = update.retrack(snap, wanted)
+            except (NetworkError, project.ForgeError) as exc:
+                # Written down untried, a wrong setting reads as up to date.
+                self.say(f"{name} was left as it was: {exc}", "red")
+                self.status = f"{len(self.rows)} registered"
+                return
+
+            self.db.add(snap, replace=True)
+            for note in update.fitting(snap, release):
+                self.say(f"{name}: {note}", "yellow")
+            self.say(f"{name} is tracked against "
+                     f"{sources.label(snap, folder='its own folder')} -- "
+                     f"upstream has {release.version}", "bold green")
+            if row:
+                found = update.situation(snap)
+                row.state, row.latest = found.state, found.latest
+                row.release, row.asset = found.release, found.asset
+                row.note = found.note or found.problem
+            self.status = f"{len(self.rows)} registered"
+
+        self.run_job("tracking", work)
+
     def _ask_yes_no(self, question):
         """Put a question on screen and block the worker until answered."""
         self.asking = question
@@ -426,6 +472,8 @@ class Dashboard:
         # First: the worker is blocked, and any other key would mean something.
         if self.asking:
             return self._answering(key)
+        if self.tracking:
+            return self._typing_track(key)
         if self.prompting:
             return self._typing(key)
         if self.picking is not None:
@@ -468,6 +516,11 @@ class Dashboard:
             self.build_selected()
         elif key == "g":
             self.pull_database()
+        elif key == "t" and self.row and not self.busy:
+            # Seeded with what it tracks now, so changing one word is one word.
+            self.tracking = self.row.name
+            self.prompt = sources.summarise(self.row.snap.upstream) \
+                if self.row.snap.upstream else ""
         elif key == "d" and self.row and not self.busy:
             self.confirm = self.row.name
         elif key == "enter" and self.row:
@@ -501,6 +554,19 @@ class Dashboard:
                 return
             self.matches = self.db.search(self.prompt)
             self.match_cursor = 0
+
+    def _typing_track(self, key):
+        """Where the selected snap's releases should be looked for."""
+        if key == "escape":
+            self.tracking, self.prompt = "", ""
+        elif key == "enter":
+            name, text = self.tracking, self.prompt.strip()
+            self.tracking, self.prompt = "", ""
+            self.track(name, text)
+        elif key == "backspace":
+            self.prompt = self.prompt[:-1]
+        elif key and len(key) == 1 and key.isprintable():
+            self.prompt += key
 
     def _close_prompt(self):
         self.prompting, self.prompt = False, ""

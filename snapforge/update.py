@@ -6,7 +6,7 @@ from pathlib import Path
 
 from dataclasses import dataclass
 
-from . import classify, github, net, recipe, rewrite, sources
+from . import classify, github, local, net, recipe, rewrite, sources
 from .db import now
 from .net import NetworkError
 from .project import ForgeError, write
@@ -83,14 +83,14 @@ def missing_artifact(snap):
 
 def check(snap, force=False):
     """What upstream has now, against what this snap was built from."""
-    release = _resolve(snap)
+    release = resolve(snap)
     if _settled(snap, release, force):
         return release, None, ""
     asset, note = _asset_for(snap, release)
     return release, asset, note
 
 
-def _resolve(snap):
+def resolve(snap):
     """What the thing this snap was made from offers now."""
     if snap.upstream:
         return sources.resolve(snap.upstream, directory=snap.path)
@@ -101,6 +101,43 @@ def _resolve(snap):
         raise NotTracked(f"{snap.name} has no release file recorded to match "
                          f"against, so there is nothing to check")
     return github.release(snap.repo)
+
+
+def retrack(snap, upstream, force=False):
+    """Point a snap at a different upstream, having resolved it first.
+
+    The record is left exactly as it was when the new upstream resolves to
+    nothing, because one written down untried reads as "up to date" for as
+    long as nobody looks. Returns the release, or None when forced past a
+    failure.
+    """
+    was = dict(snap.upstream)
+    snap.upstream = dict(upstream)
+    try:
+        return resolve(snap)
+    except (NetworkError, ForgeError):
+        if force:
+            return None
+        snap.upstream = was
+        raise
+
+
+def fitting(snap, release):
+    """What a record still needs, given the upstream it has just been given."""
+    notes = []
+    if snap.style == "artifact" and not (snap.asset_glob or release.glob):
+        suggestion = local.glob_for(release.asset or snap.asset, release.version)
+        notes.append(f"nothing matches every version of that file, so the "
+                     f"superseded one will be left behind -- add "
+                     f"glob='{suggestion}'")
+    if snap.style == "recipe" and not snap.source_anchor:
+        named = sum(1 for line in snap.snapcraft_yaml.splitlines()
+                    if line.strip().startswith("source:"))
+        if named > 1:
+            notes.append(f"the recipe names {named} sources and the record has "
+                         f"no source_anchor, so an update would repoint "
+                         f"whichever comes first")
+    return notes
 
 
 def _settled(snap, release, force):

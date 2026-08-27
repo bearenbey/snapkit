@@ -4,8 +4,9 @@ import re
 import shutil
 import subprocess
 import tarfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from string import Formatter
 
 from . import github, local
 from .net import NetworkError, download, get_text, head_location
@@ -130,6 +131,200 @@ def resolve(config, want=None, directory=None):
     if kind in NEEDS_DIRECTORY:
         return shape(config, want, directory)
     return shape(config, want)
+
+
+# --- saying which shape, and what it needs to be told ------------------------
+
+class BadUpstream(ValueError):
+    """The settings given for an upstream do not describe one."""
+
+
+@dataclass(frozen=True)
+class Shape:
+    """One kind of upstream, and what has to be said to point at it."""
+
+    kind: str
+    summary: str
+    keys: dict                                  # key -> what it is for
+    required: tuple = ()
+    defaults: dict = field(default_factory=dict)
+    # key -> the placeholders this shape can fill in, for the ones templated.
+    templates: dict = field(default_factory=dict)
+    patterns: tuple = ()                        # keys that are regexes
+    example: str = ""
+
+    @property
+    def optional(self):
+        return tuple(k for k in self.keys if k not in self.required)
+
+
+# _release reads these for every shape, so every shape accepts them.
+COMMON = {
+    "local": "what to save the file as here, if not its own name",
+    "glob": "matches every version of that file, so the old one is cleaned up",
+}
+
+SPECS = (
+    Shape(kind="apt",
+          summary="the newest amd64 stanza in an apt Packages index",
+          keys={"base": "the repository root that Filename: is relative to",
+                "package": "the Package: name to take out of the index",
+                "index": "the Packages file itself"},
+          required=("base", "package", "index"),
+          defaults={"index": "{base}/dists/stable/main/binary-amd64/Packages"},
+          templates={"local": ("version",)},
+          example="snapkit track signal-desktop apt"
+                  " base=https://updates.signal.org/desktop/apt"
+                  " package=signal-desktop"),
+
+    Shape(kind="index",
+          summary="the newest version named in a listing of every release",
+          keys={"url": "the listing to read",
+                "pattern": "a regex with one group around the version",
+                "asset": "the file to fetch, once the version is known",
+                "download": "where that file is, if not under the listing"},
+          required=("url", "pattern", "asset"),
+          templates={"asset": ("version",),
+                     "download": ("version", "asset"),
+                     "local": ("version",)},
+          patterns=("pattern",),
+          example="snapkit track emacs index url=https://ftp.gnu.org/gnu/emacs/"
+                  " 'pattern=emacs-(\\d+\\.\\d+)\\.tar\\.xz\"'"
+                  " asset=emacs-{version}.tar.xz"),
+
+    Shape(kind="redirect",
+          summary="the version in the URL a download endpoint redirects to",
+          keys={"url": "the endpoint to ask, without following it",
+                "pattern": "a regex with one group, against the redirect target",
+                "asset": "the file that version is published as",
+                "download": "where to fetch it from"},
+          required=("url", "pattern", "asset", "download"),
+          templates={"asset": ("version",),
+                     "download": ("version", "asset"),
+                     "local": ("version",)},
+          patterns=("pattern",),
+          example="snapkit track discord redirect"
+                  " 'url=https://discord.com/api/download?platform=linux&format=deb'"
+                  " 'pattern=/apps/linux/([^/]+)/' asset=discord-{version}.deb"
+                  " download=https://dl.discordapp.net/apps/linux/{version}/{asset}"),
+
+    Shape(kind="tag-archive",
+          summary="a GitHub tag, for a project that attaches no source tarball",
+          keys={"repo": "owner/name on GitHub",
+                "prefix": "what the tag puts before the version, usually v",
+                "asset": "what to call the archive here",
+                "download": "where GitHub serves that tag's archive"},
+          required=("repo", "asset", "download"),
+          templates={"asset": ("version", "tag"),
+                     "download": ("version", "tag", "asset"),
+                     "local": ("version",)},
+          example="snapkit track mpv tag-archive repo=mpv-player/mpv prefix=v"
+                  " asset=mpv-{version}.tar.gz download=https://github.com/"
+                  "mpv-player/mpv/archive/refs/tags/{tag}.tar.gz"),
+
+    Shape(kind="local",
+          summary="the newest package file sitting in the project folder",
+          keys={},
+          templates={"local": ("version",)},
+          example="snapkit track demo local glob='demo_*_amd64.deb'"),
+)
+
+SPEC = {shape.kind: shape for shape in SPECS}
+
+
+def parse_pairs(words):
+    """`key=value` words as a dict, in the order they were given."""
+    values = {}
+    for word in words:
+        key, sign, value = word.partition("=")
+        if not sign or not key.strip():
+            raise BadUpstream(f"{word!r} is not key=value -- an upstream is "
+                              f"described as name=value, name=value")
+        values[key.strip()] = value.strip()
+    return values
+
+
+def configure(kind, values):
+    """A checked upstream config, or a refusal that says what is missing."""
+    shape = SPEC.get(kind)
+    if shape is None:
+        raise BadUpstream(f"no such upstream kind: {kind or '(none)'} "
+                          f"(try: {', '.join(sorted(SPEC))})")
+    known = {**shape.keys, **COMMON}
+    for key in values:
+        if key not in known:
+            raise BadUpstream(f"{kind} has no {key!r} setting -- it takes "
+                              f"{', '.join(sorted(known))}")
+
+    config = {"kind": kind}
+    config.update({key: value for key, value in values.items() if value})
+    for key, template in shape.defaults.items():
+        if not config.get(key):
+            try:
+                config[key] = template.format(**config)
+            except KeyError:
+                pass                       # a missing part; `required` says so
+
+    # A key with a default only goes missing when what it is built from did.
+    missing = [key for key in shape.required
+               if not config.get(key) and key not in shape.defaults]
+    missing = missing or [key for key in shape.required if not config.get(key)]
+    if missing:
+        raise BadUpstream(
+            f"{kind} needs {', '.join(missing)}\n"
+            + "\n".join(f"           {key} is {known[key]}" for key in missing)
+            + f"\n\n           {shape.example}")
+
+    _check_patterns(shape, config)
+    _check_templates(shape, config)
+    order = ("kind", *shape.keys, *COMMON)
+    return {key: config[key] for key in order if key in config}
+
+
+def _check_patterns(shape, config):
+    """A regex that does not compile, or does not capture, caught here."""
+    for key in shape.patterns:
+        text = config.get(key, "")
+        if not text:
+            continue
+        try:
+            compiled = re.compile(text)
+        except re.error as exc:
+            raise BadUpstream(f"{key}={text!r} is not a regular "
+                              f"expression: {exc}") from exc
+        if compiled.groups != 1:
+            raise BadUpstream(
+                f"{key}={text!r} has {compiled.groups} capturing groups, and "
+                f"{shape.kind} reads the version out of exactly one -- put "
+                f"( ) around the version and nothing else")
+
+
+def _check_templates(shape, config):
+    """A {placeholder} the shape cannot fill in, caught here rather than later."""
+    for key, allowed in shape.templates.items():
+        text = config.get(key, "")
+        if not text:
+            continue
+        try:
+            fields = [f for _lit, f, _spec, _conv in Formatter().parse(text)]
+        except ValueError as exc:
+            raise BadUpstream(f"{key}={text!r} has an unmatched brace: "
+                              f"{exc}") from exc
+        for name in fields:
+            if name is None or name in allowed:
+                continue
+            offered = ", ".join("{%s}" % one for one in allowed) or "nothing"
+            raise BadUpstream(
+                f"{key}={text!r} asks for {{{name}}}, which {shape.kind} "
+                f"cannot fill in -- it fills in {offered}")
+
+
+def summarise(config):
+    """An upstream config as the line `show` and `track` print."""
+    kind = config.get("kind", "")
+    rest = " ".join(f"{key}={value}" for key, value in config.items()
+                    if key != "kind")
+    return f"{kind} {rest}".strip() or "(none)"
 
 
 def label(snap, folder="this folder"):

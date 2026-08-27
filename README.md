@@ -60,6 +60,7 @@ $ snapkit create aristocratos/btop
 | [Why it opens the payload](#why-it-opens-the-payload) | why the file is read rather than guessed at |
 | [What it can package](#what-it-can-package) | debs, archives, AppImages, and what is refused |
 | [When there is no repository](#when-there-is-no-repository) | packaging a file you already have |
+| [Upstreams that are not a release](#upstreams-that-are-not-a-release) | apt, a listing, a redirect, a bare tag |
 | [The shared database](#the-shared-database) | recipes published for another machine to build |
 | [The register](#the-register) | where records live, and why it is a directory |
 | [Projects you already have](#snap-projects-you-already-have) | importing packaging that predates this |
@@ -73,7 +74,8 @@ $ snapkit create aristocratos/btop
 ## The dashboard
 
 Run it with no arguments for the dashboard. Up and down move through the
-list, `enter` shows a record in full, and `q` is the only thing that quits.
+list, `enter` shows a record in full, `t` says where the selected snap's
+releases should be looked for, and `q` is the only thing that quits.
 
 ```text
 ╭──────────────────────────────────────────────────────────────────────────────────╮
@@ -90,6 +92,27 @@ list, `enter` shows a record in full, and `q` is the only thing that quits.
 ╰────────────────────────────────────────────────╯╰────────────────────────────────╯
   [↑↓] move  [n] new or find  [r] recheck  [u] update  [b] build  [q] quit
 ```
+
+`t` opens the box that says where a snap's releases come from, seeded with
+what it tracks now, so changing one word is one word rather than all of them:
+
+```text
+╭─────────────────────────────────── track ────────────────────────────────────╮
+│ ▸ sublime-text  apt base=https://download.sublimetext.com package=sublime-te…│
+│   apt base= package=                       the newest amd64 stanza in an apt…│
+│   index url= pattern= asset=               the newest version named in a lis…│
+│   redirect url= pattern= asset= download=  the version in the URL a download…│
+│   tag-archive repo= asset= download=       a GitHub tag, for a project that …│
+│   local                                    the newest package file sitting i…│
+│   repo owner/name                          the releases of a github repository│
+│   none                                     stop checking it against anything │
+╰──────────────────────────────────────────────────────────────────────────────╯
+```
+
+It takes the same words `snapkit track` does, and refuses the same way: the
+setting is resolved before it is written down, and one that resolves to
+nothing leaves the record exactly as it was. The list of kinds is built from
+the shapes themselves, so a new one cannot be added and go unmentioned here.
 
 ### Building from the dashboard
 
@@ -172,11 +195,13 @@ reliable.
 
 ## When there is no repository
 
-Plenty of things worth packaging are not published as a GitHub release.
-Discord answers a download endpoint with a redirect; Unity, Signal and
-Sublime Text publish into apt repositories of their own; and some are simply
-handed to you. In every one of those cases the file is already sitting in a
-folder, so point `create` at the file instead of at a repository:
+Plenty of things worth packaging are not published as a GitHub release. Some
+publish somewhere else, which is what [the next
+section](#upstreams-that-are-not-a-release) is about. Others are simply
+handed to you: a download somebody sent, a build off a colleague's machine, a
+`.deb` that was never on the internet at all. In that case the file is
+already sitting in a folder, so point `create` at the file instead of at a
+repository:
 
 ```console
 $ snapkit create ~/Downloads/freetube_0.25.2_amd64.deb
@@ -226,6 +251,77 @@ repoints the recipe, drops the superseded file and rebuilds.
 
 `snapkit import ../some-snap --local` does the same for a project that
 already exists, and without `--local` on a terminal it offers.
+
+## Upstreams that are not a release
+
+A folder is the honest answer when a file was handed to you, but it is the
+wrong one when the version really is published somewhere, just not as a
+GitHub release. Eight of the projects packaged here are like that. Signal,
+Sublime Text and Unity Hub publish into apt repositories of their own. Emacs
+and ffmpeg publish a directory listing of every release there has ever been.
+Discord answers a download endpoint with a redirect and puts the version in
+the path it redirects to. mpv and RetroArch do use GitHub, but attach no
+source tarball, so what there is to fetch is the archive GitHub rolls from a
+tag.
+
+`snapkit track` says which of those a snap is, and what to read:
+
+```console
+$ snapkit track sublime-text apt base=https://download.sublimetext.com \
+      package=sublime-text index=https://download.sublimetext.com/apt/stable/Packages
+==> sublime-text: apt base=https://download.sublimetext.com package=sublime-text …
+    upstream has 4200
+    which it publishes as sublime-text_build-4200_amd64.deb
+==> sublime-text is tracked against apt: sublime-text
+```
+
+The kinds, and what each one needs:
+
+| kind | how it finds the version | needs |
+| --- | --- | --- |
+| `apt` | the newest amd64 stanza in a `Packages` index, ordered the way dpkg orders versions | `base`, `package`, and `index` if it is not the Debian default path |
+| `index` | a regex with one group, over a listing of every release | `url`, `pattern`, `asset` |
+| `redirect` | a HEAD request, and a regex over where it redirects to | `url`, `pattern`, `asset`, `download` |
+| `tag-archive` | the newest tag on a GitHub repository | `repo`, `asset`, `download`, and `prefix` if the tag has one |
+| `local` | the newest matching file in the project folder | nothing, though `glob` narrows it |
+
+`asset` and `download` are templates: `{version}`, `{tag}` and `{asset}` are
+filled in once the version is known. `glob` matches every version of the file
+so the superseded one is cleaned up, and `local` renames it on the way in, for
+the upstreams whose filename changes every release.
+
+`snapkit track kinds` prints that table with a worked example under each one,
+and `snapkit track <name>` with nothing after it says what a snap is tracked
+against now and what that has at this moment. The dashboard takes the same
+words behind `t`.
+
+The settings are checked before they are written down, and then resolved
+once. A regex that does not compile, a regex with two capturing groups where
+one version is wanted, a `{tag}` asked of a shape that has no tag to give: all
+three are a refusal at the prompt rather than a `KeyError` a year later. And
+an upstream that resolves to nothing leaves the record exactly as it was:
+
+```console
+$ snapkit track emacs index url=https://ftp.gnu.org/gnu/emacs/ \
+      'pattern=emacs-(\d+)\.tar\.gz' asset=emacs-{version}.tar.gz
+==> emacs: index url=https://ftp.gnu.org/gnu/emacs/ pattern=emacs-(\d+)\.tar\.gz …
+snapkit: emacs was left as it was, because that upstream did not resolve:
+           nothing matching emacs-(\d+)\.tar\.gz in https://ftp.gnu.org/gnu/emacs/
+
+           `snapkit track kinds` says what index takes; --force writes it
+           down unresolved
+```
+
+That refusal is the point of the command. An upstream written down without
+being tried reads as "up to date" for as long as nobody looks, which is the
+one failure mode a version checker must not have. `--force` is there for the
+case where the endpoint is down rather than the setting wrong, and it says so
+in the output rather than passing silently.
+
+Two other forms: `snapkit track <name> repo owner/name` puts a snap back on
+GitHub releases, reading the release to relearn which file to take and what
+its name will look like next time, and `snapkit track <name> none` stops it
+being checked against anything at all.
 
 ## The shared database
 
@@ -483,6 +579,11 @@ exactly what an update does.
 | `snapkit check [name ...]` | what has a newer release upstream |
 | `snapkit update <name> [...]` | move onto that release and rebuild |
 | `snapkit update <name> --force` | redo it even if it is already current |
+| `snapkit track <name>` | where its releases are looked for, and what is there |
+| `snapkit track <name> <kind> ...` | look for them somewhere that is not a release |
+| `snapkit track <name> repo owner/name` | put it back on GitHub releases |
+| `snapkit track <name> none` | stop checking it against anything |
+| `snapkit track kinds` | every kind of upstream, and what each one needs |
 | `snapkit build <name>` | hand the project to snapcraft |
 | `snapkit remove <name>` | forget a snap, and its recipe with it |
 | `snapkit db` | what the shared recipe database holds |
@@ -516,8 +617,8 @@ downloading one, so the archive reader is checked against bytes the test file
 made and knows the shape of.
 
 One function per subject: upstreams, recipes, register, payloads, projects,
-checking, dashboard, updater, from_a_file. A failure names the area
-before it names the case.
+checking, dashboard, updater, from_a_file, database, tracking. A failure names
+the area before it names the case.
 
 Several exist because of bugs that were in here:
 
@@ -551,6 +652,14 @@ Several exist because of bugs that were in here:
   an empty `snapcraft.yaml` into a project that assembles its own tree
 - emptying a recipe left its file on disk, so the next read brought the old
   one back and the register disagreed with itself
+- the shape a `track` setting is checked against and the shape that reads it
+  at update time were two lists that could disagree, so the tracking tests
+  put every upstream in `seed.py` back through `configure()` and require it
+  to come out unchanged
+- the terminal and the dashboard each had their own copy of the rule that an
+  upstream which resolves to nothing must not be written down, which is the
+  one rule here that cannot be got wrong quietly: it now lives in
+  `update.retrack` and both are tested against it
 - `select()` watches a file descriptor and `sys.stdin` is buffered, so
   reading one character of an arrow key pulled the rest into Python's buffer
   where `select` could not see it; the sequence read as a lone Escape, and
