@@ -81,6 +81,25 @@ def source_type_for(url):
     return "tar"
 
 
+def app_id(desktop):
+    """The bus name a desktop entry implies, or "" when it implies none.
+
+    A GTK application's id is its desktop entry's name, and that id is the
+    name it takes on the session bus. Without a slot declaring it, snapd
+    refuses: "not allowed to own the service net.lutris.Lutris".
+    """
+    if not desktop:
+        return ""
+    stem = desktop.rsplit("/", 1)[-1]
+    if stem.endswith(".desktop"):
+        stem = stem[:-len(".desktop")]
+    # Reverse-DNS or nothing: a bare `freetube.desktop` is not a bus name.
+    parts = stem.split(".")
+    if len(parts) < 3 or not all(re.fullmatch(r"[A-Za-z0-9_-]+", p) for p in parts):
+        return ""
+    return stem
+
+
 def part_for(kind, name, url, sha=""):
     """The `parts:` stanza that gets the payload into the snap."""
     checksum = f"\n    source-checksum: sha256/{sha}" if sha else ""
@@ -160,6 +179,17 @@ def build(*, name, version, summary, description, license_id, kind, url,
     if plugs:
         out.append("    plugs:")
         out += [f"      - {plug}" for plug in plugs]
+    bus_name = app_id(desktop)
+    if bus_name:
+        out += ["    # A GtkApplication registers its application id on the session",
+                "    # bus, and confinement refuses a name the snap has not declared.",
+                "    slots:",
+                f"      - dbus-{name}"]
+
+    if bus_name:
+        out += ["", "slots:", f"  dbus-{name}:", "    interface: dbus",
+                "    bus: session", f"    name: {bus_name}"]
+
     out += ["", "parts:", part_for(kind, name, url, sha).rstrip()]
     if icon:
         out += ["",

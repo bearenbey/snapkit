@@ -449,6 +449,41 @@ def recipes():
                              license_id="", kind="archive", url="u",
                              command="bin/d", traits={"terminal"})
         assert "extensions" not in plain and "audio-playback" not in plain
+    @check("a desktop entry's app id becomes the bus name the snap may own")
+    def _():
+        # lutris died at "not allowed to own the service net.lutris.Lutris":
+        # a GtkApplication registers its id, and the id is the entry's name.
+        for desktop, wanted in (
+                ("usr/share/applications/net.lutris.Lutris.desktop",
+                 "net.lutris.Lutris"),
+                ("usr/share/applications/io.github.linx_systems.ClamUI.desktop",
+                 "io.github.linx_systems.ClamUI"),
+                ("share/applications/org.shotcut.Shotcut.desktop",
+                 "org.shotcut.Shotcut"),
+                # Not reverse-DNS, so not a bus name.
+                ("usr/share/applications/freetube.desktop", ""),
+                ("usr/share/applications/demo.desktop", ""),
+                ("", "")):
+            same(recipe.app_id(desktop), wanted, desktop or "(none)")
+
+    @check("a recipe declares the bus name, and only when there is one")
+    def _():
+        text = recipe.build(
+            name="clamui", version="0.4.0", summary="a demo",
+            description="body", license_id="MIT", kind="deb",
+            url="https://x/a.deb", command="usr/bin/clamui",
+            desktop="usr/share/applications/io.github.linx_systems.ClamUI.desktop")
+        assert "\nslots:\n  dbus-clamui:" in text, text
+        assert "    name: io.github.linx_systems.ClamUI" in text, text
+        assert "      - dbus-clamui" in text, text
+        # A bare desktop name is not a bus name, so nothing is declared.
+        plain = recipe.build(
+            name="freetube", version="1.0", summary="a demo",
+            description="body", license_id="MIT", kind="deb",
+            url="https://x/a.deb", command="usr/bin/freetube",
+            desktop="usr/share/applications/freetube.desktop")
+        assert "slots:" not in plain, plain
+
     @check("the AppImage recipe finds the file whatever its extension looks like")
     def _():
         # neovim ships .appimage; a glob for *.AppImage alone failed at chmod.
