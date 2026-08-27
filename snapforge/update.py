@@ -178,7 +178,8 @@ def _asset_for(snap, release):
         return _dressed(snap, release, asset), ""
 
     # The pattern stopped matching; upstreams rename assets between releases.
-    same_kind = [c for c in classify.classify(release.assets) if c.kind == snap.kind]
+    same_kind = [c for c in classify.classify(release.assets, wanted=snap.name)
+                 if c.kind == snap.kind]
     if not same_kind:
         raise ForgeError(
             f"{snap.name}: {release.tag} publishes nothing of the same kind "

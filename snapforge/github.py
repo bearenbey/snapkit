@@ -161,7 +161,10 @@ def recent_tags(repo, limit=30):
     except NetworkError as exc:
         raise NotFound(f"{repo}: no releases feed ({exc})") from exc
     seen, tags = set(), []
-    for match in re.findall(r"releases/tag/([^\"'<]+)", feed):
+    # Only the entries' own links. The release notes travel in the same feed
+    # with their markup escaped, so a looser match walked straight out of a
+    # tag and into `&quot;&gt;Releases page&lt;/a&gt;`.
+    for match in re.findall(r'href="[^"]*?/releases/tag/([^"]+)"', feed):
         tag = _unquote(match)
         if tag not in seen:
             seen.add(tag)

@@ -97,6 +97,24 @@ def upstreams():
                 assert False, f"{bad!r} should not parse"
             except ValueError:
                 pass
+    @check("release notes in the tag feed are not mistaken for tags")
+    def _():
+        # The atom feed carries the notes with their markup escaped, so a
+        # looser match walked out of a tag and into `&quot;&gt;Releases page`.
+        feed = (
+            '<feed><entry>'
+            '<link rel="alternate" type="text/html" '
+            'href="https://github.com/a/b/releases/tag/v0.4.0"/>'
+            '<content type="html">Download from the '
+            '&lt;a href=&quot;https://github.com/a/b/releases/tag/v0.4.0&quot;'
+            '&gt;Releases page&lt;/a&gt;.</content>'
+            '</entry><entry>'
+            '<link rel="alternate" type="text/html" '
+            'href="https://github.com/a/b/releases/tag/v0.3.0"/>'
+            '</entry></feed>')
+        with patched(github, get_text=lambda url, timeout=30: feed):
+            same(github.recent_tags("a/b"), ["v0.4.0", "v0.3.0"])
+
     @check("github.version_of undecorates a tag")
     def _():
         for tag, want in (("v1.4.7", "1.4.7"), ("4.7.2-stable", "4.7.2"),
@@ -163,6 +181,32 @@ def upstreams():
                 assert False, f"{bad} should not resolve"
             except project.ForgeError as exc:
                 assert "a.tar.gz" in str(exc), "the error should list the options"
+    @check("a companion package does not outrank the application")
+    def _():
+        # clamui attaches clamui-privileged-helper, which scores identically
+        # and sorted first on the name alone.
+        class Asset:
+            def __init__(self, name):
+                self.name, self.url = name, "http://x/" + name
+        assets = [Asset("clamui-privileged-helper_0.4.0_all.deb"),
+                  Asset("clamui_0.4.0_all.deb")]
+        same(classify.classify(assets, wanted="clamui")[0].name,
+             "clamui_0.4.0_all.deb")
+        # With nothing to compare against, the shorter name still wins: an
+        # application is rarely the one with the extra words on it.
+        same(classify.classify(assets)[0].name, "clamui_0.4.0_all.deb")
+
+    @check("the name a file leads with is what the project is called")
+    def _():
+        for name, wanted in (("clamui_0.4.0_all.deb", "clamui"),
+                             ("clamui-privileged-helper_0.4.0_all.deb",
+                              "clamui-privileged-helper"),
+                             ("shotcut-linux-x86_64-26.8.1.txz",
+                              "shotcut-linux-x86"),
+                             ("nvim-linux-x86_64.tar.gz", "nvim-linux-x86"),
+                             ("lutris_0.5.22_all.deb", "lutris")):
+            same(classify.leading_name(name), wanted, name)
+
     @check("a release with nothing usable says what it does have")
     def _():
         class Asset:
@@ -708,6 +752,88 @@ def payloads():
                 assert False, "should have raised"
             except ins.InspectionError:
                 pass
+
+
+def reading_payloads():
+    """What a payload is opened for: the program to run, the icon to show,"""
+    from snapforge import inspect
+
+    def tree(root, files):
+        """A payload on disk: paths mapped to bytes, or "" for an empty file."""
+        for name, blob in files.items():
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(blob if isinstance(blob, bytes) else blob.encode())
+            if not name.endswith((".desktop", ".svg", ".png")):
+                path.chmod(0o755)
+        return root
+
+    @check("a program is an ELF binary or a script that says what runs it")
+    def _():
+        # lutris ships usr/games/lutris, a python script, and nothing else to
+        # run: taking only ELF made every interpreted application refuse.
+        with tempfile.TemporaryDirectory() as home:
+            root = tree(Path(home), {
+                "usr/games/lutris": "#! /usr/bin/python3\nprint(1)\n",
+                "usr/bin/native": b"\x7fELF" + b"\0" * 60,
+                "usr/share/doc/readme": "not executable at all\n",
+            })
+            (root / "usr/share/doc/readme").chmod(0o644)
+            found = inspect.find_binaries(root)
+            same(sorted(found), ["usr/bin/native", "usr/games/lutris"])
+            # And the one named after the application comes first.
+            same(inspect.rank_binaries(found, "lutris")[0], "usr/games/lutris")
+
+    @check("the icon is the one the desktop entry asks for")
+    def _():
+        # hicolor sorts by what an icon is for, and lutris ships a mimetype
+        # icon whose name matches as well as the real one's does.
+        with tempfile.TemporaryDirectory() as home:
+            root = tree(Path(home), {
+                "usr/share/applications/net.lutris.Lutris.desktop":
+                    "[Desktop Entry]\nName=Lutris\nIcon=net.lutris.Lutris\n",
+                "usr/share/icons/hicolor/scalable/mimetypes/"
+                "application-x-lutris.svg": "<svg/>",
+                "usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg":
+                    "<svg/>",
+            })
+            desktop = inspect.find_desktop(root, "lutris")
+            named = inspect.desktop_icon(root, desktop)
+            # Path.stem would cut net.lutris.Lutris down to net.lutris.
+            same(named, "net.lutris.lutris")
+            same(inspect.find_icon(root, "lutris", named=named),
+                 "usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg")
+            # Even with no Icon= to go on, a mimetype icon is not the app's.
+            same(inspect.find_icon(root, "lutris"),
+                 "usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg")
+
+    @check("an Icon= that is a path, or carries a suffix, still resolves")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home)
+            entry = root / "a.desktop"
+            for wrote, wanted in (("Icon=/usr/share/pixmaps/thing.png", "thing"),
+                                  ("Icon=thing.svg", "thing"),
+                                  ("Icon=thing", "thing"),
+                                  ("Icon = Thing ", "thing"),
+                                  ("Name=no icon here", "")):
+                entry.write_text(f"[Desktop Entry]\n{wrote}\n")
+                same(inspect.desktop_icon(root, "a.desktop"), wanted, wrote)
+
+    @check("a library the payload ships is not reported as missing")
+    def _():
+        # shotcut bundles its own Qt6 and MLT beside the binary; asking the
+        # host's loader alone called all nineteen of them missing, which
+        # reads as a broken package.
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home)
+            (root / "lib").mkdir()
+            (root / "lib" / "libthing.so.6").write_bytes(b"\x7fELF")
+            same([d.name for d in inspect.bundled_lib_dirs(root)], ["lib"])
+            # No .so files means nothing to add to the search path.
+            bare = Path(home) / "bare"
+            (bare / "lib").mkdir(parents=True)
+            same(inspect.bundled_lib_dirs(bare), [])
 
 
 def projects():
@@ -2534,8 +2660,8 @@ def database():
 
 def main():
     for group in (upstreams, architectures, recipes, register, payloads,
-                  projects, checking, dashboard, updater, from_a_file,
-                  database, tracking):
+                  reading_payloads, projects, checking, dashboard, updater,
+                  from_a_file, database, tracking):
         group()
     if "--online" in sys.argv[1:]:
         online()

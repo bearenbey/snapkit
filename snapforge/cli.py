@@ -543,7 +543,7 @@ def track_repo(db, args, reporter, snap, rest):
     repo = github.parse_repo(rest[0])
     reporter.step(f"{snap.name}: reading the releases of {repo}")
     release = github.release(repo, tag=args.tag)
-    candidates = classify.classify(release.assets)
+    candidates = classify.classify(release.assets, wanted=repo.split('/')[-1])
     if not candidates:
         die(f"{repo} {release.tag} publishes nothing that can be packaged "
             f"here -- `snapkit create {repo}` says what it does publish")

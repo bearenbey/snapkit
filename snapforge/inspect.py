@@ -1,6 +1,7 @@
 """Opening the downloaded payload to see what is actually in it."""
 
 import io
+import os
 import re
 import shutil
 import stat
@@ -172,11 +173,21 @@ def find_binaries(root):
             continue
         if NOT_THE_APP.search(relative):
             continue
-        with open(path, "rb") as handle:
-            if handle.read(4) != b"\x7fELF":
-                continue
+        if not _is_program(path):
+            continue
         found.append(relative)
     return found
+
+
+def _is_program(path):
+    """A compiled binary, or a script that says what runs it.
+
+    Taking only ELF made every interpreted application unpackageable: lutris
+    ships `usr/games/lutris`, a python script, and nothing else to run.
+    """
+    with open(path, "rb") as handle:
+        head = handle.read(4)
+    return head[:4] == b"\x7fELF" or head[:2] == b"#!"
 
 
 def rank_binaries(binaries, wanted):
@@ -210,13 +221,36 @@ def find_desktop(root, wanted=""):
     return entries[0]
 
 
-def find_icon(root, wanted=""):
-    """The largest icon named after the application, or the largest icon."""
+def desktop_icon(root, desktop):
+    """The icon a .desktop entry asks for by name, which is the authority."""
+    if not desktop:
+        return ""
+    try:
+        text = (root / desktop).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    found = re.search(r"(?mi)^Icon\s*=\s*(.+?)\s*$", text)
+    if not found:
+        return ""
+    # It may be a bare name, a path, or carry an extension. Only strip a
+    # suffix that is really one: reverse-DNS names are mostly dots, and
+    # Path.stem turns net.lutris.Lutris into net.lutris.
+    name = Path(found.group(1).strip()).name
+    stem, dot, suffix = name.rpartition(".")
+    if dot and f".{suffix.lower()}" in ICON_SUFFIXES:
+        name = stem
+    return name.lower()
+
+
+def find_icon(root, wanted="", named=""):
+    """The icon the desktop entry names, else the largest one named after the
+    application."""
     icons = [p for p in root.rglob("*") if p.is_file()
              and p.suffix.lower() in ICON_SUFFIXES]
     if not icons:
         return ""
     target = (wanted or "").lower()
+    named = (named or "").lower()
 
     def size_of(path):
         found = re.search(r"(\d+)x\d+", path.as_posix())
@@ -224,7 +258,16 @@ def find_icon(root, wanted=""):
         return 10_000 if path.suffix.lower().startswith(".svg") else \
             int(found.group(1)) if found else 0
 
-    icons.sort(key=lambda p: (p.stem.lower() != target,
+    def not_an_app_icon(path):
+        # hicolor sorts icons by what they are for. Everything outside apps/
+        # is a file type or a status glyph: lutris ships a mimetype icon that
+        # matches its name just as well as the real one does.
+        where = path.as_posix().lower()
+        return "/apps/" not in where and "/mimetypes/" in where
+
+    icons.sort(key=lambda p: (not (named and p.stem.lower() == named),
+                              not_an_app_icon(p),
+                              p.stem.lower() != target,
                               target not in p.stem.lower(),
                               -size_of(p)))
     return icons[0].relative_to(root).as_posix()
@@ -271,11 +314,39 @@ def traits_of(root, desktop):
     return found
 
 
-def missing_libraries(binary):
-    """What ldd cannot resolve, which is what will fail at runtime."""
+def bundled_lib_dirs(root):
+    """Where inside a payload a portable build ships its own libraries."""
+    found = []
+    for name in ("lib", "lib64", "usr/lib", "libs", "bin"):
+        where = root / name
+        if where.is_dir() and any(where.glob("*.so*")):
+            found.append(where)
+    for where in sorted(root.glob("*/*")):
+        if where.is_dir() and where.name in ("lib", "lib64") \
+                and any(where.glob("*.so*")):
+            found.append(where)
+    return found
+
+
+def missing_libraries(binary, root=None):
+    """What ldd cannot resolve, which is what will fail at runtime.
+
+    A portable build ships its own Qt or GTK beside the binary and finds it
+    through an rpath or a launcher. Asking the host's loader alone called
+    every one of those missing, which reads as a broken package: shotcut
+    bundles nineteen and every one was reported.
+    """
     if not shutil.which("ldd"):
         return []
-    done = subprocess.run(["ldd", str(binary)], capture_output=True, text=True)
+    environment = dict(os.environ)
+    if root is not None:
+        bundled = [str(d) for d in bundled_lib_dirs(Path(root))]
+        if bundled:
+            was = environment.get("LD_LIBRARY_PATH", "")
+            environment["LD_LIBRARY_PATH"] = os.pathsep.join(
+                bundled + ([was] if was else []))
+    done = subprocess.run(["ldd", str(binary)], capture_output=True, text=True,
+                          env=environment)
     return sorted({line.split()[0] for line in done.stdout.splitlines()
                    if "not found" in line})
 
@@ -289,7 +360,8 @@ def look(archive, kind, destination, wanted=""):
     binaries = rank_binaries(find_binaries(root), wanted)
     payload.command = binaries[0] if binaries else ""
     payload.desktop = find_desktop(root, wanted)
-    payload.icon = find_icon(root, wanted)
+    payload.icon = find_icon(root, wanted,
+                             named=desktop_icon(root, payload.desktop))
 
     if kind == "deb":
         control = control_fields(archive)
@@ -300,5 +372,5 @@ def look(archive, kind, destination, wanted=""):
 
     payload.traits = traits_of(root, payload.desktop)
     if payload.command:
-        payload.libraries = missing_libraries(root / payload.command)
+        payload.libraries = missing_libraries(root / payload.command, root)
     return payload

@@ -151,7 +151,18 @@ def score(name):
     return points, kind, ", ".join(why)
 
 
-def classify(assets):
+def leading_name(name):
+    """The part of a filename before the version starts."""
+    stem = name
+    for suffix in sorted(ARCHIVES + (".deb", ".appimage"), key=len, reverse=True):
+        if stem.lower().endswith(suffix):
+            stem = stem[:-len(suffix)]
+            break
+    found = re.search(r"[-_.](?:v?\d)", stem)
+    return (stem[:found.start()] if found else stem).lower()
+
+
+def classify(assets, wanted=""):
     """Every usable asset in a release, best first."""
     found = []
     for asset in assets:
@@ -160,7 +171,13 @@ def classify(assets):
         points, kind, why = score(asset.name)
         if points:
             found.append(Candidate(asset=asset, kind=kind, score=points, why=why))
-    return sorted(found, key=lambda c: (-c.score, c.name))
+    # A release can attach a companion package that scores exactly as well as
+    # the application: clamui ships clamui-privileged-helper beside clamui,
+    # and on the name alone the helper sorted first.
+    target = (wanted or "").lower()
+    return sorted(found, key=lambda c: (-c.score,
+                                        leading_name(c.name) != target,
+                                        len(c.name), c.name))
 
 
 def rejected(assets):

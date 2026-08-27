@@ -142,7 +142,7 @@ def plan(repo_text, reporter, tag=None, name=None, asset=None):
     reporter.detail(f"newest release {release.tag} ({release.version}), "
                     f"{len(release.assets)} files attached")
 
-    candidates = classify.classify(release.assets)
+    candidates = classify.classify(release.assets, wanted=repo.split('/')[-1])
     if not candidates:
         raise ForgeError(_nothing_usable(repo, release))
 

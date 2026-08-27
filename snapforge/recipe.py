@@ -66,6 +66,21 @@ def plugs_for(traits):
     return chosen
 
 
+# snapcraft works the type out from the extension, and knows fewer of them
+# than the classifier accepts: shotcut ships .txz and the build refused to
+# start with "unable to determine source type".
+SOURCE_TYPES = ((".zip", "zip"), (".7z", "7z"))
+
+
+def source_type_for(url):
+    """What to tell snapcraft an archive is, rather than let it guess."""
+    name = url.rsplit("/", 1)[-1].lower().split("?", 1)[0]
+    for suffix, kind in SOURCE_TYPES:
+        if name.endswith(suffix):
+            return kind
+    return "tar"
+
+
 def part_for(kind, name, url, sha=""):
     """The `parts:` stanza that gets the payload into the snap."""
     checksum = f"\n    source-checksum: sha256/{sha}" if sha else ""
@@ -96,7 +111,8 @@ def part_for(kind, name, url, sha=""):
             f"    # A plain archive: snapcraft unpacks it and folds away the single\n"
             f"    # top-level directory, which is why the paths above start below it.\n"
             f"    plugin: dump\n"
-            f"    source: {url}{checksum}\n")
+            f"    source: {url}\n"
+            f"    source-type: {source_type_for(url)}{checksum}\n")
 
 
 def build(*, name, version, summary, description, license_id, kind, url,
