@@ -819,6 +819,35 @@ def reading_payloads():
             # And the one named after the application comes first.
             same(inspect.rank_binaries(found, "lutris")[0], "usr/games/lutris")
 
+    @check("a script that runs the binary is the thing to run")
+    def _():
+        # shotcut ships bin/shotcut and a launcher whose first comment is
+        # "Run this instead of trying to run bin/shotcut". Picking the binary
+        # started it with no QT_PLUGIN_PATH and it aborted on the Qt plugin.
+        with tempfile.TemporaryDirectory() as home:
+            root = tree(Path(home), {
+                "bin/thing": b"\x7fELF" + b"\0" * 60,
+                "thing": "#!/bin/sh\nexport QT_PLUGIN_PATH=lib/qt6\n"
+                         "bin/thing \"$@\"\n",
+            })
+            found = inspect.rank_binaries(inspect.find_binaries(root), "thing")
+            same(found[0], "bin/thing", "the binary still ranks first")
+            same(inspect.launcher_among(root, found), "thing")
+
+    @check("a binary with no wrapper around it is still the thing to run")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            root = tree(Path(home), {"bin/thing": b"\x7fELF" + b"\0" * 60})
+            found = inspect.rank_binaries(inspect.find_binaries(root), "thing")
+            same(inspect.launcher_among(root, found), "",
+                 "it invented a launcher that is not there")
+            # And a script that names nothing else is not a launcher either.
+            root2 = tree(Path(home) / "two", {
+                "bin/other": b"\x7fELF" + b"\0" * 60,
+                "solo": "#!/bin/sh\necho hello\n"})
+            found2 = inspect.rank_binaries(inspect.find_binaries(root2), "solo")
+            same(inspect.launcher_among(root2, found2), "")
+
     @check("the icon is the one the desktop entry asks for")
     def _():
         # hicolor sorts by what an icon is for, and lutris ships a mimetype

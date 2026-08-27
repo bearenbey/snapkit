@@ -351,6 +351,24 @@ def missing_libraries(binary, root=None):
                    if "not found" in line})
 
 
+def launcher_among(root, candidates):
+    """A script that runs one of the other candidates, which makes it the
+    thing to run."""
+    for relative in candidates:
+        path = root / relative
+        try:
+            with open(path, "rb") as handle:
+                if handle.read(2) != b"#!":
+                    continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for other in candidates:
+            if other != relative and other in text:
+                return relative
+    return ""
+
+
 def look(archive, kind, destination, wanted=""):
     """Unpack an asset and report what is in it."""
     unpack(archive, destination, kind)
@@ -358,7 +376,12 @@ def look(archive, kind, destination, wanted=""):
 
     payload = Payload(root=root, kind=kind)
     binaries = rank_binaries(find_binaries(root), wanted)
-    payload.command = binaries[0] if binaries else ""
+    # A payload that ships both a binary and a script that runs it means the
+    # script: shotcut's says so in as many words, "Run this instead of trying
+    # to run bin/shotcut", and sets the Qt and MLT paths it will not start
+    # without.
+    payload.command = launcher_among(root, binaries) or (
+        binaries[0] if binaries else "")
     payload.desktop = find_desktop(root, wanted)
     payload.icon = find_icon(root, wanted,
                              named=desktop_icon(root, payload.desktop))
