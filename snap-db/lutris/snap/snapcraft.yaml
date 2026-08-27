@@ -93,6 +93,19 @@ parts:
       - vulkan-tools
       # lutris shells out to lspci to work out which GPU is present
       - pciutils
+      # No libvulkan1 and no mesa-vulkan-drivers here on purpose. The loader,
+      # the drivers and their ICD manifests all arrive from the mesa-2404
+      # content snap, which the gnome extension puts on LD_LIBRARY_PATH and
+      # XDG_DATA_DIRS. Staging a second copy is shadowing, and the
+      # extension's gpu cleanup strips it back out again anyway.
+      #
+      # "Vulkan support: NO" is not this snap's doing. See the note in
+      # pack.py: on an nvidia host snapd has to bridge the driver into
+      # /var/lib/snapd/lib, and here those directories are empty.
+      #
+      # An overlay layer, which works in-process and needs nothing on the
+      # host, so it is worth having whatever vulkan is doing.
+      - mangohud
       # Recommends, not Depends, but each one is a feature that stays dark
       # without it: battle.net needs protobuf, controllers need evdev, and
       # reading a windows executable needs pefile.

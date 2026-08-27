@@ -56,9 +56,12 @@ def shadowing(project, root):
     TYPE_NONE. One library at a time was the wrong shape of fix; the answer
     is that the two trees must not overlap at all.
     """
+    # lib*.so* only: perl and python extension modules are .so files too,
+    # with names like Cwd.so and POSIX.so, and counting those buries the
+    # real answer under hundreds of lines of noise.
     platform = project.gnome_platform() / "usr/lib"
-    theirs = {p.name for p in platform.rglob("*.so*")}
-    ours = {p.name: p for p in (root / "usr/lib").rglob("*.so*")}
+    theirs = {p.name for p in platform.rglob("lib*.so*")}
+    ours = {p.name: p for p in (root / "usr/lib").rglob("lib*.so*")}
     both = sorted(set(ours) & theirs)
     return sorted({re.match(r"(.+?)\.so", name).group(1) for name in both})
 

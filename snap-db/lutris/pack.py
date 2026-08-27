@@ -12,7 +12,21 @@ IMPORTS = ("yaml", "lxml", "requests", "PIL", "gi", "dbus", "distro",
            "magic", "setproctitle", "google", "evdev", "pefile")
 
 # It shells out to these while installing and running a game.
-TOOLS = ("lspci", "cabextract", "unzip", "curl", "xrandr", "killall")
+TOOLS = ("lspci", "cabextract", "unzip", "curl", "xrandr", "killall",
+         "vulkaninfo", "mangohud")
+
+# lutris answers "Vulkan support" by loading libvulkan.so.1 and asking it for
+# a physical device. Nothing about that lives in this snap: the loader comes
+# from mesa-2404 over the gpu-2404 content interface, mesa's own drivers come
+# with it, and an nvidia card's driver is bridged in by snap-confine. All
+# three were verified present inside a running snap on this machine, so a
+# "NO" here is not a missing stage-package and staging one will not fix it.
+VULKAN_NOTE = ("if lutris reports \"Vulkan support: NO\", check it from "
+               "inside the snap rather than from the host: "
+               "`snap run --shell lutris -c vulkaninfo`. The host's copy of "
+               "/var/lib/snapd/lib is empty by design -- snap-confine fills "
+               "it per mount namespace, so looking from outside tells you "
+               "nothing.")
 
 # A GtkApplication registers its id on the session bus, and confinement
 # refuses a name the snap has not declared a slot for.
@@ -50,9 +64,12 @@ def shadowing(project, root):
     thing to look at if a future platform update breaks the launch with an
     undefined symbol, which is exactly how clamui failed.
     """
+    # lib*.so* only: perl and python extension modules are .so files too,
+    # with names like Cwd.so and POSIX.so, and counting those buried the
+    # real answer under three hundred lines of noise.
     platform = project.gnome_platform() / "usr/lib"
-    theirs = {p.name for p in platform.rglob("*.so*")}
-    ours = {p.name for p in (root / "usr/lib").rglob("*.so*")}
+    theirs = {p.name for p in platform.rglob("lib*.so*")}
+    ours = {p.name for p in (root / "usr/lib").rglob("lib*.so*")}
     return sorted({re.match(r"(.+?)\.so", name).group(1)
                    for name in ours & theirs})
 
@@ -119,6 +136,7 @@ def build(project):
     project.say(f"built {built.name} ({built.stat().st_size / 1e6:.0f} MB)")
     project.note(f"install it with:\n"
                  f"      sudo snap install --dangerous {built.name}")
+    project.note(VULKAN_NOTE)
     project.note("lutris downloads and runs its own wine builds, so the "
                  "first launch has nothing to play with until a runner is "
                  "installed from its own interface.")
