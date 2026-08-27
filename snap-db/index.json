@@ -48,7 +48,7 @@
         },
         "pack.py": {
           "exec": false,
-          "sha256": "749c6b7b2e6313ec6d76a459ecb2e5e36ce17aecde327d1591ebce52e1827d73"
+          "sha256": "69df75ce3f4eb5ff25e44e936032a1e1abc784f09914617223da155835df6706"
         },
         "snap/gui/clamui.svg": {
           "exec": false,
@@ -59,7 +59,7 @@
           "sha256": "cb9b7b20c849c1f465c19d94af2a24d2d9d5247240cf2c80b33455aa1e3ad395"
         }
       },
-      "fingerprint": "84a1a24366781104f8bb1a5cacd431911a243f9e92496a46ee2f54cb5cc5fa34",
+      "fingerprint": "d0f0e4d773f8beeae3254c3c606fdbd11363a69b111bb4c7070986c8abc75b8c",
       "name": "clamui",
       "pack": "pack.py",
       "record": {
@@ -475,7 +475,7 @@
         },
         "pack.py": {
           "exec": false,
-          "sha256": "eec7eb5898d6d704c5fe409f93f8003de249c122a89bad158d9901af857c4940"
+          "sha256": "5bc3a8fd693a418d1fed751d651c446f510418b76282e0f74f32eca8b813c958"
         },
         "snap/gui/lutris.svg": {
           "exec": false,
@@ -483,10 +483,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "ca9b14fe483af927612f3b5a45ef98295e144e697773165ce2ee132364cd8347"
+          "sha256": "b2dc3fc9956e9c7292bcd574fb7963bed2347eeba9043e516d777c77a5073930"
         }
       },
-      "fingerprint": "3318b9c2a0f8527e56219a4ed92368d3077132fcf8ac9a2dcad54959fbe9b0e7",
+      "fingerprint": "045c86cf92dfaa646270d6a8fb01dab6070ad7d72f0d6f2f2b737cfaaf224293",
       "name": "lutris",
       "pack": "pack.py",
       "record": {

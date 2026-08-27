@@ -37,6 +37,10 @@ apps:
     # the base's copy, not this one.
     environment:
       PYTHONPATH: $SNAP/usr/lib/python3/dist-packages
+      # The 32-bit tree is not one the gnome extension knows about, and the
+      # gpu wrapper appends to whatever it finds here, so mesa's own i386
+      # libraries and /var/lib/snapd/lib/gl32 still come after these.
+      LD_LIBRARY_PATH: $SNAP/usr/lib/i386-linux-gnu:$LD_LIBRARY_PATH
     # A GtkApplication registers its application id on the session bus, and
     # confinement refuses to let it own a name it has not declared:
     # "not allowed to own the service net.lutris.Lutris due to AppArmor policy".
@@ -49,6 +53,18 @@ apps:
       - opengl
       - removable-media
 
+  # --- the 32-bit runtime -------------------------------------------------
+  #
+  # Proton and wine run 32-bit windows binaries in a 32-bit process, and that
+  # process needs a 32-bit copy of everything it links: GL, X11, gnutls,
+  # alsa, the lot. core24 ships an i386 glibc and nothing else, so lutris
+  # reported "i386 libGL.so.1 missing (needed by opengl)" and umu exited
+  # during prefix creation with nothing to build against.
+  #
+  # snapcraft's stage-packages cannot ask for :i386 on an amd64 build, so
+  # this part adds the architecture itself, lets apt resolve the closure,
+  # and takes only the library directories out of the debs. The named
+  # packages are libwine:i386's own Depends -- upstream's list of what
 slots:
   dbus-lutris:
     interface: dbus
@@ -83,6 +99,8 @@ parts:
       - gir1.2-notify-0.7
       # what lutris shells out to while installing and running a game
       - pciutils
+      # lsblk, which lutris runs to enumerate drives
+      - util-linux
       - psmisc
       - cabextract
       - unzip
@@ -112,8 +130,55 @@ parts:
       - python3-protobuf
       - python3-evdev
       - python3-pefile
+      # winetricks, which lutris shells out to by name. Not wine itself:
+      # lutris runs proton out of its own runners directory and never looks
+      # at a system wine, so 647MB of libwine would sit there unused.
+      - winetricks
 
 # The icon snapd shows in the launcher. `icon:` is resolved against
 # this project directory, not against the payload, so the one found
-# inside the release was copied here next to the recipe.
+# inside the release was copied here next to the recipe.  # 32-bit wine needs -- plus the GL, vulkan and gnutls that lutris named.
+  i386-runtime:
+    plugin: nil
+    build-packages:
+      - dpkg-dev
+    override-build: |
+      set -eu
+      dpkg --add-architecture i386
+      apt-get update
+
+      # Resolving with apt rather than naming the closure by hand: these are
+      # the roots, apt works out the hundred-odd libraries under them.
+      ROOTS="libgl1:i386 libglx0:i386 libegl1:i386 libglvnd0:i386
+             libvulkan1:i386 libgnutls30:i386
+             libfontconfig1:i386 libfreetype6:i386 libasound2t64:i386
+             libglib2.0-0t64:i386 libpulse0:i386 libudev1:i386
+             libusb-1.0-0:i386 libwayland-client0:i386 libwayland-egl1:i386
+             libx11-6:i386 libxext6:i386 libxkbcommon0:i386
+             libxrandr2:i386 libxi6:i386 libxcursor1:i386 libxinerama1:i386
+             libxcomposite1:i386 libxfixes3:i386 libxrender1:i386
+             libxxf86vm1:i386 libsdl2-2.0-0:i386 libpcsclite1:i386
+             libgstreamer1.0-0:i386 libgstreamer-plugins-base1.0-0:i386
+             libopenal1:i386 libncurses6:i386 libgcrypt20:i386"
+      apt-get install -y --no-install-recommends --download-only $ROOTS
+
+      # Extract to one side, then take only the 32-bit library trees. The
+      # debs also carry usr/share/doc, which would collide with the amd64
+      # part on the same paths at stage time.
+      scratch="$(mktemp -d)"
+      for deb in /var/cache/apt/archives/*_i386.deb; do
+        [ -e "$deb" ] || continue
+        dpkg-deb -x "$deb" "$scratch"
+      done
+
+      target="$CRAFT_PART_INSTALL/usr/lib/i386-linux-gnu"
+      mkdir -p "$target"
+      # noble is usr-merged, so /lib and /usr/lib are the same place.
+      for from in "$scratch/usr/lib/i386-linux-gnu" "$scratch/lib/i386-linux-gnu"; do
+        [ -d "$from" ] && cp -a "$from/." "$target/" || true
+      done
+      rm -rf "$scratch"
+
+      echo "staged $(find "$target" -name 'lib*.so*' | wc -l) 32-bit libraries"
+
 icon: snap/gui/lutris.svg

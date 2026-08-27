@@ -13,20 +13,21 @@ IMPORTS = ("yaml", "lxml", "requests", "PIL", "gi", "dbus", "distro",
 
 # It shells out to these while installing and running a game.
 TOOLS = ("lspci", "cabextract", "unzip", "curl", "xrandr", "killall",
-         "vulkaninfo", "mangohud")
+         "vulkaninfo", "mangohud", "winetricks")
 
-# lutris answers "Vulkan support" by loading libvulkan.so.1 and asking it for
-# a physical device. Nothing about that lives in this snap: the loader comes
-# from mesa-2404 over the gpu-2404 content interface, mesa's own drivers come
-# with it, and an nvidia card's driver is bridged in by snap-confine. All
-# three were verified present inside a running snap on this machine, so a
-# "NO" here is not a missing stage-package and staging one will not fix it.
-VULKAN_NOTE = ("if lutris reports \"Vulkan support: NO\", check it from "
-               "inside the snap rather than from the host: "
-               "`snap run --shell lutris -c vulkaninfo`. The host's copy of "
-               "/var/lib/snapd/lib is empty by design -- snap-confine fills "
-               "it per mount namespace, so looking from outside tells you "
-               "nothing.")
+# The diagnostics row is LinuxSystem.is_vulkan_supported, which is stricter
+# than the vkquery function of the same name: it also wants libvulkan.so.1
+# for *both* architectures, read out of `ldconfig -p`. A snap inherits the
+# host's /etc/ld.so.cache verbatim, so the i386 half is answered by a package
+# on the host and by nothing in this recipe. Everything needed to actually
+# run 32-bit vulkan is already in the snap -- the i386 loader and mesa
+# drivers in gpu-2404, and the 32-bit nvidia driver snap-confine bridges into
+# /var/lib/snapd/lib/gl32.
+VULKAN_NOTE = ("if lutris reports \"Vulkan support: NO\", it wants a 32-bit "
+               "loader: `sudo apt install libvulkan1:i386` on the HOST. The "
+               "check reads the host's ld.so.cache, which a snap inherits "
+               "whole, while the 32-bit runtime it then uses is the snap's "
+               "own from gpu-2404. Nothing to change in this recipe.")
 
 # A GtkApplication registers its id on the session bus, and confinement
 # refuses a name the snap has not declared a slot for.
@@ -67,11 +68,16 @@ def shadowing(project, root):
     # lib*.so* only: perl and python extension modules are .so files too,
     # with names like Cwd.so and POSIX.so, and counting those buried the
     # real answer under three hundred lines of noise.
+    # Keyed on the architecture directory as well as the name: the snap
+    # carries a 32-bit tree now, and an i386 libFLAC.so does not shadow the
+    # platform's amd64 one -- they are different files for different
+    # processes. Comparing bare names called all 360 of them a conflict.
     platform = project.gnome_platform() / "usr/lib"
-    theirs = {p.name for p in platform.rglob("lib*.so*")}
-    ours = {p.name for p in (root / "usr/lib").rglob("lib*.so*")}
+    theirs = {(p.parent.name, p.name) for p in platform.rglob("lib*.so*")}
+    ours = {(p.parent.name, p.name)
+            for p in (root / "usr/lib").rglob("lib*.so*")}
     return sorted({re.match(r"(.+?)\.so", name).group(1)
-                   for name in ours & theirs})
+                   for _arch, name in ours & theirs})
 
 
 def built_snap(project):

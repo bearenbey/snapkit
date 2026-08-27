@@ -59,11 +59,14 @@ def shadowing(project, root):
     # lib*.so* only: perl and python extension modules are .so files too,
     # with names like Cwd.so and POSIX.so, and counting those buries the
     # real answer under hundreds of lines of noise.
+    # Keyed on the architecture directory as well as the name, so a 32-bit
+    # library is not counted as shadowing a 64-bit one of the same name.
     platform = project.gnome_platform() / "usr/lib"
-    theirs = {p.name for p in platform.rglob("lib*.so*")}
-    ours = {p.name: p for p in (root / "usr/lib").rglob("lib*.so*")}
-    both = sorted(set(ours) & theirs)
-    return sorted({re.match(r"(.+?)\.so", name).group(1) for name in both})
+    theirs = {(p.parent.name, p.name) for p in platform.rglob("lib*.so*")}
+    ours = {(p.parent.name, p.name)
+            for p in (root / "usr/lib").rglob("lib*.so*")}
+    return sorted({re.match(r"(.+?)\.so", name).group(1)
+                   for _arch, name in ours & theirs})
 
 
 def built_snap(project):
