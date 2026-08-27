@@ -1,0 +1,106 @@
+# Written by snapkit from https://github.com/lutris/lutris.
+# Everything here is a starting point -- edit it, it is yours now.
+
+name: lutris
+base: core24
+version: '0.5.22'
+summary: video game preservation platform
+description: |
+  Lutris helps you install and play video games from all eras and from most
+  gaming systems. By leveraging and combining existing emulators, engine re-
+  implementations and compatibility layers, it gives you a central interface
+  to launch all your games.
+
+  Packaged from the upstream release at https://github.com/lutris/lutris.
+  This snap is not published or endorsed by the upstream project.
+grade: stable
+confinement: strict
+license: GPL-3.0
+title: lutris
+website: https://github.com/lutris/lutris
+source-code: https://github.com/lutris/lutris
+issues: https://github.com/lutris/lutris/issues
+contact: https://github.com/lutris/lutris/issues
+
+platforms:
+  amd64:
+
+apps:
+  lutris:
+    command: usr/games/lutris
+    # The gnome extension wires up the desktop, fonts, themes and
+    # GTK/GL stack from the platform snap rather than bundling them.
+    extensions: [gnome]
+    desktop: usr/share/applications/net.lutris.Lutris.desktop
+    # The base's python3 runs the script, so it has to be told where the
+    # staged modules are: /usr/lib/python3/dist-packages inside the snap is
+    # the base's copy, not this one.
+    environment:
+      PYTHONPATH: $SNAP/usr/lib/python3/dist-packages
+    # A GtkApplication registers its application id on the session bus, and
+    # confinement refuses to let it own a name it has not declared:
+    # "not allowed to own the service net.lutris.Lutris due to AppArmor policy".
+    slots:
+      - dbus-lutris
+    plugs:
+      - home
+      - network
+      - audio-playback
+      - opengl
+      - removable-media
+
+slots:
+  dbus-lutris:
+    interface: dbus
+    bus: session
+    name: net.lutris.Lutris
+
+parts:
+  lutris:
+    # snapcraft unpacks the .deb and `dump` stages what was in it.
+    plugin: dump
+    source: https://github.com/lutris/lutris/releases/download/v0.5.22/lutris_0.5.22_all.deb
+    source-type: deb
+    source-checksum: sha256/88a350357e0438b423cdf93108f27942de094dc19f973df73839f3b0b0bafaa0
+    # The .deb carries the application and nothing it imports. Every name
+    # here is off its own Depends: line, checked against the core24 archive.
+    stage-packages:
+      # what `import` needs
+      - python3-yaml
+      - python3-lxml
+      - python3-requests
+      - python3-pil
+      - python3-gi
+      - python3-gi-cairo
+      - python3-setproctitle
+      - python3-magic
+      - python3-distro
+      - python3-dbus
+      - python3-protobuf
+      # the typelibs those bindings read at runtime
+      - gir1.2-gtk-3.0
+      - gir1.2-webkit2-4.1
+      - gir1.2-notify-0.7
+      # what lutris shells out to while installing and running a game
+      - pciutils
+      - psmisc
+      - cabextract
+      - unzip
+      - p7zip
+      - curl
+      - x11-xserver-utils
+      - mesa-utils
+      - vulkan-tools
+      # lutris shells out to lspci to work out which GPU is present
+      - pciutils
+      # Recommends, not Depends, but each one is a feature that stays dark
+      # without it: battle.net needs protobuf, controllers need evdev, and
+      # reading a windows executable needs pefile.
+      - python3-protobuf
+      - python3-evdev
+      - python3-pefile
+
+# The icon snapd shows in the launcher. `icon:` is resolved against
+# this project directory, not against the payload, so the one found
+# inside the release was copied here next to the recipe.
+icon: snap/gui/lutris.svg

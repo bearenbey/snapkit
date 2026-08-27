@@ -40,6 +40,46 @@
       "upstream": "aristocratos/btop",
       "version": "1.4.7"
     },
+    "clamui": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "1c0a230e6ca19814340fdb42e289dbd01da1df319f1ca8515f3ee891e9a25767"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "a45af9e6fb74a1b6195520a6bb826d981e31116e55a523e9a7d915105af36a5d"
+        },
+        "snap/gui/clamui.svg": {
+          "exec": false,
+          "sha256": "70ea5c696cdc3e2ba6ea14914a32c72f6bde234d1ed1b8c9e0396ff5de02879c"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "cb9b7b20c849c1f465c19d94af2a24d2d9d5247240cf2c80b33455aa1e3ad395"
+        }
+      },
+      "fingerprint": "dba7cef8a76c5f203212dbee67661d3d3c6089ffdf5ba6cf4d26480a6b4de233",
+      "name": "clamui",
+      "pack": "pack.py",
+      "record": {
+        "asset": "clamui_0.4.0_all.deb",
+        "asset_pattern": "^clamui_[0-9][0-9A-Za-z.+~_-]*_all\\.deb$",
+        "icon": "snap/gui/clamui.svg",
+        "kind": "deb",
+        "pack": "pack.py",
+        "repo": "linx-systems/clamui",
+        "style": "recipe",
+        "summary": "Modern graphical interface for ClamAV antivirus scanner",
+        "tag": "v0.4.0",
+        "url": "https://github.com/linx-systems/clamui",
+        "version": "0.4.0",
+        "write_version": false
+      },
+      "summary": "Modern graphical interface for ClamAV antivirus scanner",
+      "upstream": "linx-systems/clamui",
+      "version": "0.4.0"
+    },
     "defold": {
       "files": {
         "README.md": {
@@ -427,6 +467,46 @@
       "upstream": "irssi/irssi",
       "version": "1.4.5"
     },
+    "lutris": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "c6eca43ec52b2d40ae1712b586d7e00c746ed5df749f0cc94989cddb068ac62f"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "c338eb25cac83cdedf4ae75d8a0622759c227345dfed8499758f272719134cf1"
+        },
+        "snap/gui/lutris.svg": {
+          "exec": false,
+          "sha256": "3c187d638f8622548e84d50d4ae2a9179cd2198a7823f159426863ce1b64a836"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "305804ad12e117183dd6beb544a1697f2f1d9fe42c32e1ab9ac72e2a6d6b3627"
+        }
+      },
+      "fingerprint": "2203f6ca9beb9a0acf51d5102c5d3acd0c14a3ba86cf31d2d70b8365f2b08385",
+      "name": "lutris",
+      "pack": "pack.py",
+      "record": {
+        "asset": "lutris_0.5.22_all.deb",
+        "asset_pattern": "^lutris_[0-9][0-9A-Za-z.+~_-]*_all\\.deb$",
+        "icon": "snap/gui/lutris.svg",
+        "kind": "deb",
+        "pack": "pack.py",
+        "repo": "lutris/lutris",
+        "style": "recipe",
+        "summary": "video game preservation platform",
+        "tag": "v0.5.22",
+        "url": "https://github.com/lutris/lutris",
+        "version": "0.5.22",
+        "write_version": false
+      },
+      "summary": "video game preservation platform",
+      "upstream": "lutris/lutris",
+      "version": "0.5.22"
+    },
     "mpv": {
       "files": {
         "README.md": {
@@ -522,10 +602,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "e4754386cfeecaa02e205b7ab4c9a02530965e9bdc5aa390cd26d9cc09f885de"
+          "sha256": "37a15a65618706a9f88856c60f0e3efcb4d87cab3795351aa936229e06b55556"
         }
       },
-      "fingerprint": "958e91246f17433fe3531adc01057cf35a6280cb06ab425a94935bea7ef5d2b5",
+      "fingerprint": "4fb80940ac181b4e90cced191934e8b163be9ab11320fe7a08791b9c07d59502",
       "name": "ollama",
       "pack": "",
       "record": {
@@ -539,14 +619,14 @@
         "source_anchor": "^(\\s*source:\\s*).*/ollama-linux-amd64\\.tar\\.zst\\s*$",
         "style": "recipe",
         "summary": "Get up and running with large language models",
-        "tag": "v0.33.0",
+        "tag": "v0.33.1",
         "url": "https://github.com/ollama/ollama",
-        "version": "0.33.0",
+        "version": "0.33.1",
         "write_version": false
       },
       "summary": "Get up and running with large language models",
       "upstream": "ollama/ollama",
-      "version": "0.33.0"
+      "version": "0.33.1"
     },
     "retroarch": {
       "files": {
@@ -600,6 +680,46 @@
       "upstream": "libretro/RetroArch",
       "version": "1.22.2"
     },
+    "shotcut": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "cbc357d27873bfa296c50aa5e8e9ea26a0b6e6afe5a2e4369dfbe28e651cbfa6"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "5f427681090753cac51d3715d2f99babc8acead38abdb83fad875465e725a657"
+        },
+        "snap/gui/shotcut.png": {
+          "exec": false,
+          "sha256": "43708da592f28b712c072b3ae972dffa1b787fb84821013ac969d84d0ab23048"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "9b6307962328249f10d7ce10d2b88eb19868b4a1d98ce1cff8f95f243992c398"
+        }
+      },
+      "fingerprint": "368723556901259bc8575cec2de9854df06df0a68095739fd63be613aa94a3bd",
+      "name": "shotcut",
+      "pack": "pack.py",
+      "record": {
+        "asset": "shotcut-linux-x86_64-26.8.1.txz",
+        "asset_pattern": "^shotcut\\-linux\\-x86_64\\-[0-9][0-9A-Za-z.+~_-]*\\.txz$",
+        "icon": "snap/gui/shotcut.png",
+        "kind": "archive",
+        "pack": "pack.py",
+        "repo": "mltframework/shotcut",
+        "style": "recipe",
+        "summary": "cross-platform (Qt), open-source (GPLv3) video editor - mltframework/shotcut",
+        "tag": "v26.8.1",
+        "url": "https://github.com/mltframework/shotcut",
+        "version": "26.8.1",
+        "write_version": false
+      },
+      "summary": "cross-platform (Qt), open-source (GPLv3) video editor - mltframework/shotcut",
+      "upstream": "mltframework/shotcut",
+      "version": "26.8.1"
+    },
     "signal-desktop": {
       "files": {
         "README.md": {
@@ -631,7 +751,7 @@
         "summary": "Private messaging from your desktop",
         "upstream": {
           "base": "https://updates.signal.org/desktop/apt",
-          "index": "https://updates.signal.org/desktop/apt/dists/xenial/main/binary-amd64/Packages",
+          "index": "https://updates.signal.org/desktop/apt/dists/xenial/main/binary-{arch}/Packages",
           "kind": "apt",
           "package": "signal-desktop"
         },
@@ -836,7 +956,7 @@
         "summary": "The official Unity Hub",
         "upstream": {
           "base": "https://hub.unity3d.com/linux/repos/deb",
-          "index": "https://hub.unity3d.com/linux/repos/deb/dists/stable/main/binary-amd64/Packages",
+          "index": "https://hub.unity3d.com/linux/repos/deb/dists/stable/main/binary-{arch}/Packages",
           "kind": "apt",
           "package": "unityhub"
         },

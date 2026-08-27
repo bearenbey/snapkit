@@ -1,0 +1,73 @@
+# Written by snapkit from https://github.com/mltframework/shotcut.
+# Everything here is a starting point -- edit it, it is yours now.
+
+name: shotcut
+base: core24
+version: '26.8.1'
+summary: cross-platform (Qt), open-source (GPLv3) video editor - mltframework/shotcut
+description: |
+  cross-platform (Qt), open-source (GPLv3) video editor - mltframework/shotcut
+
+  Packaged from the upstream release at https://github.com/mltframework/shotcut.
+  This snap is not published or endorsed by the upstream project.
+grade: stable
+confinement: strict
+license: GPL-3.0
+title: shotcut
+website: https://github.com/mltframework/shotcut
+source-code: https://github.com/mltframework/shotcut
+issues: https://github.com/mltframework/shotcut/issues
+contact: https://github.com/mltframework/shotcut/issues
+
+platforms:
+  amd64:
+
+apps:
+  shotcut:
+    # Upstream's own launcher, not bin/shotcut: "Run this instead of trying
+    # to run bin/shotcut. It runs shotcut with the correct environment." It
+    # sets QT_PLUGIN_PATH and the MLT, frei0r and LADSPA paths the editor
+    # will not start without.
+    command: shotcut
+    # The gnome extension wires up the desktop, fonts, themes and
+    # GTK/GL stack from the platform snap rather than bundling them.
+    extensions: [gnome]
+    desktop: share/applications/org.shotcut.Shotcut.desktop
+    environment:
+      # The session exports QT_QPA_PLATFORM=wayland-egl, which is a Qt5 name.
+      # The bundled Qt6 ships wayland and xcb and no such plugin, so it
+      # aborted before it drew anything. A list is a fallback order.
+      QT_QPA_PLATFORM: wayland;xcb
+    # A Qt application with a reverse-DNS desktop id registers it on the
+    # session bus the same way a GTK one does.
+    slots:
+      - dbus-shotcut
+    plugs:
+      - home
+      - network
+      - audio-playback
+      # A video editor captures as well as plays back.
+      - audio-record
+      - camera
+      - opengl
+      - removable-media
+
+slots:
+  dbus-shotcut:
+    interface: dbus
+    bus: session
+    name: org.shotcut.Shotcut
+
+parts:
+  shotcut:
+    # A plain archive: snapcraft unpacks it and folds away the single
+    # top-level directory, which is why the paths above start below it.
+    plugin: dump
+    source: https://github.com/mltframework/shotcut/releases/download/v26.8.1/shotcut-linux-x86_64-26.8.1.txz
+    source-type: tar
+    source-checksum: sha256/c4befab2240964389df6139f00aae0b92949f398fd98083b922f3aabd8b7a844
+
+# The icon snapd shows in the launcher. `icon:` is resolved against
+# this project directory, not against the payload, so the one found
+# inside the release was copied here next to the recipe.
+icon: snap/gui/shotcut.png

@@ -1,0 +1,141 @@
+# Written by snapkit from https://github.com/linx-systems/clamui.
+# Everything here is a starting point -- edit it, it is yours now.
+
+name: clamui
+base: core24
+version: '0.4.0'
+summary: Modern graphical interface for ClamAV antivirus scanner
+description: |
+  ClamUI is a modern Linux desktop application that provides a graphical user
+  interface for the ClamAV antivirus command-line tool. . Features: - Easy-to-
+  use GTK4/libadwaita interface - Scan files and directories for malware -
+  View and manage scan results - Desktop integration with notifications . This
+  package requires ClamAV to be installed for scanning functionality.
+
+  Packaged from the upstream release at https://github.com/linx-systems/clamui.
+  This snap is not published or endorsed by the upstream project.
+grade: stable
+confinement: strict
+license: MIT
+title: clamui
+website: https://github.com/linx-systems/clamui
+source-code: https://github.com/linx-systems/clamui
+issues: https://github.com/linx-systems/clamui/issues
+contact: https://github.com/linx-systems/clamui/issues
+
+platforms:
+  amd64:
+
+apps:
+  clamui:
+    command: usr/bin/clamui
+    # The gnome extension wires up the desktop, fonts, themes and
+    # GTK/GL stack from the platform snap rather than bundling them.
+    extensions: [gnome]
+    desktop: usr/share/applications/io.github.linx_systems.ClamUI.desktop
+    # The base's python3 runs the script, so it has to be told where the
+    # staged modules are: /usr/lib/python3/dist-packages inside the snap is
+    # the base's copy, not this one.
+    environment:
+      PYTHONPATH: $SNAP/usr/lib/python3/dist-packages
+      PATH: $SNAP/usr/bin:$SNAP/bin:$PATH
+    # A GtkApplication registers its application id on the session bus, and
+    # confinement refuses a name the snap has not declared.
+    slots:
+      - dbus-clamui
+    plugs:
+      - home
+      - network
+      - audio-playback
+      - opengl
+      - removable-media
+
+slots:
+  dbus-clamui:
+    interface: dbus
+    bus: session
+    name: io.github.linx_systems.ClamUI
+
+parts:
+  clamui:
+    # snapcraft unpacks the .deb and `dump` stages what was in it.
+    plugin: dump
+    source: https://github.com/linx-systems/clamui/releases/download/v0.4.0/clamui_0.4.0_all.deb
+    source-type: deb
+    source-checksum: sha256/8b330b817e8907bbb7c0dfdee3c5447e67ec02812662b9b8e89ab636d5b34523
+    # The .deb carries the application and nothing it imports. Every name
+    # here is off its own Depends: line, checked against the core24 archive.
+    stage-packages:
+      # No python3-gi, python3-gi-cairo or python3-cairo: the gnome platform
+      # snap carries PyGObject 3.54.2 and pycairo already, and a second copy
+      # is a second GI stack for the same process to disagree with.
+      # No gir1.2-gtk-4.0 or gir1.2-adw-1 here on purpose. They pull noble's
+      # GTK 4.14 in, which then shadows the newer GTK the gnome extension
+      # mounts, and the platform's own media backend fails to load against
+      # it: "undefined symbol: gdk_cicp_params_set_matrix_coefficients".
+      # The extension supplies GTK4, libadwaita and both typelibs already.
+      - python3-requests
+      - python3-urllib3
+      - python3-keyring
+      - python3-matplotlib
+      - python3-psutil
+      - python3-pil
+      # The scanner itself, and the definition updater it drives. Confined,
+      # there is no host clamav to reach, so it brings its own.
+      - clamav
+      - clamav-freshclam
+    # matplotlib and pillow drag the whole graphics stack in behind them, and
+    # every one of these is already in the platform snap. Staged, they load
+    # first and the platform's own libraries then resolve against the older
+    # copy: "libharfbuzz-subset.so.0: undefined symbol: hb_free". The list is
+    # not guesswork -- it is the measured overlap between the two trees.
+    stage:
+      - "*"
+      - -usr/lib/*/libLerc.so*
+      - -usr/lib/*/libXft.so*
+      - -usr/lib/*/libXrender.so*
+      - -usr/lib/*/libXss.so*
+      - -usr/lib/*/libcairo.so*
+      - -usr/lib/*/libcairo-gobject.so*
+      - -usr/lib/*/libcurl.so*
+      - -usr/lib/*/libdeflate.so*
+      - -usr/lib/*/libexslt.so*
+      - -usr/lib/*/libfontconfig.so*
+      - -usr/lib/*/libfribidi.so*
+      - -usr/lib/*/libgfortran.so*
+      - -usr/lib/*/libgirepository-1.0.so*
+      - -usr/lib/*/libgomp.so*
+      - -usr/lib/*/libgraphite2.so*
+      - -usr/lib/*/libharfbuzz.so*
+      - -usr/lib/*/libjbig.so*
+      - -usr/lib/*/libjpeg.so*
+      - -usr/lib/*/liblber.so*
+      - -usr/lib/*/liblcms2.so*
+      - -usr/lib/*/libldap.so*
+      - -usr/lib/*/libnghttp2.so*
+      - -usr/lib/*/libopenjp2.so*
+      - -usr/lib/*/libpixman-1.so*
+      - -usr/lib/*/libpsl.so*
+      - -usr/lib/*/libqhull_r.so*
+      - -usr/lib/*/librtmp.so*
+      - -usr/lib/*/libsasl2.so*
+      - -usr/lib/*/libsharpyuv.so*
+      - -usr/lib/*/libssh.so*
+      - -usr/lib/*/libtcl8.6.so*
+      - -usr/lib/*/libtiff.so*
+      - -usr/lib/*/libtk8.6.so*
+      - -usr/lib/*/libwebp.so*
+      - -usr/lib/*/libwebpdemux.so*
+      - -usr/lib/*/libwebpmux.so*
+      - -usr/lib/*/libxcb-render.so*
+      - -usr/lib/*/libxslt.so*
+      # These three sit a directory deeper, which is how the first pass
+      # over the two trees missed them: blas/, lapack/ and sasl2/.
+      - -usr/lib/*/blas/libblas.so*
+      - -usr/lib/*/lapack/liblapack.so*
+      - -usr/lib/*/sasl2/libsasldb.so*
+
+# The icon snapd shows in the launcher. `icon:` is resolved against
+# this project directory, not against the payload, so the one found
+# inside the release was copied here next to the recipe.
+icon: snap/gui/clamui.svg
