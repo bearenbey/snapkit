@@ -122,6 +122,16 @@ def retrack(snap, upstream, force=False):
         raise
 
 
+def untrack(snap):
+    """Stop checking a snap against anything: no upstream, and no repository.
+
+    Both are cleared together. Leaving `repo` behind would have `check` fall
+    back to it and report on a snap that was just told to stop.
+    """
+    snap.upstream, snap.repo, snap.url, snap.asset_pattern = {}, "", "", ""
+    return snap
+
+
 def fitting(snap, release):
     """What a record still needs, given the upstream it has just been given."""
     notes = []
@@ -300,7 +310,7 @@ def _verified(snap, path, release, reporter):
 
 
 def _say_changes(changes, reporter):
-    """Every line a rewrite touched, so a bump stays reviewable without"""
+    """Print every line a rewrite touched, so a bump reads without a diff."""
     for change in changes:
         reporter.detail(change.path)
         for number, text in change.lines:

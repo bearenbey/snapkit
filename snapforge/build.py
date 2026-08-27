@@ -150,7 +150,7 @@ class Build:
         return GNOME_SNAP
 
     def check_version(self, found, what):
-        """Refuse to pack a snap that would advertise a version its payload"""
+        """Refuse to pack a snap whose payload is not the version it claims."""
         if found != self.version:
             die(f"version mismatch: {self.yaml.name} says {self.version}, "
                 f"{what} ships {found}")
@@ -247,7 +247,7 @@ class Build:
                     one.chmod(one.stat().st_mode | 0o111)
 
     def missing_libraries(self, binary):
-        """What ldd cannot resolve for a binary. Empty when everything is"""
+        """What ldd cannot resolve for a binary, empty when nothing is missing."""
         done = subprocess.run(["ldd", str(binary)], capture_output=True, text=True)
         return [line.split()[0] for line in done.stdout.splitlines()
                 if "not found" in line]

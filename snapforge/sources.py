@@ -169,6 +169,12 @@ class Shape:
         return tuple(k for k in self.keys if k not in self.required)
 
 
+# The two shapes that read a version off a page and then name the file to
+# fetch fill in the same placeholders in the same four settings.
+FETCHED = {"url": ("arch",), "asset": ("version", "arch"),
+           "download": ("version", "asset", "arch"),
+           "local": ("version", "arch")}
+
 # _release reads these for every shape, so every shape accepts them.
 COMMON = {
     "local": "what to save the file as here, if not its own name",
@@ -196,9 +202,7 @@ SPECS = (
                 "asset": "the file to fetch, once the version is known",
                 "download": "where that file is, if not under the listing"},
           required=("url", "pattern", "asset"),
-          templates={"url": ("arch",), "asset": ("version", "arch"),
-                     "download": ("version", "asset", "arch"),
-                     "local": ("version", "arch")},
+          templates=FETCHED,
           patterns=("pattern",),
           example="snapkit track emacs index url=https://ftp.gnu.org/gnu/emacs/"
                   " 'pattern=emacs-(\\d+\\.\\d+)\\.tar\\.xz\"'"
@@ -211,9 +215,7 @@ SPECS = (
                 "asset": "the file that version is published as",
                 "download": "where to fetch it from"},
           required=("url", "pattern", "asset", "download"),
-          templates={"url": ("arch",), "asset": ("version", "arch"),
-                     "download": ("version", "asset", "arch"),
-                     "local": ("version", "arch")},
+          templates=FETCHED,
           patterns=("pattern",),
           example="snapkit track discord redirect"
                   " 'url=https://discord.com/api/download?platform=linux&format=deb'"
@@ -292,12 +294,14 @@ def configure(kind, values):
     return {key: config[key] for key in order if key in config}
 
 
+def _given(config, keys):
+    """The settings out of `keys` that were actually given something."""
+    return [(key, config[key]) for key in keys if config.get(key)]
+
+
 def _check_patterns(shape, config):
     """A regex that does not compile, or does not capture, caught here."""
-    for key in shape.patterns:
-        text = config.get(key, "")
-        if not text:
-            continue
+    for key, text in _given(config, shape.patterns):
         try:
             compiled = re.compile(text)
         except re.error as exc:
@@ -312,10 +316,8 @@ def _check_patterns(shape, config):
 
 def _check_templates(shape, config):
     """A {placeholder} the shape cannot fill in, caught here rather than later."""
-    for key, allowed in shape.templates.items():
-        text = config.get(key, "")
-        if not text:
-            continue
+    for key, text in _given(config, shape.templates):
+        allowed = shape.templates[key]
         try:
             fields = [f for _lit, f, _spec, _conv in Formatter().parse(text)]
         except ValueError as exc:

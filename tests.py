@@ -79,7 +79,7 @@ def make_deb(path, package="demo", version="1.2.3", binary="usr/bin/demo"):
 # -- offline ------------------------------------------------------------------
 
 def upstreams():
-    """Reading an upstream: what a repository is called, what it published,"""
+    """Reading an upstream: the repository name, and which asset to take."""
     from snapforge import classify, github, project, update
 
     @check("github.parse_repo takes a url in any of its shapes")
@@ -184,7 +184,7 @@ def upstreams():
 
 
 def architectures():
-    """Which architecture this is, and what upstreams call it. Everything"""
+    """Which architecture this is, and which of a release's files is for it."""
     import os
     from snapforge import arch, classify, recipe, sources
     from snapforge.net import NetworkError
@@ -216,6 +216,50 @@ def architectures():
                                 ("armv7l", "armhf"), ("ppc64le", "ppc64el"),
                                 ("riscv64", "riscv64"), ("i686", "i386")):
             same(arch.FROM_MACHINE[machine], wanted, machine)
+
+    @check("the override takes the spelling a person would actually type")
+    def _():
+        # `uname -m` says x86_64, so that is what gets typed. Taken as a name
+        # of its own it made every amd64 asset foreign on an amd64 machine,
+        # which is the exact failure this module exists to prevent.
+        for typed, wanted in (("x86_64", "amd64"), ("aarch64", "arm64"),
+                              ("AMD64", "amd64"), (" amd64 ", "amd64"),
+                              ("ppc64le", "ppc64el"), ("arm64", "arm64")):
+            with as_arch(typed):
+                same(arch.host(), wanted, typed)
+                if wanted == "amd64":
+                    same(classify.rejection("app_amd64.deb"), "", typed)
+
+    @check("an override nothing recognises is refused, not taken literally")
+    def _():
+        for typed in ("nonsense", "sparc", "x86_65"):
+            with as_arch(typed):
+                try:
+                    arch.host()
+                    assert False, f"{typed} should have been refused"
+                except arch.UnknownArchitecture as exc:
+                    assert "is not an architecture this knows" in str(exc)
+                    # The message has to list them, or there is no way back.
+                    assert "amd64" in str(exc) and "riscv64" in str(exc)
+        # It is a ValueError, so the command line already turns it into a
+        # message rather than a traceback.
+        assert issubclass(arch.UnknownArchitecture, ValueError)
+
+    @check("a machine this does not know about is still allowed to be itself")
+    def _():
+        # Only what a person typed is second-guessed. A real port that is not
+        # in the table would otherwise be unable to run the tool at all.
+        import shutil
+        was_which, was_machine = arch.shutil.which, arch.platform.machine
+        arch.detected.cache_clear()
+        arch.shutil.which = lambda name: None if name == "dpkg" else was_which(name)
+        arch.platform.machine = lambda: "sparc64"
+        try:
+            same(arch.detected(), "sparc64")
+            same(arch.known("sparc64"), False, "it should not be in the table")
+        finally:
+            arch.shutil.which, arch.platform.machine = was_which, was_machine
+            arch.detected.cache_clear()
 
     @check("an asset is ours or somebody else's depending on the host")
     def _():
@@ -334,7 +378,7 @@ def architectures():
 
 
 def recipes():
-    """Writing a snapcraft.yaml, and moving an existing one onto a new"""
+    """Writing a snapcraft.yaml, and moving one onto a newer release."""
     from snapforge import classify, db, recipe
 
     @check("recipe.snap_name produces a name snapd will take")
@@ -406,7 +450,7 @@ def recipes():
 
 
 def register():
-    """The register: one file per snap, the recipe beside it, and what has"""
+    """The register: one file per snap, the recipe beside it, and migration."""
     from snapforge import db, github, recipe
 
     @check("the register survives a round trip, and delete takes the recipe")
@@ -627,7 +671,7 @@ def register():
 
 
 def payloads():
-    """Opening what was downloaded: the .deb reader, and working out which"""
+    """Opening what was downloaded: the .deb reader, and what it finds inside."""
     from snapforge import inspect as ins
 
     @check("the .deb reader finds the program, the entry and the version")
@@ -667,7 +711,7 @@ def payloads():
 
 
 def projects():
-    """Projects that exist already: reading one into a record, writing one"""
+    """Projects that exist already: importing one, and writing one back out."""
     from snapforge import db, github, project, recipe, update
 
     @check("a project deleted from disk comes back from the register, icon and all")
@@ -821,12 +865,12 @@ def projects():
 
 
 def checking():
-    """Asking whether a snap is behind, and what to build it from when it"""
+    """Asking whether a snap is behind, and what to build the new one from."""
     from snapforge import db, project, update
 
     @check("a matching version is up to date even with no tag recorded")
     def _():
-        # Comparing both made all sixteen imported projects read as out of date.
+        # Comparing both made every imported project read as out of date.
         class Asset:
             def __init__(self, name):
                 self.name, self.url = name, "http://x/" + name
@@ -873,7 +917,7 @@ def checking():
 
     @check("an upstream that is not a repository is still checked")
     def _():
-        # Skipping on `repo` silently stopped checking five non-GitHub projects.
+        # Skipping on `repo` silently stopped checking every non-GitHub project.
         with tempfile.TemporaryDirectory() as home:
             here = Path(home)
             make_deb(here / "demo_1.0_amd64.deb", version="1.0")
@@ -934,7 +978,7 @@ def checking():
 
 
 def tracking():
-    """Saying where a snap's releases come from, for the upstreams that are"""
+    """Saying where a snap's releases come from, when it is not a release."""
     from snapforge import arch, cli, db, sources
     from snapforge.net import NetworkError
 
@@ -1179,7 +1223,7 @@ def update_state(snap):
 
 
 def dashboard():
-    """The dashboard: the keys, the one worker thread, and the drawing --"""
+    """The dashboard: the keys, the one worker thread, and the drawing."""
     from snapforge import db
 
     @check("the picker blocks the worker until something is chosen")
@@ -1441,6 +1485,41 @@ def dashboard():
             same((board.tracking, board.prompt), ("", ""))
             same(store.get("demo").upstream,
                  {"kind": "local", "glob": "demo_*.deb"})
+
+    @check("an emptied track box is never mind, not stop tracking")
+    def _():
+        # `t` then a cleared line then return threw the upstream away: the
+        # most natural way to back out was the destructive one.
+        from snapforge.tui import Dashboard
+        with tempfile.TemporaryDirectory() as home:
+            store = db.Database(Path(home))
+            was = {"kind": "local", "glob": "demo_*.deb"}
+            store.add(db.Snap(name="demo", version="1.0", upstream=dict(was)))
+            board = Dashboard(db=store)
+
+            board.track("demo", "")
+            if board.worker:
+                board.worker.join(timeout=10)
+            same(store.get("demo").upstream, was, "an empty line untracked it")
+            same(board.busy, "", "it should not have started any work")
+
+            # Said outright, it still does what it says.
+            board.track("demo", "none")
+            board.worker.join(timeout=10)
+            same(store.get("demo").upstream, {})
+
+    @check("stopping tracking clears the repository as well as the upstream")
+    def _():
+        # Leaving `repo` behind has check() fall back to it, so a snap that
+        # was just told to stop being checked carries on being checked.
+        from snapforge import update
+        snap = db.Snap(name="demo", repo="a/b", url="https://github.com/a/b",
+                       version="1.0", asset_pattern="^x$",
+                       upstream={"kind": "local"})
+        update.untrack(snap)
+        same((snap.upstream, snap.repo, snap.url, snap.asset_pattern),
+             ({}, "", "", ""))
+        same(update.situation(snap).state, "untracked")
 
     @check("the dashboard tracks, and refuses, the way the command line does")
     def _():
@@ -1717,7 +1796,7 @@ def dashboard():
 # -- the updater, ported from the tool this replaced --------------------------
 
 def updater():
-    """The parts that used to be ../update.py: upstreams that are not a"""
+    """Updating: resolving an upstream, and rewriting the project onto it."""
     from snapforge import build as buildlib
     from snapforge import db, project, rewrite, sources, update
 
@@ -2002,7 +2081,7 @@ def updater():
 
 
 def from_a_file():
-    """Packaging something that is already on the disk, and keeping a snap in"""
+    """Packaging a file already on disk, and keeping it in step with its folder."""
     from snapforge import classify, db, local, project, sources, update
 
     @check("every shape the classifier packages is found on a disk")

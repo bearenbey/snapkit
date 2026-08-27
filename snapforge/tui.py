@@ -149,7 +149,7 @@ class Dashboard:
                 if self.cancel.is_set():
                     row.state = "unknown"
                     continue
-                # Skipping on `repo` missed five snaps.
+                # Skipping on `repo` missed every non-GitHub upstream.
                 found = update.situation(row.snap)
                 row.state = found.state
                 row.release, row.asset = found.release, found.asset
@@ -280,15 +280,16 @@ class Dashboard:
     def track(self, name, text):
         """Point a snap at a different upstream, typed in as `kind key=value`."""
         snap = self.db.snaps.get(name)
-        if snap is None:
-            return
         words = text.split()
+        if snap is None or not words:
+            # An emptied box is "never mind". Untracking is asked for by
+            # name; a stray return key must not throw an upstream away.
+            return
 
         def work():
             row = self.row_for(name)
-            if not words or words[0] in ("none", "off"):
-                snap.upstream, snap.repo = {}, ""
-                snap.url, snap.asset_pattern = "", ""
+            if words[0] in ("none", "off"):
+                update.untrack(snap)
                 self.db.add(snap, replace=True)
                 self.say(f"{name} is not tracked against anything now",
                          "yellow")

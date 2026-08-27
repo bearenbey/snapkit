@@ -82,7 +82,7 @@ class Release:
         return chosen.asset.url, sha
 
     def track(self, snap, chosen, version):
-        """How this snap is kept in step: the release it came from, and a"""
+        """Record what to ask upstream next time: the tag and asset pattern."""
         snap.tag = self.release.tag
         snap.asset_pattern = classify.asset_pattern(chosen.name,
                                                     self.release.version)

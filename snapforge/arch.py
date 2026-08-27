@@ -39,10 +39,24 @@ NEVER = ("mips64el", "mips64", "mipsel", "mips", "sparc64", "sparc", "m68k",
 OVERRIDE = "SNAPKIT_ARCH"
 
 
+class UnknownArchitecture(ValueError):
+    """SNAPKIT_ARCH names something this does not know how to look for."""
+
+
 def host():
     """The Debian name of the architecture being built for."""
-    named = os.environ.get(OVERRIDE, "").strip()
-    return named or detected()
+    named = os.environ.get(OVERRIDE, "").strip().lower()
+    if not named:
+        return detected()
+    # `uname -m` spellings are what a person reaches for, so take them; but
+    # a name nothing recognises would quietly make every asset foreign, which
+    # is the failure this whole module exists to prevent. Say so instead.
+    wanted = FROM_MACHINE.get(named, named)
+    if not known(wanted):
+        raise UnknownArchitecture(
+            f"{OVERRIDE}={named} is not an architecture this knows: "
+            f"{', '.join(sorted(SPELLINGS))}")
+    return wanted
 
 
 @functools.lru_cache(maxsize=1)
@@ -53,10 +67,15 @@ def detected():
             done = subprocess.run(["dpkg", "--print-architecture"],
                                   capture_output=True, text=True, timeout=5)
             if done.returncode == 0 and done.stdout.strip():
-                return done.stdout.strip()
+                return _from_machine(done.stdout)
         except (OSError, subprocess.SubprocessError):
             pass
-    machine = platform.machine().lower()
+    return _from_machine(platform.machine())
+
+
+def _from_machine(machine):
+    """A uname spelling as a Debian name, or itself when it is not a spelling."""
+    machine = machine.strip().lower()
     return FROM_MACHINE.get(machine, machine)
 
 

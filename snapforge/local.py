@@ -24,18 +24,21 @@ class Found:
         return self.path.name
 
 
+def _declared(path, field, kind=""):
+    """What a .deb says about itself, or "" for anything else and for a .deb
+    that will not open."""
+    if (kind or classify.kind_of(Path(path).name)) != classify.DEB:
+        return ""
+    try:
+        return inspect.control_fields(path).get(field, "")
+    except Exception:                                         # noqa: BLE001
+        return ""
+
+
 def version_of(path, kind=""):
     """The version this file is of, read from it where that is possible."""
     path = Path(path)
-    kind = kind or classify.kind_of(path.name)
-    if kind == classify.DEB:
-        try:
-            found = inspect.control_fields(path).get("Version", "")
-        except Exception:                                     # noqa: BLE001
-            found = ""
-        if found:
-            return found
-    return version_from("", path.name)
+    return _declared(path, "Version", kind) or version_from("", path.name)
 
 
 @functools.lru_cache(maxsize=None)
@@ -54,14 +57,9 @@ def _ends_the_name(spelled, missed):
 def name_from(path, kind=""):
     """What the program in this file is called."""
     path = Path(path)
-    kind = kind or classify.kind_of(path.name)
-    if kind == classify.DEB:
-        try:
-            declared = inspect.control_fields(path).get("Package", "")
-        except Exception:                                     # noqa: BLE001
-            declared = ""
-        if declared:
-            return declared
+    declared = _declared(path, "Package", kind)
+    if declared:
+        return declared
 
     stem = path.name
     for suffix in sorted(classify.ARCHIVES + (".deb", ".appimage"),

@@ -569,7 +569,7 @@ def track_repo(db, args, reporter, snap, rest):
 
 def untrack(db, snap, reporter):
     """Stop checking a snap against anything at all."""
-    snap.upstream, snap.repo, snap.url, snap.asset_pattern = {}, "", "", ""
+    update.untrack(snap)
     db.add(snap, replace=True)
     reporter.result(f"{snap.name} is not tracked against anything now")
     reporter.detail(f"`snapkit check` will leave it alone until "
@@ -669,53 +669,73 @@ def cmd_db(db, args, reporter):
     rest = args.rest[1:]
 
     if action == "publish":
-        where = Path(rest[0]) if rest else Path.cwd() / snapdb.FOLDER
-        reporter.step(f"writing {where}")
-        index, left_out = snapdb.publish(db.all(), where, reporter)
-        reporter.result(f"published {len(index['snaps'])} snaps to {where}")
-        for name, files in left_out.items():
-            reporter.warn(f"{name}: published without {', '.join(files)}, "
-                          f"so it cannot be built from the database")
-        return 0
-
+        return db_publish(db, rest, reporter)
     if action not in ("list", "pull"):
         # `snapkit db btop` reads as a name, not as a mistyped subcommand.
         rest, action = [action, *rest], "pull"
 
     found = snapdb.index()
-    snaps = found["snaps"]
-
     if action == "list":
-        reporter.detail(f"{snapdb.base_url()}")
-        width = max((len(n) for n in snaps), default=4)
-        drifted, unpublished = [], []
-        for name in sorted(snaps):
-            published = snaps[name]
-            here = db.snaps.get(name)
-            mark = " "
-            if here:
-                mark = "*"
-                if Path(here.path).is_dir():
-                    if snapdb.local_fingerprint(here.path) != published.get("fingerprint"):
-                        mark, _ = "~", drifted.append(name)
-            reporter.detail(f"{mark} {name:<{width}}  {published['version']:<16}"
-                            f"  {published.get('summary', '')[:42]}")
-        for name in sorted(db.snaps):
-            if name not in snaps:
-                unpublished.append(name)
-                reporter.detail(f"+ {name:<{width}}  {db.snaps[name].version:<16}"
-                                f"  not in the database")
-        reporter.detail("")
-        reporter.detail("*  registered here    ~  differs from the database"
-                        "    +  here but not published")
-        if drifted or unpublished:
-            reporter.warn(f"{len(drifted) + len(unpublished)} project(s) have "
-                          f"moved on: snapkit db publish <dir> writes them out")
-        else:
-            reporter.detail("the database matches the projects here")
-        return 0
+        return db_list(db, found["snaps"], reporter)
+    return db_pull(args, rest, found, reporter)
 
-    wanted = rest or sorted(snaps)
+
+def db_publish(db, rest, reporter):
+    """Write every registered project out as a database somebody can pull."""
+    where = Path(rest[0]) if rest else Path.cwd() / snapdb.FOLDER
+    reporter.step(f"writing {where}")
+    index, left_out = snapdb.publish(db.all(), where, reporter)
+    reporter.result(f"published {len(index['snaps'])} snaps to {where}")
+    for name, files in left_out.items():
+        reporter.warn(f"{name}: published without {', '.join(files)}, "
+                      f"so it cannot be built from the database")
+    return 0
+
+
+def db_list(db, snaps, reporter):
+    """What the database has, against what is registered here."""
+    reporter.detail(f"{snapdb.base_url()}")
+    width = max((len(n) for n in snaps), default=4)
+    drifted, unpublished = [], []
+
+    for name in sorted(snaps):
+        published = snaps[name]
+        mark = _drift_mark(db.snaps.get(name), published)
+        if mark == "~":
+            drifted.append(name)
+        reporter.detail(f"{mark} {name:<{width}}  {published['version']:<16}"
+                        f"  {published.get('summary', '')[:42]}")
+    for name in sorted(db.snaps):
+        if name not in snaps:
+            unpublished.append(name)
+            reporter.detail(f"+ {name:<{width}}  {db.snaps[name].version:<16}"
+                            f"  not in the database")
+
+    reporter.detail("")
+    reporter.detail("*  registered here    ~  differs from the database"
+                    "    +  here but not published")
+    if drifted or unpublished:
+        reporter.warn(f"{len(drifted) + len(unpublished)} project(s) have "
+                      f"moved on: snapkit db publish <dir> writes them out")
+    else:
+        reporter.detail("the database matches the projects here")
+    return 0
+
+
+def _drift_mark(here, published):
+    """Whether this snap is registered here, and whether it has moved on."""
+    if here is None:
+        return " "
+    if not Path(here.path).is_dir():
+        return "*"
+    if snapdb.local_fingerprint(here.path) != published.get("fingerprint"):
+        return "~"
+    return "*"
+
+
+def db_pull(args, rest, found, reporter):
+    """Write the named projects here, or all of them."""
+    wanted = rest or sorted(found["snaps"])
     where = Path(args.directory) if args.directory else Path.cwd()
     done, failed = 0, []
     for name in wanted:
