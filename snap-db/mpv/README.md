@@ -1,7 +1,8 @@
 # mpv-snap
 
 A [snap](https://snapcraft.io/) package of [mpv](https://mpv.io/), the media
-player for the command line and the desktop.
+player for the command line and the desktop. This snap is not published or
+endorsed by the upstream project.
 
 Built from the upstream release tarball against `core26` (Ubuntu 26.04) in
 **strict** confinement, with Lua and JavaScript scripting, VAAPI/VDPAU/NVDEC

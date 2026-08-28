@@ -1,7 +1,9 @@
 # helium-snap
 
-Snap packaging for the [Helium browser](https://github.com/imputnet/helium-linux),
-built by repackaging the official upstream amd64 `.deb`.
+Snap packaging for the
+[Helium browser](https://github.com/imputnet/helium-linux), built by
+repackaging the official upstream amd64 `.deb`. This snap is not published or
+endorsed by the upstream project.
 
 ## Layout
 

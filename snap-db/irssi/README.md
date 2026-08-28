@@ -1,7 +1,8 @@
 # irssi-snap
 
 A [snap](https://snapcraft.io/) package of [irssi](https://irssi.org/), the
-modular text mode IRC client.
+modular text mode IRC client. This snap is not published or endorsed by the
+upstream project.
 
 Built from the upstream release tarball against `core24`, in **strict**
 confinement, with Perl scripting, the IRC proxy module, OTR, true colour and

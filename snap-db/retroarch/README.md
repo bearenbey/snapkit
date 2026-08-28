@@ -4,7 +4,9 @@ This directory packages RetroArch as a snap using the Flathub recipe for
 `org.libretro.RetroArch` as the source of truth. The starting point was
 `org.libretro.RetroArch.flatpakref`, which is a pointer to the Flathub app
 rather than a bundle, so the packaging was reconstructed from the upstream
-manifest at [flathub/org.libretro.RetroArch](https://github.com/flathub/org.libretro.RetroArch).
+manifest at
+[flathub/org.libretro.RetroArch](https://github.com/flathub/org.libretro.RetroArch).
+This snap is not published or endorsed by the upstream project.
 
 The set of components in `snap/snapcraft.yaml`, and the build flags, are copied
 from that manifest, so this snap builds the same tree of code and data the

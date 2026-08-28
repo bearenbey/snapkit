@@ -2,7 +2,8 @@
 
 Turns `zen.linux-x86_64.tar.xz` into a strictly confined snap
 (`zen_1.21.15b_amd64.snap`). snapcraft builds it from `snap/snapcraft.yaml`;
-`pack.py` adds the checks a recipe cannot express and then runs it.
+`pack.py` adds the checks a recipe cannot express and then runs it. This snap
+is not published or endorsed by the upstream project.
 
 ## Build
 

@@ -1,19 +1,19 @@
-# discord
+# sublime-text
 
-Chat for Communities and Friends
+Sophisticated text editor for code, markup and prose
 
-Packaged by snapkit from the release asset `discord-1.0.155.deb`,
-tracked against `redirect: https://discord.com/api/download?platform=linux&format=deb`.
+Packaged by snapkit from the release asset `sublime-text_build-4200_amd64.deb`,
+tracked against `apt: sublime-text`.
 This snap is not published or endorsed by the upstream project.
 
 ## Building
 
-    cd /home/bearen/Development/snap/discord-snap
+    cd /home/bearen/Development/snap/sublimetext-snap
     snapcraft
 
 ## Installing what you built
 
-    sudo snap install --dangerous discord_1.0.155_amd64.snap
+    sudo snap install --dangerous sublime-text_4200_amd64.snap
 
 ## Updating
 

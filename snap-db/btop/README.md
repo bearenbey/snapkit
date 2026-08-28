@@ -1,9 +1,10 @@
 # btop snap
 
-A strictly confined snap of [btop++](https://github.com/aristocratos/btop) 1.4.7,
-packaged from the upstream statically linked musl x86_64 release tarball
-(`btop-x86_64-unknown-linux-musl.tar.gz`). Because the binary is static, the snap
-carries no libraries of its own and works on any base.
+A strictly confined snap of [btop++](https://github.com/aristocratos/btop)
+1.4.7, packaged from the upstream statically linked musl x86_64 release tarball
+(`btop-x86_64-unknown-linux-musl.tar.gz`). Because the binary is static, the
+snap carries no libraries of its own and works on any base. This snap is not
+published or endorsed by the upstream project.
 
 ## Install
 

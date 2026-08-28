@@ -3,7 +3,8 @@
 A strictly confined snap of [yt-dlp](https://github.com/yt-dlp/yt-dlp)
 2026.08.19, packaged from the upstream standalone Linux build
 (`yt-dlp_linux.zip`). That zip is a PyInstaller bundle, so the snap carries no
-Python of its own. It is not published or endorsed by the yt-dlp project.
+Python of its own. This snap is not published or endorsed by the upstream
+project.
 
 ffmpeg is bundled with it. yt-dlp needs ffmpeg to merge separate video and
 audio streams, which is what YouTube serves for anything above 720p, so

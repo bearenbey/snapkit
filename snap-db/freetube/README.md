@@ -3,7 +3,7 @@
 Turns `freetube_0.25.3_beta_amd64.deb` into a strictly confined snap
 (`freetube_0.25.3-beta_amd64.snap`). snapcraft builds it from
 `snap/snapcraft.yaml`; `pack.py` adds the checks a recipe cannot express and
-then runs it.
+then runs it. This snap is not published or endorsed by the upstream project.
 
 ## Build
 

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import build as buildlib
-from . import arch, classify, github, inspect, local, net, recipe
+from . import arch, classify, github, inspect, local, net, recipe, sources
 from .db import Snap, now
 
 
@@ -477,13 +477,16 @@ def build(snap, reporter, extra=()):
 
 
 def _readme(snap):
+    # Not every upstream is a repository with a page to link to.
+    origin = sources.label(snap) or "upstream"
+    linked = f"[{snap.repo}]({snap.url})" if snap.repo else f"`{origin}`"
     return f"""# {snap.name}
 
 {snap.summary}
 
-Packaged from [{snap.repo}]({snap.url}) by snapkit, from the release asset
-`{snap.asset}`. This snap is not published or endorsed by the upstream
-project.
+Packaged by snapkit from the release asset `{snap.asset}`,
+tracked against {linked}.
+This snap is not published or endorsed by the upstream project.
 
 ## Building
 
@@ -496,7 +499,7 @@ project.
 
 ## Updating
 
-`snapkit` checks {snap.repo} for a newer release and rewrites
+`snapkit` checks that upstream for a newer release and rewrites
 `snap/snapcraft.yaml` for you. Anything you change in that file is kept:
 an update only moves the version, the source URL and its checksum.
 """

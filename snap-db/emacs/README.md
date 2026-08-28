@@ -1,7 +1,8 @@
 # emacs-snap
 
-A [snap](https://snapcraft.io/) package of [GNU Emacs](https://www.gnu.org/software/emacs/),
-the extensible, customizable text editor.
+A [snap](https://snapcraft.io/) package of
+[GNU Emacs](https://www.gnu.org/software/emacs/), the extensible, customizable
+text editor. This snap is not published or endorsed by the upstream project.
 
 Built from the GNU release tarball against `core24`, in **strict**
 confinement, as a **PGTK** (pure GTK) build, a native Wayland client that

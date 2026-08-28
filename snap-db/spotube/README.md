@@ -1,8 +1,9 @@
 # Spotube snap (repack of the official .deb)
 
 Turns `Spotube-linux-x86_64.deb` into a strictly confined snap
-(`spotube_5.1.2_amd64.snap`). snapcraft builds it, the same way discord,
-signal and sublimetext in this repo are built.
+(`spotube_5.1.2_amd64.snap`). snapcraft builds it, the same way discord, signal
+and sublimetext in this repo are built. This snap is not published or endorsed
+by the upstream project.
 
 ## Build
 

@@ -5,7 +5,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "996b2122c251ef147841792aa6d9184d94ec2b2d871498cc7587ad71d753a61d"
+          "sha256": "c30ff2bf7b9ddac2e83765dc63775bdb7aff75ce134cf6e7a437c3e3aad6819d"
         },
         "diagnose.py": {
           "exec": true,
@@ -20,7 +20,7 @@
           "sha256": "74aebca6efee2a627c3543951a2331d019735d500a095123ba822c7d2c3d8bae"
         }
       },
-      "fingerprint": "a74bb8d2d5bb58d2a8dbd0c533fa6fbc3ac013dea30068f383e0de3d81caec8b",
+      "fingerprint": "3192292f1a94cad0d69fa40b028f770a9892e8b24dd75215539bfa9487ad7305",
       "name": "btop",
       "pack": "pack.py",
       "record": {
@@ -44,7 +44,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "1c0a230e6ca19814340fdb42e289dbd01da1df319f1ca8515f3ee891e9a25767"
+          "sha256": "bde3d658a0fb74ff791f82234c4f5975dc71968be155fb6e704c6a1e9ba818d8"
         },
         "pack.py": {
           "exec": false,
@@ -59,7 +59,7 @@
           "sha256": "cb9b7b20c849c1f465c19d94af2a24d2d9d5247240cf2c80b33455aa1e3ad395"
         }
       },
-      "fingerprint": "d0f0e4d773f8beeae3254c3c606fdbd11363a69b111bb4c7070986c8abc75b8c",
+      "fingerprint": "7f29193ca665f0e3be8915bceff374937819cc52959ee510a8164587aaa343c9",
       "name": "clamui",
       "pack": "pack.py",
       "record": {
@@ -84,7 +84,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "783bbc3cd6df238db5c01f93aef10dbbcf36df6e913a711691efd4778fcaa418"
+          "sha256": "0383a9d2d888da68b482d9e9a12c42a0284745a6478cf8a4160c6f6be46472b3"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -103,7 +103,7 @@
           "sha256": "7548257b6a41610237a4c54ed9febec941a2b7be5b2e059aab763b0039f76405"
         }
       },
-      "fingerprint": "9ccb99bbaf8a77162bd83b27eaf4a4d0f54c1761abb1e0c60589aa973d7640d9",
+      "fingerprint": "b17394a23698037b816bbf11b35021d547b1d9c0ca35e8674461c2a4a9728e77",
       "name": "defold",
       "pack": "pack.py",
       "record": {
@@ -127,7 +127,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "fe9469434401d4372bd72d12bc97a9950be0af40afef365f628286ca3aa4f3b5"
+          "sha256": "2dab70d3acb2342dbfaa59ad6a965897769db1fb57ef7145e088df8c432f342c"
         },
         "launcher/discord-launch": {
           "exec": true,
@@ -142,7 +142,7 @@
           "sha256": "e43fdccc2cdd93cdd2a44a4a56687dc1530e3234ee1b3eb956a9abae3541915f"
         }
       },
-      "fingerprint": "e2b09bb1a71b37e94cba58fc6606ecf87c38654ce0532bf9fd6d2f11fb3c310d",
+      "fingerprint": "959c0724c6235ca19aac533da1b9deead67802aa1dbc1320d0e4680b1b5985a5",
       "name": "discord",
       "pack": "",
       "record": {
@@ -169,7 +169,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "d2f3934ce4252c24dba4abb76f7a16c4c0bdd42b17c0702df6de3d39cd621d9e"
+          "sha256": "f6a2cdf78da497212fa6e9e17a1b2ee63fbbd6ae76f1d5e315eca7eb0676db22"
         },
         "snap/gui/emacs.png": {
           "exec": false,
@@ -180,7 +180,7 @@
           "sha256": "6c9b679685ad2d0a6d568206555cbe79e30bd61e9341c18055216068d2810c9f"
         }
       },
-      "fingerprint": "ddce1c163977b64ed42aa7eb96ab3e03014e5f508b41d23d49aedd605c7e4f40",
+      "fingerprint": "5d67b217683e9bf15bf4a7a2f063584b9032d077346c524aeb98e3e6a213a825",
       "name": "emacs",
       "pack": "",
       "record": {
@@ -210,7 +210,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "ef117539e96b9c5784da7f0ab33b756d55e6de678909a17cc11ed891f7699687"
+          "sha256": "d8bd35f28dd20a60a381b96691612629abf93a897493dcc2b63833cf2fd99a8c"
         },
         "snap/local/ffmpeg-launch": {
           "exec": true,
@@ -221,7 +221,7 @@
           "sha256": "657aec0b070b0aa072067fdf9c21e3564ff382f4cc06b78ea959adaa5c28e9a2"
         }
       },
-      "fingerprint": "d1326c57d555eeb0f29d512fa8916dad2fba76278e8e5ef88c78dc1b7c92c3d5",
+      "fingerprint": "3c67d45a9b3de32b5ea28164308f0084007e0ef22998ef7988f1e6e0d7eec610",
       "name": "ffmpeg",
       "pack": "",
       "record": {
@@ -251,7 +251,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "f404be747674f229a02139a11d38674379fe684238ad7fd4023cf6f046e39d67"
+          "sha256": "27c220b24161be51fa336426bbc3c08bf38df601b647a093bb0dfe377af9156b"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -274,7 +274,7 @@
           "sha256": "faf36828734dae56f06a86862fc3424fbc9c21003ae414a908a31815ab540d93"
         }
       },
-      "fingerprint": "340e0d81ced2272f4a94cfa55c21ba66a03658bcec876cbbe6004030f0967559",
+      "fingerprint": "7b2ba7e011750bb33ea9b4adb083a709e70e6c6cfdb59f924405c45c0c92d059",
       "name": "floorp",
       "pack": "pack.py",
       "record": {
@@ -303,7 +303,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "0fa6b714c546adb2404da8bbf1390256a17f8598b04390cfb06557c319e9a97d"
+          "sha256": "159f77c953cff5e73cfe59d3506495122c58a6dee68a746889d9c30a4d08a7e8"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -318,7 +318,7 @@
           "sha256": "8f4307bc2f0dcf88a5ee25c31d8381c9feb54194c57f15600892ae6a350a351d"
         }
       },
-      "fingerprint": "b49dc217fc067641ac655453eaceae95a921a7ace907607164f11dd5f13deda0",
+      "fingerprint": "0842d7c22a00cf33a95a23e7fc2cb2e33a8ce0dbcedcab837b6a7b6293fea0f3",
       "name": "freetube",
       "pack": "pack.py",
       "record": {
@@ -343,7 +343,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "fd3169f7acbc42e544ee4453ae1507c3d3df4cb70c1edba710cb35bc530502b9"
+          "sha256": "1f465f11976e6ea775a65826b155ebb7ba1defe5e3926ad320ce29fe702b8392"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -366,7 +366,7 @@
           "sha256": "418116b6916080fc104bc53c940843f42ce716321b764fc2985833cc96562a26"
         }
       },
-      "fingerprint": "1ae189a1f30b8f54b8738c78217f7ff1b2bb1bfada9c8f33a8859e4dce7ce78d",
+      "fingerprint": "259c3bda1e93dd187f85e7caf58b2fce16b142d14cf62189d65ec07b82d16e70",
       "name": "godot",
       "pack": "pack.py",
       "record": {
@@ -391,7 +391,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "74df6d2f69615776eac87ec91a634a4fd8ac43d2c148ed7f4d596a5590fc9fea"
+          "sha256": "c422eabe52006d285e6e79bb269afc03e1b6d6b5035db08be07ecf472d847526"
         },
         "pack.py": {
           "exec": false,
@@ -414,7 +414,7 @@
           "sha256": "0691a4ae3d836dc445cd2aad68a1e5bdf43bd177da969b5c5c18b2a51ee8e9f8"
         }
       },
-      "fingerprint": "2d9f07cc9b4ac3369ef553f687a8607cfbb564a08ea007d458a45a4618f67e24",
+      "fingerprint": "8bffd15153ea83f7096b916f29d7d508f299968f95e949f912322f3a8f751e7e",
       "name": "helium",
       "pack": "pack.py",
       "record": {
@@ -439,7 +439,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "fc6d6dea628c3e739c54aa925b44281fed768694e986d4bdff6d533c6c8fc087"
+          "sha256": "0f5b8b10480759c8eec1e0bff17a7a3a1c2cadc602f8e92e4a1fc56e8a4aa4f0"
         },
         "snap/local/irssi-launch": {
           "exec": true,
@@ -450,7 +450,7 @@
           "sha256": "2cd6de3e6171276e25e1d5841bbde0905a344246e2f33830eff9952e9dd5b20c"
         }
       },
-      "fingerprint": "4521142036e18c2fee4b6a83604c14a4de72dbd0177a12cf2233a8ee5b7dd9d5",
+      "fingerprint": "42bf17bf93a723b2b2f454185c343afd0c56b9c2b5d46f4a556280ed55bb822e",
       "name": "irssi",
       "pack": "",
       "record": {
@@ -473,7 +473,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "c6eca43ec52b2d40ae1712b586d7e00c746ed5df749f0cc94989cddb068ac62f"
+          "sha256": "efd315e4387b6f8c7b6e83e7f3319715f37363b50cef788c3b64e47517b5fa05"
         },
         "pack.py": {
           "exec": false,
@@ -488,7 +488,7 @@
           "sha256": "b2dc3fc9956e9c7292bcd574fb7963bed2347eeba9043e516d777c77a5073930"
         }
       },
-      "fingerprint": "045c86cf92dfaa646270d6a8fb01dab6070ad7d72f0d6f2f2b737cfaaf224293",
+      "fingerprint": "69e21ef4b9ce29a6d27d921ad4bf9170404016898398b3098555601010368505",
       "name": "lutris",
       "pack": "pack.py",
       "record": {
@@ -513,7 +513,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "3a71fbfda8f16f5563acde846e4eb3b856ed801eece201d1e397bf6817b9b098"
+          "sha256": "1eb54f76cf12691d8d771b4ced8ffe47e288b71354b3e2bdaf7ef586c4cbcaf7"
         },
         "snap/local/mpv-launch": {
           "exec": true,
@@ -524,7 +524,7 @@
           "sha256": "61d3c2b2c9d41d282703d719dd9b4c1224f356ab91ae2fef51add996ee28a13b"
         }
       },
-      "fingerprint": "8a9f1199d97c3fcda16832242e7aa72c1bb92a78c4786646c352c3903a499422",
+      "fingerprint": "73b041910a39f91bea1bf009dd19b855b8d5d3ef30c108d2b16b6a825c5ff8d2",
       "name": "mpv",
       "pack": "",
       "record": {
@@ -557,7 +557,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "5f930712e0d299f540e5d668ef2cf924bc6d4bfd4eca446bd9db58cc59f33fe7"
+          "sha256": "f2244af6abb41fff28d45fbd56266cb012de998b54f1760d953ceeb3aaa68d73"
         },
         "pack.py": {
           "exec": false,
@@ -568,7 +568,7 @@
           "sha256": "297d7806c2cbe3a98c6e443f414549f408d47c1052611825073d5e146e1a1e1c"
         }
       },
-      "fingerprint": "0e27bd15e3faa4bb6b0f3250c9d361ac37b80f25d1a6f48c8c5ab9dfd39a1997",
+      "fingerprint": "a354f9dad69e7695b7c8c2b05f7a21eb5fa85f2ecb219fcc3a32138da2549563",
       "name": "nvim",
       "pack": "pack.py",
       "record": {
@@ -592,7 +592,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "7bb6676f9548eda148de196c13e2bb7e6555e9bd3afb2c3ce123f46b9a6397c0"
+          "sha256": "6346fd83dfc6da2ead0b2d230c64f323874e05add96107b537041c8bbdea1944"
         },
         "snap/hooks/configure": {
           "exec": true,
@@ -607,7 +607,7 @@
           "sha256": "37a15a65618706a9f88856c60f0e3efcb4d87cab3795351aa936229e06b55556"
         }
       },
-      "fingerprint": "4fb80940ac181b4e90cced191934e8b163be9ab11320fe7a08791b9c07d59502",
+      "fingerprint": "046181977b3a055c941448d0b8999751a8349e0c5ab2b075635f523ef333bc6a",
       "name": "ollama",
       "pack": "",
       "record": {
@@ -634,7 +634,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "7299b9465d5c94e8ab902192df51d79612dabda5ab7bfd587d999b4149d149c8"
+          "sha256": "b0236b7c0f92ecc7d6a434262b56d28f65ee8b81b36d2a61d9f9784c0815035a"
         },
         "snap/gui/retroarch.svg": {
           "exec": false,
@@ -653,7 +653,7 @@
           "sha256": "7d02c249a5c2324a4561d10f9b2e5c307a7f5c8b1dba98ec9ceba1e290d85d3b"
         }
       },
-      "fingerprint": "3c78ffec83ee31f354e7eb86de260fa80b5174d42d55f59784da7a01107b3ec8",
+      "fingerprint": "7424a1ff8dd64adc886b836e27eff3f3dcf13de673341a67705628da38d6d1ae",
       "name": "retroarch",
       "pack": "",
       "record": {
@@ -686,7 +686,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "cbc357d27873bfa296c50aa5e8e9ea26a0b6e6afe5a2e4369dfbe28e651cbfa6"
+          "sha256": "9749b492a903719d6e5f21bc4d615171001ca470cae07eb9eb52a5e07a168bac"
         },
         "pack.py": {
           "exec": false,
@@ -701,7 +701,7 @@
           "sha256": "9b6307962328249f10d7ce10d2b88eb19868b4a1d98ce1cff8f95f243992c398"
         }
       },
-      "fingerprint": "368723556901259bc8575cec2de9854df06df0a68095739fd63be613aa94a3bd",
+      "fingerprint": "ab43049bb43ed74d25749126365ae36947b308220415412d37316a336df2fcc2",
       "name": "shotcut",
       "pack": "pack.py",
       "record": {
@@ -726,7 +726,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "3216384d6c311ac9da9750fb4b12afd4f4cf1f536e6ff5e92cc3f6145b441e9c"
+          "sha256": "7ba253f1a19cf321d8e137ddd89842c514d610b31c559dca528270bf0ff4be10"
         },
         "snap/gui/signal-desktop.png": {
           "exec": false,
@@ -741,7 +741,7 @@
           "sha256": "072c81f97bd0e3c845f3f0db92e9924285d4daed3df414b48e2b268d37667382"
         }
       },
-      "fingerprint": "ab96e27f74f1bdda605d92531d19d32d693f355a3caacd3b3f353d9220b28bea",
+      "fingerprint": "6e33373a0470af85f05b06139ec6ce1e7cf09e2564aa186222768515f733df80",
       "name": "signal-desktop",
       "pack": "",
       "record": {
@@ -769,14 +769,14 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "28bb6db94dc991cac732218004175c8b9b3c42297ee5acc49326da5e7a8e66dd"
+          "sha256": "7162d6070b5a398aeddb74f57982512aa1f9f4feacd19b6112cf280f245ae972"
         },
         "snap/snapcraft.yaml": {
           "exec": false,
           "sha256": "e87461f150e10e86f1dc1d93208983cf6a587065be2dc49a86245fac77053179"
         }
       },
-      "fingerprint": "09d2f84a74eeb10b381cc08a98a0e79ecedff16ecff2eb86dc047b54cf2ff3c3",
+      "fingerprint": "1050e53755604979c6b63a4090fee45c233bfe3249c1a75e12406f7b076115a5",
       "name": "spotube",
       "pack": "",
       "record": {
@@ -801,6 +801,10 @@
     },
     "sublime-text": {
       "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "ebb1454c5c60b4f11d0fd005f17669d10d32d443d68e36e50b9006b1c91031f5"
+        },
         "snap/gui/sublime-text.desktop": {
           "exec": false,
           "sha256": "0e29932dbf58908aa8f3ee93a7545700a845dc62f8e382d93e8e3f92d170ab19"
@@ -814,7 +818,7 @@
           "sha256": "6fbbd85886deb64f95bf28c3df67e86222062183b50d88121c0dfaf6b2f38c3f"
         }
       },
-      "fingerprint": "5409adfdb4e9de3abead8a399f0f84e4af31065fac814ed3cb8a91c32adf0342",
+      "fingerprint": "fa0bada2c526a92983f34b09537e4c4188ff3e6e94a8fbc2eb9aa3f874ec210c",
       "name": "sublime-text",
       "pack": "",
       "record": {
@@ -840,7 +844,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "3f95a16512c900966dc98d0dacd4651667fc283edafaf9ec4b7928f7ec6d366e"
+          "sha256": "264822ec7fcde19396072cf8b373a9ddff2cf152f9e67ac6e970217f2c8b97a6"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -859,7 +863,7 @@
           "sha256": "2331b5a08ffe3e1501b84e730fc82327d14a5246f7d342bfcee1cb56d2a8619f"
         }
       },
-      "fingerprint": "cdb913342891cd57747c18fa76dea6e364053e408afa6ce861e66e2f607f2923",
+      "fingerprint": "305ab4337e06130ccaf423c3877e9e342ea2cea058a6221ed2885d5facec1893",
       "name": "transmission",
       "pack": "pack.py",
       "record": {
@@ -883,7 +887,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "3a31fe62ee045235a6d83ba71925809335a90ccd492707cd3a2981fed588f30c"
+          "sha256": "a94604d671100deab3f725bde2e80ddecbf4fb77d56a3be3a00d3aa81a9f7f09"
         },
         "pack.py": {
           "exec": false,
@@ -906,7 +910,7 @@
           "sha256": "0c845223cfc46037f4fb4a1bfd2d091281d9e000da352757744bc7484b17fb22"
         }
       },
-      "fingerprint": "1387fe3f49a9720dc4721790602d26c9030f70f47fbf8d92207b2fce87604a01",
+      "fingerprint": "76d85bfa55426c5331adc1f2b9e73b21748fec2a236448b4da435144a0a2bbc9",
       "name": "ungoogled-chromium",
       "pack": "pack.py",
       "record": {
@@ -930,7 +934,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "ac4e6a08c31c8fe1f20951ad1f31a92b483c8a353503bf27023fb1f69eafc9d7"
+          "sha256": "373430d8609f82c9159436513ce6a9b62db92f568efed78714d3fa54071289f6"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -945,7 +949,7 @@
           "sha256": "2de56caff8fb81e891284b53b6a1ff9e5d0ec77cdc1e268baf177e5908333b63"
         }
       },
-      "fingerprint": "f422dbbff36ec7c54bd6bba2e74c3c121e47a73f7fd6919f52862374d80d3df0",
+      "fingerprint": "06560d4dc02909cec3a6806ea39f319810492e9f8b61b42830886fa47f7d1aab",
       "name": "unityhub",
       "pack": "pack.py",
       "record": {
@@ -973,7 +977,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "c915c36a9a5393463aed6cdcc2c6ced58abdf845b868fb34280ed8550bf2b140"
+          "sha256": "f9251b3d2b5baeaa5879609c24641d461d94db6022222d5240b68b2d45eb6757"
         },
         "launcher/yt-dlp": {
           "exec": true,
@@ -984,7 +988,7 @@
           "sha256": "1970cbf30f5086ab1d2e50a41ef5539abd070417ae5d33132bd5bdbeababf8f9"
         }
       },
-      "fingerprint": "c8e6db3df009148e34720e605da983ad5889e3a4f689eee45b71c9bc8c40dcf1",
+      "fingerprint": "fe2a33462f54979cdea0caadbb87fe6a0b6af20dfec518b57962cddea795c9a1",
       "name": "yt-dlp",
       "pack": "",
       "record": {
@@ -1011,7 +1015,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "d4b474b8ba3d7e0002a02916f042bd046f31166ddd07c4c50b30b07ffd20f080"
+          "sha256": "3a716a753e815f36f36b3b43141abd2845bc4c245d56e2f821176ebd282aad5a"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -1034,7 +1038,7 @@
           "sha256": "8086f296a13f5c1d61b4bea509865dc238f5f7a712114df07ec3cd487b5a3de6"
         }
       },
-      "fingerprint": "07c1b5fec3af564d0735ca25438919d8e9aa46ae9cc67941c51deaf7994e80c8",
+      "fingerprint": "070254ee68fe89b04d0e0ef426d688865010fcafe1028d404f7ca74a05374892",
       "name": "zen",
       "pack": "pack.py",
       "record": {

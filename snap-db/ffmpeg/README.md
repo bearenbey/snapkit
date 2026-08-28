@@ -2,6 +2,7 @@
 
 A [snap](https://snapcraft.io/) package of [FFmpeg](https://ffmpeg.org/), the
 cross-platform toolkit for recording, converting and streaming audio and video.
+This snap is not published or endorsed by the upstream project.
 
 Built from the upstream release tarball against `core26` (Ubuntu 26.04) in
 **strict** confinement, with a broad codec and filter set and with VAAPI,

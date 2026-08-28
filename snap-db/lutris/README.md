@@ -2,9 +2,9 @@
 
 video game preservation platform
 
-Packaged from [lutris/lutris](https://github.com/lutris/lutris) by snapkit, from the release asset
-`lutris_0.5.22_all.deb`. This snap is not published or endorsed by the upstream
-project.
+Packaged by snapkit from the release asset `lutris_0.5.22_all.deb`,
+tracked against [lutris/lutris](https://github.com/lutris/lutris).
+This snap is not published or endorsed by the upstream project.
 
 ## Building
 
@@ -17,6 +17,6 @@ project.
 
 ## Updating
 
-`snapkit` checks lutris/lutris for a newer release and rewrites
+`snapkit` checks that upstream for a newer release and rewrites
 `snap/snapcraft.yaml` for you. Anything you change in that file is kept:
 an update only moves the version, the source URL and its checksum.

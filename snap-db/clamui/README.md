@@ -2,9 +2,9 @@
 
 Modern graphical interface for ClamAV antivirus scanner
 
-Packaged from [linx-systems/clamui](https://github.com/linx-systems/clamui) by snapkit, from the release asset
-`clamui_0.4.0_all.deb`. This snap is not published or endorsed by the upstream
-project.
+Packaged by snapkit from the release asset `clamui_0.4.0_all.deb`,
+tracked against [linx-systems/clamui](https://github.com/linx-systems/clamui).
+This snap is not published or endorsed by the upstream project.
 
 ## Building
 
@@ -17,6 +17,6 @@ project.
 
 ## Updating
 
-`snapkit` checks linx-systems/clamui for a newer release and rewrites
+`snapkit` checks that upstream for a newer release and rewrites
 `snap/snapcraft.yaml` for you. Anything you change in that file is kept:
 an update only moves the version, the source URL and its checksum.

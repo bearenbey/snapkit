@@ -5,6 +5,7 @@ Snap packaging for
 Chromium with Google web-service integration removed, built by repackaging
 the official upstream amd64 portable tarball from
 [ungoogled-chromium-portablelinux](https://github.com/ungoogled-software/ungoogled-chromium-portablelinux).
+This snap is not published or endorsed by the upstream project.
 
 ## Layout
 

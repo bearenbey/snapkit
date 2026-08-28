@@ -1,10 +1,11 @@
 # Defold snap (repack of the official editor zip)
 
 Turns `Defold-x86_64-linux.zip` into a strictly confined snap
-(`defold_1.13.1_amd64.snap`). snapcraft builds it from
-`snap/snapcraft.yaml`; `pack.py` adds the checks a recipe cannot express and
-then runs it. libopenal and libsndio come from `stage-packages` (see the
-design notes); later builds reuse the cache and need no network.
+(`defold_1.13.1_amd64.snap`). snapcraft builds it from `snap/snapcraft.yaml`;
+`pack.py` adds the checks a recipe cannot express and then runs it. libopenal
+and libsndio come from `stage-packages` (see the design notes); later builds
+reuse the cache and need no network. This snap is not published or endorsed by
+the upstream project.
 
 ## Build
 

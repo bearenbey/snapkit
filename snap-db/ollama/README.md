@@ -2,7 +2,8 @@
 
 A [snap](https://snapcraft.io/) package for [Ollama](https://ollama.com), built
 from the official upstream Linux release tarball, the same artefact that
-`https://ollama.com/install.sh` downloads.
+`https://ollama.com/install.sh` downloads. This snap is not published or
+endorsed by the upstream project.
 
 The snap ships:
 

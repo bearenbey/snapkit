@@ -1,8 +1,9 @@
 # Transmission snap (built from the official source release)
 
 Compiles `transmission-4.1.3.tar.xz` into a strictly confined snap
-(`transmission_4.1.3_amd64.snap`) containing the GTK 4 client, the daemon,
-the web UI and the command-line utilities.
+(`transmission_4.1.3_amd64.snap`) containing the GTK 4 client, the daemon, the
+web UI and the command-line utilities. This snap is not published or endorsed
+by the upstream project.
 
 Unlike the other snaps in this tree this one is a real build, not a repack.
 snapcraft compiles it in an Ubuntu 24.04 (noble) instance, so the binaries are

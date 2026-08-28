@@ -1,7 +1,8 @@
 # Signal Desktop snap (repack of the official .deb)
 
 Builds a strictly confined `signal-desktop` snap from the `.deb` that Signal
-Messenger publishes for Debian/Ubuntu. Not published or endorsed by Signal.
+Messenger publishes for Debian/Ubuntu. This snap is not published or endorsed
+by the upstream project.
 
 Signal's download page only offers the apt repository, never a direct `.deb`
 link, which is why the package looks like it does not exist. It does, and the

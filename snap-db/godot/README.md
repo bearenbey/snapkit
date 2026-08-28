@@ -2,7 +2,8 @@
 
 Turns `Godot_v4.7.2-stable_linux.x86_64.zip` into a strictly confined snap
 (`godot_4.7.2_amd64.snap`). snapcraft builds it from `snap/snapcraft.yaml`;
-`pack.py` adds the checks a recipe cannot express and then runs it.
+`pack.py` adds the checks a recipe cannot express and then runs it. This snap
+is not published or endorsed by the upstream project.
 
 ## Build
 

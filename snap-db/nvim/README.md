@@ -2,7 +2,8 @@
 
 Turns `nvim-linux-x86_64.tar.gz` into a classically confined snap
 (`nvim_0.12.5_amd64.snap`). snapcraft builds it from `snap/snapcraft.yaml`;
-`pack.py` adds the checks a recipe cannot express and then runs it.
+`pack.py` adds the checks a recipe cannot express and then runs it. This snap
+is not published or endorsed by the upstream project.
 
 ## Build
 
