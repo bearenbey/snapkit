@@ -1929,17 +1929,26 @@ def dashboard():
             for index in range(50):
                 board.say(f"line {index}")
 
-            board.handle("l")
-            same((board.reading_log, board.log_offset), (True, 0))
+            # The loop draws a frame between keystrokes, and the drawing is
+            # what tells the scroll how long the thing it is scrolling is.
+            from rich.console import Console
+            paper = Console(file=io.StringIO(), width=90, height=20)
+
+            def press(key):
+                board.handle(key)
+                paper.print(board.render())
+
+            press("l")
+            same((board.reading_log, board.page_offset), (True, 0))
             for _ in range(5):
-                board.handle("up")
-            same(board.log_offset, 5, "up did not scroll back")
+                press("up")
+            same(board.page_offset, 5, "up did not scroll back")
             for _ in range(500):
-                board.handle("up")
-            assert board.log_offset < len(board.log), "scrolled past the oldest"
-            board.handle("G")
-            same(board.log_offset, 0, "G did not come back to the newest")
-            board.handle("escape")
+                press("up")
+            assert board.page_offset < len(board.log), "scrolled past the oldest"
+            press("G")
+            same(board.page_offset, 0, "G did not come back to the newest")
+            press("escape")
             same(board.reading_log, False, "escape did not close the log")
 
     @check("delete asks before it forgets")

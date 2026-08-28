@@ -40,6 +40,17 @@ STATE_GLYPH = {
     "built": "✔",
     "failed": "✕",
 }
+# The list has one column for this. update.STATES stays as the terminal's.
+SHORT_STATE = {
+    "current": "up to date", "behind": "update", "untracked": "untracked",
+    "error": "unreachable", "unknown": "not checked", "checking": "checking",
+    "queued": "queued", "working": "working", "done": "updated",
+    "built": "built", "failed": "failed",
+}
+# What a record shows above its recipe, and how tall that makes the head.
+RECORD_FIELDS = ("repo", "kind", "version", "tag", "asset", "asset_pattern",
+                 "command", "icon", "license", "directory", "created",
+                 "updated")
 KIND_STYLE = {"deb": "magenta", "archive": "cyan", "appimage": "green"}
 # Off the shapes themselves, so a kind cannot be added and go unmentioned.
 _TRACK_HINTS = tuple(
@@ -48,11 +59,11 @@ _TRACK_HINTS = tuple(
      for shape in sources.SPECS]
     + [("repo owner/name", "the releases of a github repository"),
        ("none", "stop checking it against anything")])
-KEYS = (("↑↓", "move"), ("n", "new or find"), ("r", "recheck"), ("u", "update"),
-        ("b", "build"), ("/", "filter"), ("l", "log"), ("?", "keys"),
-        ("q", "quit"))
-SHORT_KEYS = (("↑↓", "move"), ("n", "find"), ("r", "recheck"), ("u", "update"),
-              ("b", "build"), ("?", "keys"), ("q", "quit"))
+KEYS = (("↑↓", "move"), ("n", "new or find"), ("r", "recheck"),
+        ("u", "update"), ("b", "build"), ("/", "filter"), ("l", "log"),
+        ("?", "keys"), ("q", "quit"))
+SHORT_KEYS = (("↑↓", "move"), ("n", "find"), ("r", "recheck"),
+              ("u", "update"), ("b", "build"), ("?", "keys"), ("q", "quit"))
 
 # Every key the dashboard answers to, which the footer has never had room for.
 HELP = (
@@ -64,7 +75,7 @@ HELP = (
         ("s", "order by the register, or by what needs doing"),
     )),
     ("one snap, the one under the cursor", (
-        ("enter", "its record, in full"),
+        ("enter", "its record, with the recipe under it scrolling"),
         ("u", "move it onto the release the last check found"),
         ("b", "hand the project to snapcraft as it stands"),
         ("t", "where its releases should be looked for"),
@@ -96,7 +107,7 @@ def advertised():
 ACCENT = "#4ce0ff"          # the one colour that means "this, here"
 EDGE = "grey42"             # panel borders, which should be seen and not read
 CURSOR_ROW = "on grey15"
-WORDMARK = "◆ SNAPKIT"
+WORDMARK = "SNAPKIT"
 SPINNER = "◐◓◑◒"
 PARTIAL = ("", "▏", "▎", "▍", "▌", "▋", "▊", "▉")
 LOG_HEIGHT = 8
@@ -112,6 +123,7 @@ class Screen:
         self.frame = 0
         self.window = 1         # rows that fit; the first render works it out
         self.height = 30        # ... and the whole screen, for a full-page view
+        self.page_lines = 0     # how long the full-screen view being drawn is
         self.offset = 0
 
     def render(self):
@@ -160,38 +172,47 @@ class Screen:
             return self._track_header(width)
         if self.board.prompting:
             return self._prompt_header()
-        return Panel(Group(self._masthead()), box=box.ROUNDED,
-                     border_style=EDGE, padding=(0, 1))
-    def _masthead(self):
-        """The wordmark, and the shape of the register beside it."""
+        # No box: two lines and a rule read as a heads-up display rather
+        # than as a fourth container stacked on three others.
+        return Group(Text(""), self._masthead(width), self._rule(width))
+    def _rule(self, width=100):
+        """A hairline under the masthead, bright at the left and fading out."""
+        room = max(4, width - 2)
+        rule = Text("  ")
+        for index in range(room):
+            share = index / max(room - 1, 1)
+            rule.append("─", style=_fade(share))
+        return rule
+
+    def _masthead(self, width=100):
+        """The wordmark, the shape of the register, and what it is doing."""
         # Of the register, not of what a filter happens to be showing.
         counts = {}
         for row in self.board.known:
             counts[row.state] = counts.get(row.state, 0) + 1
-        behind = counts.get("behind", 0)
-        current = counts.get("current", 0)
         busy = sum(counts.get(s, 0) for s in ("queued", "working", "checking"))
-        failed = counts.get("failed", 0) + counts.get("error", 0)
 
-        line = Text()
-        line.append_text(_gradient(WORDMARK))
+        line = Text("  ")
+        # Letter-spaced where there is room for it: a wordmark, not a word.
+        line.append_text(_gradient("◆  " + " ".join(WORDMARK) if width >= 104
+                                   else "◆ " + WORDMARK))
+        if width >= 92:
+            line.append("   ")
+            line.append_text(_meter(counts, len(self.board.known)))
         line.append("   ")
-        line.append_text(_chip("▪", len(self.board.known), "registered", "cyan"))
-        if current:
-            line.append("  ")
-            line.append_text(_chip("●", current, "current", "green"))
-        if behind:
-            line.append("  ")
-            line.append_text(_chip("▲", behind, "behind", "yellow"))
-        if busy:
-            line.append("  ")
-            line.append_text(_chip(_spinner(self.frame), busy, "in flight", "cyan"))
-        if failed:
-            line.append("  ")
-            line.append_text(_chip("✕", failed, "failed", "red"))
+        line.append(str(len(self.board.known)), style="bold")
+        line.append(" registered", style="dim")
+        for glyph, count, style in (("●", counts.get("current", 0), "green"),
+                                    ("▲", counts.get("behind", 0), "yellow"),
+                                    (_spinner(self.frame), busy, ACCENT),
+                                    ("✕", counts.get("failed", 0)
+                                     + counts.get("error", 0), "red")):
+            if count:
+                line.append("   ")
+                line.append_text(_chip(glyph, count, style))
         if self.board.status:
             line.append("   ")
-            line.append(self.board.status, style="dim")
+            line.append(self.board.status, style="dim italic")
         return line
     def _question(self, title, style, *parts):
         """A yes-or-no across the top, with no as the default it shows."""
@@ -237,7 +258,8 @@ class Screen:
             if room >= 12:
                 line.append(_fit(what, room), style="dim")
             lines.append(line)
-        return Panel(Group(*lines), title="track", box=box.ROUNDED,
+        return Panel(Group(*lines), title="track", title_align="left",
+                     box=box.ROUNDED,
                      border_style=ACCENT, padding=(0, 1))
 
     def _prompt_header(self):
@@ -268,14 +290,15 @@ class Screen:
             lines.append(Text("  a name you have used before, a github url, or "
                               "the path to a .deb, an archive or a folder",
                               style="dim"))
-        return Panel(Group(*lines), title="find or add", box=box.ROUNDED,
+        return Panel(Group(*lines), title="find or add", title_align="left",
+                     box=box.ROUNDED,
                      border_style=ACCENT, padding=(0, 1))
     def _table(self, width=100, compact=False):
         """The registered snaps, scrolled so the cursor is always on screen."""
         first, last = self._window()
         table = Table(expand=True, box=None, pad_edge=False,
                       header_style="dim " + EDGE)
-        table.add_column(" ", width=2)
+        table.add_column(" ", width=2)      # the state rail, and the cursor
         table.add_column("NAME", width=18, no_wrap=True)
         table.add_column("BUILT", width=15, no_wrap=True)
         table.add_column("UPSTREAM", width=15, no_wrap=True)
@@ -299,9 +322,9 @@ class Screen:
             row = self.board.rows[index]
             here = index == self.board.cursor
             cells = [
-                Text("▸" if here else " ", style="bold " + ACCENT),
+                _rail(row, here),
                 Text(row.name, style="bold" if here else ""),
-                Text(row.snap.version or "-"),
+                Text(row.snap.version or "-", style="" if here else "dim"),
                 _upstream_cell(row),
                 self._status_cell(row),
             ]
@@ -333,16 +356,18 @@ class Screen:
             title += "   /"
         if self.board.order == "attention":
             title += "   by attention"
-        return Panel(table, title=title, box=box.ROUNDED, border_style=EDGE,
+        return Panel(table, title=title, title_align="left",
+                     box=box.ROUNDED, border_style=EDGE,
                      padding=(0, 1))
     def _status_cell(self, row):
         """What this snap is doing, as one cell."""
         if row.state == "working" and row.total_bytes:
             share = row.done_bytes / row.total_bytes
-            return Text.assemble(
-                (_smooth_bar(share, 12), ACCENT),
-                (f" {share * 100:3.0f}%", "dim"))
-        label, style = STATE_STYLE.get(row.state, (row.state, ""))
+            bar = _gradient(_smooth_bar(share, 12), bold=False)
+            bar.append(f" {share * 100:3.0f}%", style="dim")
+            return bar
+        _, style = STATE_STYLE.get(row.state, (row.state, ""))
+        label = SHORT_STATE.get(row.state, row.state)
         glyph = STATE_GLYPH.get(row.state, "·")
         if row.state in ("working", "queued", "checking"):
             glyph = _spinner(self.frame)
@@ -365,7 +390,7 @@ class Screen:
         row = self.board.row
         if row is None:
             return Panel(Text("nothing selected", style="dim"),
-                         title="inspector", box=box.ROUNDED,
+                         title="inspector", box=box.ROUNDED, title_align="left",
                          border_style=EDGE, padding=(0, 1))
         snap = row.snap
         label, style = STATE_STYLE.get(row.state, (row.state, ""))
@@ -410,21 +435,24 @@ class Screen:
         if snap.summary:
             lines += [Text(""), Text(snap.summary, style="grey70")]
 
-        return Panel(Group(*lines), title="inspector", box=box.ROUNDED,
+        return Panel(Group(*lines), title="inspector", title_align="left",
+                     box=box.ROUNDED,
                      border_style=EDGE, padding=(0, 1))
     def _logbook(self):
         """The activity log, full screen, scrolled back to where it was left."""
         lines = list(self.board.log)
         room = max(1, self.height - 4)
-        end = len(lines) - self.board.log_offset
+        self.page_lines = len(lines)
+        end = len(lines) - self.board.page_offset
         shown = lines[max(0, end - room):end]
-        where = ("newest" if not self.board.log_offset
-                 else f"{self.board.log_offset} line"
-                      f"{'' if self.board.log_offset == 1 else 's'} back")
+        where = ("newest" if not self.board.page_offset
+                 else f"{self.board.page_offset} line"
+                      f"{'' if self.board.page_offset == 1 else 's'} back")
         return Panel(Group(*shown) if shown else Text("nothing yet", style="dim"),
                      title=f"activity -- {len(lines)} kept, {where}",
                      subtitle="↑↓ PgUp PgDn   home oldest   G newest   q closes",
-                     box=box.ROUNDED, border_style=EDGE, padding=(0, 1))
+                     title_align="left", box=box.ROUNDED,
+                     border_style=EDGE, padding=(0, 1))
 
     def _help(self):
         """Every key, grouped, because the footer only ever fits a few."""
@@ -437,12 +465,13 @@ class Screen:
                 lines.append(Text.assemble(("    ", ""), (f"{key:<12}", "bold"),
                                            (what, "dim")))
         return Panel(Group(*lines), title="keys", subtitle="any key closes",
-                     box=box.ROUNDED, border_style=EDGE, padding=(1, 1))
+                     title_align="left", box=box.ROUNDED,
+                     border_style=EDGE, padding=(1, 1))
 
     def _log(self):
         lines = list(self.board.log)[-(LOG_HEIGHT - 2):]
         return Panel(Group(*lines) if lines else Text(""),
-                     title="activity", box=box.ROUNDED,
+                     title="activity", box=box.ROUNDED, title_align="left",
                      border_style="grey35", padding=(0, 1))
     def _footer(self, width=100):
         if self.board.busy:
@@ -476,20 +505,33 @@ class Screen:
                      title=f"{self.board.picking.title} -- which file?",
                      box=box.ROUNDED, border_style=ACCENT, padding=(0, 1))
     def _details(self):
+        """The record, with the recipe under it scrolling on its own.
+
+        What the snap is stays on screen. The yaml is what runs past the
+        bottom of any terminal, so the yaml is the part that moves.
+        """
         snap = self.board.detail
         rows = Table(box=None, pad_edge=False)
         rows.add_column(style="dim", width=16)
         rows.add_column(overflow="fold")
-        for key in ("repo", "kind", "version", "tag", "asset", "asset_pattern",
-                    "command", "icon", "license", "directory", "created", "updated"):
+        for key in RECORD_FIELDS:
             rows.add_row(key, str(getattr(snap, key, "") or "-"))
         rows.add_row("plugs", ", ".join(snap.plugs) or "-")
         rows.add_row("builds", str(snap.builds or len(snap.history)))
-        head = Group(_gradient(snap.name), rows)
-        yaml = Text(snap.snapcraft_yaml or "(none)", style="grey70")
-        return Panel(Group(head, Text(""), yaml),
-                     title="any key to go back", box=box.ROUNDED,
-                     border_style=ACCENT, padding=(0, 1))
+
+        recipe = (snap.snapcraft_yaml or "(none)").splitlines()
+        self.page_lines = len(recipe)
+        # The name, a blank line, and one row per field, all of it kept.
+        room = max(1, self.height - 4 - len(RECORD_FIELDS) - 4)
+        start = min(self.board.page_offset, max(0, len(recipe) - room))
+        seen = f"{start + 1}-{min(start + room, len(recipe))} of {len(recipe)}"
+        return Panel(
+            Group(_gradient(snap.name), rows, Text(""),
+                  *[Text(line, style="grey70")
+                    for line in recipe[start:start + room]]),
+            title=snap.name, title_align="left",
+            subtitle=f"recipe {seen}   ↑↓ PgUp PgDn   q closes",
+            box=box.ROUNDED, border_style=ACCENT, padding=(0, 1))
 
 # The modes that take the whole screen, by the name tui.MODES gives them.
 FULL_SCREEN = {
@@ -500,30 +542,54 @@ FULL_SCREEN = {
 }
 
 
-def _gradient(text, start=(0x4C, 0xE0, 0xFF), end=(0xB9, 0x8C, 0xFF)):
+def _gradient(text, start=(0x4C, 0xE0, 0xFF), end=(0xB9, 0x8C, 0xFF),
+              bold=True):
     """The wordmark and every snap name, cyan to violet across the letters."""
     out = Text()
     span = max(1, len(text) - 1)
     for index, character in enumerate(text):
         mix = index / span
         shade = tuple(int(a + (b - a) * mix) for a, b in zip(start, end))
-        out.append(character, style="bold #%02x%02x%02x" % shade)
+        weight = "bold " if bold else ""
+        out.append(character, style=f"{weight}#%02x%02x%02x" % shade)
     return out
 def _fit(text, room):
     """`text`, shortened to `room` columns, so a header cannot wrap."""
     return text if len(text) <= room else text[:max(1, room - 1)] + "…"
 
 
-def _chip(glyph, count, label, style):
-    return Text.assemble((glyph + " ", style), (str(count), "bold " + style),
-                         (" " + label, "dim"))
+def _chip(glyph, count, style):
+    return Text.assemble((glyph + " ", style), (str(count), "bold " + style))
+
+
+def _fade(share, start=(0x4C, 0xE0, 0xFF), end=(0x2A, 0x2A, 0x32)):
+    """A colour some way along the accent, for a rule that trails off."""
+    return "#%02x%02x%02x" % tuple(
+        round(a + (b - a) * share) for a, b in zip(start, end))
+
+
+def _meter(counts, total, width=24):
+    """The whole register as one bar, a segment for each state."""
+    bar, used = Text(), 0
+    for name, style in (("current", "green"), ("behind", "yellow"),
+                        ("checking", ACCENT), ("queued", ACCENT),
+                        ("working", ACCENT), ("done", "green"),
+                        ("built", "green"), ("failed", "red"),
+                        ("error", "red"), ("untracked", "grey42")):
+        share = counts.get(name, 0)
+        if not share:
+            continue
+        cells = min(max(1, round(width * share / max(total, 1))), width - used)
+        if cells:
+            bar.append("█" * cells, style=style)
+            used += cells
+    bar.append("░" * (width - used), style="grey30")
+    return bar
 def _keys(pairs):
     out = Text("  ")
     for key, label in pairs:
-        out.append("[", style="dim " + ACCENT)
         out.append(key, style="bold " + ACCENT)
-        out.append("] ", style="dim " + ACCENT)
-        out.append(label + "   ", style="dim")
+        out.append(" " + label + "    ", style="dim")
     return out
 def _spinner(frame):
     return SPINNER[(frame // 3) % len(SPINNER)]
@@ -546,11 +612,28 @@ def _source_of(snap):
     return Text(text) if text else Text("(none recorded)", style="dim")
 
 
+def _rail(row, here):
+    """The colour down the left: where the cursor is, and how each row is."""
+    style = STATE_STYLE.get(row.state, ("", "dim"))[1]
+    if here:
+        return Text("▌", style="bold " + ACCENT)
+    return Text("▏", style=style)
+
+
 def _upstream_cell(row):
+    """What upstream has, and only when that is not what is already here.
+
+    A column that repeats the version beside it is a column of noise. This
+    one is empty until there is something to say.
+    """
     if not row.latest:
-        return Text("-", style="dim")
-    style = "bold yellow" if row.behind else "dim"
-    return Text(row.latest, style=style)
+        return Text("·", style="grey35")
+    if row.behind:
+        return Text.assemble(("→ ", "bold yellow"),
+                             (row.latest, "bold yellow"))
+    if row.latest == row.snap.version:
+        return Text("·", style="grey35")
+    return Text(row.latest, style="dim")
 def _lineage(snap):
     """The last few versions this snap has been on, oldest first."""
     seen = []

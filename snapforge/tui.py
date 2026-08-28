@@ -91,7 +91,7 @@ class Dashboard:
     match_cursor: int = 0
     detail: object = None     # a Snap being looked at, or None
     reading_log: bool = False  # the activity log, full screen
-    log_offset: int = 0        # lines back from the newest, 0 at the tail
+    page_offset: int = 0       # how far a full-screen view is scrolled back
     filtering: bool = False    # a filter is being typed
     needle: str = ""           # what the list is narrowed to, "" for all
     order: str = "register"    # or "attention": what needs doing, first
@@ -647,7 +647,7 @@ class Dashboard:
         elif key == "g":
             self.pull_database()
         elif key == "l":
-            self.reading_log, self.log_offset = True, 0
+            self.reading_log, self.page_offset = True, 0
         elif key == "/":
             self.filtering = True
         elif key == "s":
@@ -664,11 +664,11 @@ class Dashboard:
         elif key == "d" and self.row and not self.busy:
             self.confirm = self.row.name
         elif key == "enter" and self.row:
-            self.detail = self.row.snap
+            self.detail, self.page_offset = self.row.snap, 0
 
     def _showing(self, key):
-        """A record, or the keys page: any key puts it away."""
-        self.detail, self.helping = None, False
+        """The keys page, which fits: any key puts it away."""
+        self.helping = False
 
     def _typing(self, key):
         """The one box: find something registered, or add something new."""
@@ -711,23 +711,42 @@ class Dashboard:
                 self.prompt = typed
 
     def _reading(self, key):
-        """Scrolling back through what has already gone past."""
+        """The activity log, where the newest line is home and up goes back."""
         page = max(1, self.screen.window)
-        oldest = max(0, len(self.log) - 1)
+        oldest = max(0, self.screen.page_lines - 1)
         if key in ("escape", "q", "l"):
             self.reading_log = False
         elif key in ("k", "up"):
-            self.log_offset = min(self.log_offset + 1, oldest)
+            self.page_offset = min(self.page_offset + 1, oldest)
         elif key in ("j", "down"):
-            self.log_offset = max(self.log_offset - 1, 0)
+            self.page_offset = max(self.page_offset - 1, 0)
         elif key == "pageup":
-            self.log_offset = min(self.log_offset + page, oldest)
+            self.page_offset = min(self.page_offset + page, oldest)
         elif key == "pagedown":
-            self.log_offset = max(self.log_offset - page, 0)
+            self.page_offset = max(self.page_offset - page, 0)
         elif key == "home":
-            self.log_offset = oldest
+            self.page_offset = oldest
         elif key in ("end", "G"):
-            self.log_offset = 0
+            self.page_offset = 0
+
+    def _paging(self, key):
+        """A record, where the top is home and down goes further into it."""
+        page = max(1, self.screen.window)
+        last = max(0, self.screen.page_lines - 1)
+        if key in ("escape", "q", "enter"):
+            self.detail = None
+        elif key in ("k", "up"):
+            self.page_offset = max(self.page_offset - 1, 0)
+        elif key in ("j", "down"):
+            self.page_offset = min(self.page_offset + 1, last)
+        elif key == "pageup":
+            self.page_offset = max(self.page_offset - page, 0)
+        elif key == "pagedown":
+            self.page_offset = min(self.page_offset + page, last)
+        elif key == "home":
+            self.page_offset = 0
+        elif key in ("end", "G"):
+            self.page_offset = last
 
     def _typing_filter(self, key):
         """Narrowing the list as it is typed, over name, repo, summary, kind."""
@@ -854,7 +873,7 @@ HANDLERS = {
     "prompting": Dashboard._typing,
     "picking": Dashboard._choosing,
     "confirm": Dashboard._confirming,
-    "detail": Dashboard._showing,
+    "detail": Dashboard._paging,
     "helping": Dashboard._showing,
     "reading_log": Dashboard._reading,
     "filtering": Dashboard._typing_filter,
