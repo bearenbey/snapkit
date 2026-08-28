@@ -503,7 +503,7 @@ class Dashboard:
             self.move(self.screen.window)
         elif key == "pageup":
             self.move(-self.screen.window)
-        elif key in ("home", "g"):
+        elif key == "home":
             self.cursor = 0
         elif key in ("end", "G"):
             self.cursor = max(0, len(self.rows) - 1)

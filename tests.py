@@ -1594,6 +1594,37 @@ def dashboard():
                 same(board.quit, False, f"{key} quit the dashboard")
             board.handle("q")
             same(board.quit, True, "q did not quit")
+    @check("every key the legend advertises reaches what it advertises")
+    def _():
+        from snapforge import screen
+        from snapforge.tui import Dashboard
+        with tempfile.TemporaryDirectory() as home:
+            store = db.Database(Path(home) / "snapkit.json")
+            for index in range(5):
+                store.add(db.Snap(name=f"s{index}", repo=f"a/b{index}"))
+            board = Dashboard(db=store)
+
+            called = []
+            for name in ("recheck", "update_selected", "build_selected",
+                         "pull_database"):
+                setattr(board, name, lambda name=name: called.append(name))
+
+            # g read the database, and an earlier binding took it for `home`.
+            board.cursor = 3
+            board.handle("g")
+            same(called, ["pull_database"], "g did not read the database")
+            same(board.cursor, 3, "g moved the cursor instead")
+
+            for key, name in (("r", "recheck"), ("u", "update_selected"),
+                              ("b", "build_selected")):
+                called.clear()
+                board.handle(key)
+                same(called, [name], f"{key} did not reach {name}")
+
+            lettered = {key for key, _ in screen.KEYS if len(key) == 1}
+            same(lettered - set("nrubtgdq"), set(),
+                 "a key is advertised that nothing here presses")
+
     @check("the list scrolls, and the cursor stays inside it")
     def _():
         from snapforge.tui import Dashboard
