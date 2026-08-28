@@ -1,7 +1,7 @@
 # FreeTube snap (repack of the official .deb)
 
-Turns `freetube_0.25.2_beta_amd64.deb` into a strictly confined snap
-(`freetube_0.25.2-beta_amd64.snap`). snapcraft builds it from
+Turns `freetube_0.25.3_beta_amd64.deb` into a strictly confined snap
+(`freetube_0.25.3-beta_amd64.snap`). snapcraft builds it from
 `snap/snapcraft.yaml`; `pack.py` adds the checks a recipe cannot express and
 then runs it.
 
@@ -19,7 +19,7 @@ spells it out, and builds the result.
 ## Install / run
 
 ```sh
-sudo snap install --dangerous freetube_0.25.2-beta_amd64.snap
+sudo snap install --dangerous freetube_0.25.3-beta_amd64.snap
 snap connect freetube:password-manager-service   # optional, see below
 freetube
 ```

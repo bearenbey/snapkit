@@ -1,5 +1,5 @@
 name: helium
-version: '0.15.7.1'
+version: '0.16.1.1'
 summary: Private, fast, and honest web browser
 description: |
   Helium is a private, fast, and honest web browser based on Chromium.
@@ -79,7 +79,7 @@ plugs:
 parts:
   helium:
     plugin: dump
-    source: helium-bin_0.15.7.1-1_amd64.deb
+    source: helium-bin_0.16.1.1-1_amd64.deb
     source-type: deb
     organize:
       opt/helium: usr/lib/helium

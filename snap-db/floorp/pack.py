@@ -81,7 +81,7 @@ def build(project):
 
     project.say(f"building Floorp {project.version}  (from {tarball.name})")
 
-    # No clean first: craft-parts re-pulls when the source changes.
+    # snapkit has already cleaned the part if the tarball under it changed.
     project.say("snapcraft pack")
     project.run("snapcraft", "pack")
 

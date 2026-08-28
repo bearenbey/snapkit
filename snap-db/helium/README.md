@@ -8,7 +8,7 @@ built by repackaging the official upstream amd64 `.deb`.
 ```
 pack.py                           assembles and builds the snap
                                   (`snapkit update helium` fetches the release)
-helium-bin_0.15.7.1-1_amd64.deb   upstream .deb (the source for the snap)
+helium-bin_0.16.1.1-1_amd64.deb   upstream .deb (the source for the snap)
 snap/snapcraft.yaml               snap recipe
 snap/gui/helium.desktop           desktop entry (taken from the .deb, Icon= repointed)
 snap/gui/helium.png               256x256 icon (taken from the .deb)

@@ -169,7 +169,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "c6e1bf91c9c25e7b8541676a5fb54371d1ccaffe0eb05f651dd96b5377c1f95b"
+          "sha256": "d2f3934ce4252c24dba4abb76f7a16c4c0bdd42b17c0702df6de3d39cd621d9e"
         },
         "snap/gui/emacs.png": {
           "exec": false,
@@ -180,7 +180,7 @@
           "sha256": "6c9b679685ad2d0a6d568206555cbe79e30bd61e9341c18055216068d2810c9f"
         }
       },
-      "fingerprint": "7a3987c1eac3f9d079b2acb6d46c029db9555fa76c9a268ceac1cfe74d6282cf",
+      "fingerprint": "ddce1c163977b64ed42aa7eb96ab3e03014e5f508b41d23d49aedd605c7e4f40",
       "name": "emacs",
       "pack": "",
       "record": {
@@ -193,7 +193,7 @@
           "asset": "emacs-{version}.tar.xz",
           "kind": "index",
           "pattern": "emacs-(\\d+\\.\\d+(?:\\.\\d+)?)\\.tar\\.xz\"",
-          "url": "https://ftp.gnu.org/gnu/emacs/"
+          "url": "https://mirrors.kernel.org/gnu/emacs/"
         },
         "verify": {
           "kind": "gpg",
@@ -251,7 +251,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "a80bff793c724b87f466f5a31a2342d11e22c062bbc99dfa0de265c6ba2aa459"
+          "sha256": "f404be747674f229a02139a11d38674379fe684238ad7fd4023cf6f046e39d67"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -267,14 +267,14 @@
         },
         "pack.py": {
           "exec": false,
-          "sha256": "faae3095bdd447be4c5991fadece63b966752ac4b1dd995cd7f4d7815e1e3f68"
+          "sha256": "5917578cfb886c966ca29cf02255f3149924e1ef0dce53775205cf11823905c4"
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "0d52c303bc6212edbfc927b1ad510b967f97e6c99cb7abf5e53a1cd6a9ad5bd0"
+          "sha256": "faf36828734dae56f06a86862fc3424fbc9c21003ae414a908a31815ab540d93"
         }
       },
-      "fingerprint": "8b15452bcccd3ca0582aa918283c80ba8065f6d2e5a4a22144c084496801945c",
+      "fingerprint": "340e0d81ced2272f4a94cfa55c21ba66a03658bcec876cbbe6004030f0967559",
       "name": "floorp",
       "pack": "pack.py",
       "record": {
@@ -290,19 +290,20 @@
         "repo": "Floorp-Projects/Floorp",
         "style": "artifact",
         "summary": "A Firefox-based browser built around vertical tabs and workspaces",
+        "tag": "v12.17.1",
         "url": "https://github.com/Floorp-Projects/Floorp",
-        "version": "12.17.0",
+        "version": "12.17.1",
         "write_version": false
       },
       "summary": "A Firefox-based browser built around vertical tabs and workspaces",
       "upstream": "Floorp-Projects/Floorp",
-      "version": "12.17.0"
+      "version": "12.17.1"
     },
     "freetube": {
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "c277214247f41fd0e87be011a635699cc061642e8b540ea2b46b15116396496c"
+          "sha256": "0fa6b714c546adb2404da8bbf1390256a17f8598b04390cfb06557c319e9a97d"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -314,14 +315,14 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "843dd8ce89f92fcb12a038d5dbad6adf9e68aec0e71537842300d4c67b9b85b3"
+          "sha256": "8f4307bc2f0dcf88a5ee25c31d8381c9feb54194c57f15600892ae6a350a351d"
         }
       },
-      "fingerprint": "938b993f363b6108f1a9d8ff1bde8d96d823cc8a69f8d6c58419cf9824003289",
+      "fingerprint": "b49dc217fc067641ac655453eaceae95a921a7ace907607164f11dd5f13deda0",
       "name": "freetube",
       "pack": "pack.py",
       "record": {
-        "asset": "freetube_0.25.2_beta_amd64.deb",
+        "asset": "freetube_0.25.3_beta_amd64.deb",
         "asset_glob": "freetube_*_amd64.deb",
         "asset_pattern": "^freetube_[0-9][0-9A-Za-z.+~_-]*_amd64\\.deb$",
         "kind": "deb",
@@ -329,14 +330,14 @@
         "repo": "FreeTubeApp/FreeTube",
         "style": "artifact",
         "summary": "A private YouTube client",
-        "tag": "v0.25.2-beta",
+        "tag": "v0.25.3-beta",
         "url": "https://github.com/FreeTubeApp/FreeTube",
-        "version": "0.25.2-beta",
+        "version": "0.25.3-beta",
         "write_version": false
       },
       "summary": "A private YouTube client",
       "upstream": "FreeTubeApp/FreeTube",
-      "version": "0.25.2-beta"
+      "version": "0.25.3-beta"
     },
     "godot": {
       "files": {
@@ -390,7 +391,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "c4d6513ea7a908892560dfe3d8a5b4fce2605f512c006afaa8466c183e1f2789"
+          "sha256": "74df6d2f69615776eac87ec91a634a4fd8ac43d2c148ed7f4d596a5590fc9fea"
         },
         "pack.py": {
           "exec": false,
@@ -410,14 +411,14 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "9116faf80d77bf54a9332f95ca4641417ad9eeb12386c37d24fdf79a471a7244"
+          "sha256": "0691a4ae3d836dc445cd2aad68a1e5bdf43bd177da969b5c5c18b2a51ee8e9f8"
         }
       },
-      "fingerprint": "120847ea8f10c5874e4f87bcac87e4f75e5c7030bb14fcfca090a55b83a0042f",
+      "fingerprint": "2d9f07cc9b4ac3369ef553f687a8607cfbb564a08ea007d458a45a4618f67e24",
       "name": "helium",
       "pack": "pack.py",
       "record": {
-        "asset": "helium-bin_0.15.7.1-1_amd64.deb",
+        "asset": "helium-bin_0.16.1.1-1_amd64.deb",
         "asset_glob": "helium-bin_*_amd64.deb",
         "asset_pattern": "^helium\\-bin_[0-9][0-9A-Za-z.+~_-]*\\-1_amd64\\.deb$",
         "kind": "deb",
@@ -425,13 +426,14 @@
         "repo": "imputnet/helium-linux",
         "style": "artifact",
         "summary": "Private, fast, and honest web browser",
+        "tag": "0.16.1.1",
         "url": "https://github.com/imputnet/helium-linux",
-        "version": "0.15.7.1",
+        "version": "0.16.1.1",
         "write_version": false
       },
       "summary": "Private, fast, and honest web browser",
       "upstream": "imputnet/helium-linux",
-      "version": "0.15.7.1"
+      "version": "0.16.1.1"
     },
     "irssi": {
       "files": {

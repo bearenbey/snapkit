@@ -1,7 +1,7 @@
 # Floorp snap (repack of the official tarball)
 
 Turns `floorp-linux-x86_64.tar.xz` into a strictly confined snap
-(`floorp_12.17.0_amd64.snap`). snapcraft builds it from
+(`floorp_12.17.1_amd64.snap`). snapcraft builds it from
 `snap/snapcraft.yaml`; `pack.py` adds the checks a recipe cannot express and
 then runs it.
 
@@ -23,7 +23,7 @@ every release; which release is packaged is read back out of the payload's own
 ## Install / run
 
 ```sh
-sudo snap install --dangerous floorp_12.17.0_amd64.snap
+sudo snap install --dangerous floorp_12.17.1_amd64.snap
 sudo snap connect floorp:browser-sandbox   # see below — not optional in practice
 floorp
 ```

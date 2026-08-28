@@ -1,7 +1,7 @@
 name: freetube
 title: FreeTube
 base: core24
-version: '0.25.2-beta'
+version: '0.25.3-beta'
 summary: A private YouTube client
 description: |
   FreeTube is an open source desktop YouTube player built with privacy in
@@ -9,7 +9,7 @@ description: |
   the tracking that comes with the official site.
 
   This snap is a repack of the official upstream `.deb` release
-  (freetube_0.25.2_beta_amd64.deb) and is not published or endorsed by the
+  (freetube_0.25.3_beta_amd64.deb) and is not published or endorsed by the
   FreeTube team.
 
 license: AGPL-3.0-or-later
@@ -56,7 +56,7 @@ apps:
 parts:
   freetube:
     plugin: dump
-    source: freetube_0.25.2_beta_amd64.deb
+    source: freetube_0.25.3_beta_amd64.deb
     source-type: deb
     override-build: |
       craftctl default

@@ -1,7 +1,7 @@
 name: floorp
 title: Floorp
 base: core24
-version: '12.17.0'
+version: '12.17.1'
 summary: A Firefox-based browser built around vertical tabs and workspaces
 description: |
   Floorp is a Gecko browser from Ablaze, built on Firefox with vertical tabs,

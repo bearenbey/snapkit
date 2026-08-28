@@ -140,7 +140,7 @@ byte-compiled here instead, which is how it ran for decades.
 ```
 
 This is an `artifact` project: `snapkit update emacs` resolves the newest tarball from
-the [GNU release index](https://ftp.gnu.org/gnu/emacs/), downloads it into
+the [GNU release index](https://mirrors.kernel.org/gnu/emacs/) on a mirror, downloads it into
 this directory, checks its detached GPG signature, rewrites every mention of
 the old version, and removes the superseded tarball.
 
@@ -151,7 +151,7 @@ reports `gpg: NOT verified (release key not in your keyring)` and continues.
 To make it a real check:
 
 ```sh
-curl -sO https://ftp.gnu.org/gnu/gnu-keyring.gpg
+curl -sO https://mirrors.kernel.org/gnu/gnu-keyring.gpg
 gpg --import gnu-keyring.gpg
 ```
 
