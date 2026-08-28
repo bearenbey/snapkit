@@ -15,6 +15,53 @@ from .versions import deb_compare, yaml_version
 # Where the desktop builds get their GTK and font helpers from.
 GNOME_SNAP = Path("/snap/gnome-46-2404/current")
 
+# A part name sits two spaces in, its settings deeper than that.
+PART_NAME = re.compile(r"^  ([A-Za-z0-9][\w.+-]*):\s*$")
+PART_SOURCE = re.compile(r"^\s+source:\s*(.+?)\s*$")
+
+
+def file_source_parts(yaml_path):
+    """The parts fed from a file here, as (part, file) pairs."""
+    yaml_path = Path(yaml_path)
+    if not yaml_path.is_file():
+        return []
+    directory = yaml_path.parent.parent
+    found, name, in_parts = [], "", False
+    for line in yaml_path.read_text(encoding="utf-8",
+                                    errors="replace").splitlines():
+        if line.strip() and not line.startswith(" "):
+            in_parts, name = line.startswith("parts:"), ""
+            continue
+        if not in_parts:
+            continue
+        part = PART_NAME.match(line)
+        if part:
+            name = part.group(1)
+            continue
+        source = PART_SOURCE.match(line)
+        if name and source:
+            given = directory / source.group(1).strip("\'\"")
+            if given.is_file():
+                found.append((name, given))
+    return found
+
+
+def stale_parts(directory):
+    """The parts whose source file was replaced since the last snap was packed.
+
+    craft-parts re-pulls a source when the URL it names changes, but a file
+    it has already copied is never looked at again. A release published under
+    the same filename as the one before it would otherwise be packed as its
+    predecessor, which is how the version check catches it.
+    """
+    directory = Path(directory)
+    packed = [path.stat().st_mtime for path in directory.glob("*.snap")]
+    if not packed:
+        return []
+    return [name for name, source
+            in file_source_parts(directory / "snap" / "snapcraft.yaml")
+            if source.stat().st_mtime > max(packed)]
+
 
 class BuildError(Exception):
     """Something the build cannot go on without."""

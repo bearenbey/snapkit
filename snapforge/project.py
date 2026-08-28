@@ -361,12 +361,35 @@ def package(snap, reporter, build_it=True):
     return build(snap, reporter)
 
 
+def clean_stale_parts(directory, reporter, extra=()):
+    """Clean the parts craft-parts pulled from a file that has changed since.
+
+    craft-parts re-pulls a source when the URL it names changes, but never
+    a file it has already copied, so a release published under the filename
+    its predecessor used would be packed as that predecessor.
+    """
+    replaced = buildlib.stale_parts(directory)
+    if not replaced or not shutil.which("snapcraft"):
+        return
+    reporter.detail(f"cleaning {', '.join(replaced)}: the source here is "
+                    f"newer than what craft-parts pulled")
+    command = ["snapcraft", "clean", *replaced,
+               *[flag for flag in extra if flag == "--destructive-mode"]]
+    if reporter.captures_output:
+        buildlib.stream(command, reporter, cwd=directory)
+    else:
+        with reporter.suspended():
+            subprocess.run(command, cwd=directory)
+
+
 def build(snap, reporter, extra=()):
     """Build the project, and find what it produced."""
     directory = snap.path
     if not directory.is_dir():
         raise ForgeError(f"no project at {directory} -- write it out first")
     before = {p.name for p in directory.glob("*.snap")}
+    if not snap.build_with:
+        clean_stale_parts(directory, reporter, extra)
 
     if snap.pack:
         # pack.py is imported, not run, so it needs nothing on the path.

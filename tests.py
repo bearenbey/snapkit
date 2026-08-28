@@ -2195,6 +2195,41 @@ def updater():
             finally:
                 buildlib.SNAPCRAFT_LOGS = was
 
+    @check("a part is cleaned when the file under it is newer than the snap")
+    def _():
+        import os
+        with tempfile.TemporaryDirectory() as home:
+            here = Path(home)
+            (here / "snap").mkdir()
+            (here / "overlay").mkdir()
+            (here / "app-linux-x86_64.tar.xz").write_bytes(b"payload")
+            (here / "snap" / "snapcraft.yaml").write_text(
+                "name: app\n"
+                "source-code: https://example.invalid/app\n"
+                "parts:\n"
+                "  app:\n"
+                "    plugin: dump\n"
+                "    source: app-linux-x86_64.tar.xz\n"
+                "  overlay:\n"
+                "    plugin: dump\n"
+                "    source: overlay\n"
+                "  upstream:\n"
+                "    plugin: dump\n"
+                "    source: https://example.invalid/app.tar.gz\n")
+
+            same(buildlib.stale_parts(here), [], "nothing packed yet")
+
+            packed = here / "app_1.0_amd64.snap"
+            packed.write_bytes(b"squashfs")
+            same(buildlib.stale_parts(here), [], "the snap is the newer of the two")
+
+            # What `snapkit update` does: the same filename, new contents.
+            (here / "app-linux-x86_64.tar.xz").write_bytes(b"a later release")
+            os.utime(here / "app-linux-x86_64.tar.xz",
+                     (packed.stat().st_mtime + 10,) * 2)
+            same(buildlib.stale_parts(here), ["app"],
+                 "only the part fed from the replaced file")
+
     @check("a build's own output is handed to the reporter line by line")
     def _():
         from snapforge.report import Reporter
