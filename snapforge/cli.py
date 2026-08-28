@@ -19,8 +19,8 @@ package file you already have, and keep it up to date afterwards.
   snapkit create ~/Downloads       ... or from whichever of those is in there
   snapkit create                   ... and with nothing named, it asks
   snapkit import <dir>             register packaging that already exists
-  snapkit package <name|repo>      build one already registered, from the register
-  snapkit search <text>            find a registered snap by name, repo or summary
+  snapkit package <name|repo>      build one already registered, no lookup
+  snapkit search <text>            find one by name, repository or summary
   snapkit list                     what is registered
   snapkit show <name>              one record, in full
   snapkit check [name ...]         what has a newer release upstream

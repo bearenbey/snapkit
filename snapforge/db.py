@@ -70,7 +70,7 @@ class Snap:
     command: str = ""
     # The file exposing build(p), which `snapkit build` imports and calls.
     pack: str = ""
-    build_with: str = ""            # a command, when neither of those is the way
+    build_with: str = ""            # a command, when neither of those is it
     icon: str = ""                   # relative to the project directory
     plugs: list = field(default_factory=list)
     directory: str = ""

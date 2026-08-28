@@ -65,7 +65,7 @@ def situation(snap, force=False):
 
 
 def situations(snaps):
-    """Check several upstreams at once, answered in the order they were given."""
+    """Check several upstreams at once, answered in the order given."""
     snaps = list(snaps)
     if not snaps:
         return []
@@ -74,7 +74,7 @@ def situations(snaps):
 
 
 def built_version(snap):
-    """The version of the newest .snap in the project, or "" if there is none."""
+    """The version of the newest .snap in the project, or "" if none."""
     directory = snap.path
     if not directory.is_dir():
         return ""

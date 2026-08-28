@@ -315,7 +315,7 @@ def _check_patterns(shape, config):
 
 
 def _check_templates(shape, config):
-    """A {placeholder} the shape cannot fill in, caught here rather than later."""
+    """A {placeholder} the shape cannot fill in, caught now not later."""
     for key, text in _given(config, shape.templates):
         allowed = shape.templates[key]
         try:

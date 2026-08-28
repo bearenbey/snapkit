@@ -777,7 +777,7 @@ def register():
 
 
 def payloads():
-    """Opening what was downloaded: the .deb reader, and what it finds inside."""
+    """Opening what was downloaded: the .deb reader, and what is inside."""
     from snapforge import inspect as ins
 
     @check("the .deb reader finds the program, the entry and the version")
@@ -1442,7 +1442,7 @@ def tracking():
 
 
 def _raise(exception):
-    """A stand-in that raises whatever it was given, whatever it is called with."""
+    """A stand-in that raises what it was given, however it is called."""
     def raiser(*_args, **_kwargs):
         raise exception
     return raiser
@@ -1848,6 +1848,28 @@ def dashboard():
         same(offered, set(sources.SHAPES) | {"repo", "none"},
              "the dashboard and the shapes have drifted")
         assert "t" in screen.advertised(), "no key says it is there"
+
+    @check("every mode is answered by a key handler and drawn by something")
+    def _():
+        # The keys and the drawing used to be two chains that had to agree,
+        # and adding a mode to one and not the other left it stuck on screen.
+        from snapforge import screen, tui
+
+        same(set(tui.HANDLERS), set(tui.MODES),
+             "a mode has no key handler, or a handler has no mode")
+        same(set(screen.FULL_SCREEN) - set(tui.MODES), set(),
+             "something is drawn full screen for a mode that cannot be up")
+
+        with tempfile.TemporaryDirectory() as home:
+            store = db.Database(Path(home) / "snapkit.json")
+            store.add(db.Snap(name="demo", repo="a/b"))
+            board = tui.Dashboard(db=store)
+            same(board.mode, "", "the list is not a mode")
+            for name in tui.MODES:
+                setattr(board, name, "x" if name != "picking" else object())
+                same(board.mode, name, f"{name} did not take the screen")
+                setattr(board, name, "" if name != "picking" else None)
+            same(board.mode, "", "a mode was left up")
 
     @check("a filter narrows the eye, not the register")
     def _():
@@ -2503,7 +2525,7 @@ def updater():
 
 
 def from_a_file():
-    """Packaging a file already on disk, and keeping it in step with its folder."""
+    """Packaging a file on disk, and keeping it in step with its folder."""
     from snapforge import classify, db, local, project, sources, update
 
     @check("every shape the classifier packages is found on a disk")

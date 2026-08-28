@@ -53,8 +53,21 @@ class Row:
                    (snap.name, snap.repo, snap.summary, snap.kind))
 
 
+def edited(text, key, lower=False):
+    """`text` with this keystroke applied, or None when it was not typing."""
+    if key == "backspace":
+        return text[:-1]
+    if key and len(key) == 1 and key.isprintable():
+        return text + (key.lower() if lower else key)
+    return None
+
+
 # What needs a person, first, when the list is ordered by attention.
 ATTENTION = {"behind": 0, "failed": 1, "error": 2, "untracked": 3}
+
+# The modal states, in the order they take the keyboard from one another.
+MODES = ("asking", "tracking", "prompting", "picking", "confirm", "detail",
+         "helping", "reading_log", "filtering")
 
 
 @dataclass
@@ -147,6 +160,19 @@ class Dashboard:
         with self.lock:
             self.log.append(Text(text, style=style) if style else Text(text))
 
+    def idle(self):
+        """Back to saying what the register holds, with nothing in flight."""
+        self.status = f"{len(self.known)} registered"
+
+    @property
+    def mode(self):
+        """Whichever modal state is up, or "" for the list itself.
+
+        Both the keys and the drawing read this, so a new one cannot be
+        added to the board and go unhandled by either of them.
+        """
+        return next((name for name in MODES if getattr(self, name)), "")
+
     # -- work ----------------------------------------------------------------
 
     def run_job(self, label, function, *args):
@@ -235,7 +261,7 @@ class Dashboard:
                     self.say(f"{repo} is already registered as {known.name} -- "
                              f"select it and press u to update it", "yellow")
                     self.select(known.name)
-                    self.status = f"{len(self.known)} registered"
+                    self.idle()
                     return
                 made = project.plan(text, reporter)
             if len(made.candidates) > 1:
@@ -272,7 +298,7 @@ class Dashboard:
                 self.say(f"{directory} is {snap.name} -- select it and press u "
                          f"to pick up what is in there", "yellow")
                 self.select(snap.name)
-                self.status = f"{len(self.known)} registered"
+                self.idle()
                 return None
         return project.plan_local(text, reporter)
 
@@ -327,12 +353,12 @@ class Dashboard:
                     self.say(f"{name}: {exc}", "yellow")
             self.reload()
             self.say(f"wrote {taken} of {len(new)} into {where}", "bold green")
-            self.status = f"{len(self.known)} registered"
+            self.idle()
 
         self.run_job("pulling", work)
 
     def track(self, name, text):
-        """Point a snap at a different upstream, typed in as `kind key=value`."""
+        """Point a snap at another upstream, typed as `kind key=value`."""
         snap = self.db.snaps.get(name)
         words = text.split()
         if snap is None or not words:
@@ -359,7 +385,7 @@ class Dashboard:
             except (NetworkError, project.ForgeError) as exc:
                 # Written down untried, a wrong setting reads as up to date.
                 self.say(f"{name} was left as it was: {exc}", "red")
-                self.status = f"{len(self.known)} registered"
+                self.idle()
                 return
 
             self.db.add(snap, replace=True)
@@ -373,7 +399,7 @@ class Dashboard:
                 row.state, row.latest = found.state, found.latest
                 row.release, row.asset = found.release, found.asset
                 row.note = found.note or found.problem
-            self.status = f"{len(self.known)} registered"
+            self.idle()
 
         self.run_job("tracking", work)
 
@@ -422,7 +448,7 @@ class Dashboard:
             self.status = f"packaging {snap.name} from the register"
             project.package(snap, reporter, build_it=False)
             self._build(snap, reporter, row)
-            self.status = f"{len(self.known)} registered"
+            self.idle()
 
         self.run_job("packaging", work)
 
@@ -524,7 +550,7 @@ class Dashboard:
             self.status = f"building {row.name}"
             project.adopt(row.snap, reporter)
             self._build(row.snap, reporter, row)
-            self.status = f"{len(self.known)} registered"
+            self.idle()
 
         self.run_job("building", work)
 
@@ -563,7 +589,7 @@ class Dashboard:
         self.say(f"removed {name} from the register, and its recipe with it",
                  "yellow")
         self.say(f"the project directory is still at {row.snap.path}", "dim")
-        self.status = f"{len(self.known)} registered"
+        self.idle()
 
     def render(self):
         """One frame of whatever the board currently is."""
@@ -581,27 +607,10 @@ class Dashboard:
     # -- keys ----------------------------------------------------------------
 
     def handle(self, key):
-        # First: the worker is blocked, and any other key would mean something.
-        if self.asking:
-            return self._answering(key)
-        if self.tracking:
-            return self._typing_track(key)
-        if self.prompting:
-            return self._typing(key)
-        if self.picking is not None:
-            return self._choosing(key)
-        if self.confirm:
-            return self._confirming(key)
-        if self.detail is not None:
-            self.detail = None
-            return
-        if self.helping:
-            self.helping = False
-            return
-        if self.reading_log:
-            return self._reading(key)
-        if self.filtering:
-            return self._typing_filter(key)
+        # Whatever is up has the keyboard: the list only gets what is left.
+        mode = self.mode
+        if mode:
+            return HANDLERS[mode](self, key)
         if key == "q":
             # Only q: Escape means "not this", and there is nothing to leave.
             if self.busy:
@@ -657,6 +666,10 @@ class Dashboard:
         elif key == "enter" and self.row:
             self.detail = self.row.snap
 
+    def _showing(self, key):
+        """A record, or the keys page: any key puts it away."""
+        self.detail, self.helping = None, False
+
     def _typing(self, key):
         """The one box: find something registered, or add something new."""
         if key == "escape":
@@ -677,12 +690,10 @@ class Dashboard:
             elif text:
                 self.create(text)
         else:
-            if key == "backspace":
-                self.prompt = self.prompt[:-1]
-            elif key and len(key) == 1 and key.isprintable():
-                self.prompt += key
-            else:
+            typed = edited(self.prompt, key)
+            if typed is None:
                 return
+            self.prompt = typed
             self.matches = self.db.search(self.prompt)
             self.match_cursor = 0
 
@@ -694,10 +705,10 @@ class Dashboard:
             name, text = self.tracking, self.prompt.strip()
             self.tracking, self.prompt = "", ""
             self.track(name, text)
-        elif key == "backspace":
-            self.prompt = self.prompt[:-1]
-        elif key and len(key) == 1 and key.isprintable():
-            self.prompt += key
+        else:
+            typed = edited(self.prompt, key)
+            if typed is not None:
+                self.prompt = typed
 
     def _reading(self, key):
         """Scrolling back through what has already gone past."""
@@ -724,12 +735,11 @@ class Dashboard:
             self.filtering, self.needle = False, ""
         elif key == "enter":
             self.filtering = False
-        elif key == "backspace":
-            self.needle = self.needle[:-1]
-        elif key and len(key) == 1 and key.isprintable():
-            self.needle += key.lower()
         else:
-            return
+            typed = edited(self.needle, key, lower=True)
+            if typed is None:
+                return
+            self.needle = typed
         self.restack()
 
     def _close_prompt(self):
@@ -835,6 +845,20 @@ class DashboardReporter(Reporter):
 
     def suspended(self):
         return self.dashboard.suspended()
+
+
+# One handler for every mode, so a mode cannot be added and go unanswered.
+HANDLERS = {
+    "asking": Dashboard._answering,
+    "tracking": Dashboard._typing_track,
+    "prompting": Dashboard._typing,
+    "picking": Dashboard._choosing,
+    "confirm": Dashboard._confirming,
+    "detail": Dashboard._showing,
+    "helping": Dashboard._showing,
+    "reading_log": Dashboard._reading,
+    "filtering": Dashboard._typing_filter,
+}
 
 
 def run_dashboard(db):

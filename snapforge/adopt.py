@@ -98,7 +98,7 @@ def version_from(source, artifact):
         if found:
             return found.group(1)
         found = re.search(r"[-_]([0-9]{3,})[-_.]", text)
-        if found:                       # a bare build number, as sublime-text has
+        if found:                  # a bare build number, as sublime-text
             return found.group(1)
     return ""
 

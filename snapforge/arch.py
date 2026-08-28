@@ -61,7 +61,7 @@ def host():
 
 @functools.lru_cache(maxsize=1)
 def detected():
-    """What this machine is, asked of dpkg first because snapd agrees with it."""
+    """What this machine is, asked of dpkg because snapd agrees with it."""
     if shutil.which("dpkg"):
         try:
             done = subprocess.run(["dpkg", "--print-architecture"],
@@ -74,7 +74,7 @@ def detected():
 
 
 def _from_machine(machine):
-    """A uname spelling as a Debian name, or itself when it is not a spelling."""
+    """A uname spelling as a Debian name, or itself when it is not one."""
     machine = machine.strip().lower()
     return FROM_MACHINE.get(machine, machine)
 
@@ -110,7 +110,7 @@ def other(name):
 
 
 def _alternation(words):
-    """One regex matching any of these words, and none of them inside another."""
+    """One regex matching any of these words, none of them inside another."""
     parts = []
     for word in sorted(set(words), key=len, reverse=True):
         # `x86` is 32-bit only when it is not the front of x86_64, and the

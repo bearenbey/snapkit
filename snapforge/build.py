@@ -47,7 +47,7 @@ def file_source_parts(yaml_path):
 
 
 def stale_parts(directory):
-    """The parts whose source file was replaced since the last snap was packed.
+    """The parts whose file was replaced since the last snap was packed.
 
     craft-parts re-pulls a source when the URL it names changes, but a file
     it has already copied is never looked at again. A release published under
@@ -299,7 +299,7 @@ class Build:
                     one.chmod(one.stat().st_mode | 0o111)
 
     def missing_libraries(self, binary):
-        """What ldd cannot resolve for a binary, empty when nothing is missing."""
+        """Whatever ldd cannot resolve for a binary, empty when it can."""
         done = subprocess.run(["ldd", str(binary)], capture_output=True, text=True)
         return [line.split()[0] for line in done.stdout.splitlines()
                 if "not found" in line]

@@ -92,7 +92,8 @@ project needs no new client, and a client a version behind still works.
       "summary": "A calmer way to browse the web",
       "upstream": "zen-browser/desktop",
       "fingerprint": "9f86d081...",
-      "record": { "style": "artifact", "asset_glob": "zen.linux-x86_64.tar.xz" },
+      "record": { "style": "artifact",
+                  "asset_glob": "zen.linux-x86_64.tar.xz" },
       "files": {
         "snap/snapcraft.yaml": { "sha256": "...", "exec": false },
         "overlay/bin/launcher": { "sha256": "...", "exec": true }

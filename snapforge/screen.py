@@ -123,15 +123,11 @@ class Screen:
         self.height = height
         self.window = max(1, height - self._header_height() - LOG_HEIGHT - 4)
 
-        # Any of these is the whole screen while it is up.
-        if self.board.detail is not None:
-            return self._details()
-        if self.board.picking is not None:
-            return self._picker()
-        if self.board.helping:
-            return self._help()
-        if self.board.reading_log:
-            return self._logbook()
+        # A mode that wants the whole screen takes it, off the one list of
+        # modes the keys are dispatched through.
+        whole = FULL_SCREEN.get(self.board.mode)
+        if whole:
+            return whole(self)
 
         body = Layout(name="body")
         if width >= SPLIT_AT and self.board.rows:
@@ -197,27 +193,31 @@ class Screen:
             line.append("   ")
             line.append(self.board.status, style="dim")
         return line
+    def _question(self, title, style, *parts):
+        """A yes-or-no across the top, with no as the default it shows."""
+        return Panel(Text.assemble(*parts, ("[y/N]", "bold " + style)),
+                     title=title, box=box.ROUNDED, border_style=style,
+                     padding=(0, 1))
+
     def _asking_header(self):
-        return Panel(
-            Text.assemble(
-                (self.board.asking, "bold"),
-                ("  it is not signed, so this installs with --dangerous.  ",
-                 "dim"),
-                ("[y/N]", "bold " + ACCENT)),
-            title="install", box=box.ROUNDED, border_style=ACCENT,
-            padding=(0, 1))
+        return self._question(
+            "install", ACCENT,
+            (self.board.asking, "bold"),
+            ("  it is not signed, so this installs with --dangerous.  ", "dim"))
 
     def _confirm_header(self):
-        return Panel(
-            Text.assemble(
-                ("forget ", "bold"), (self.board.confirm, "bold yellow"),
-                ("?  its record and the snapcraft.yaml stored with it go too. "
-                 "The project directory stays.  ", "bold"),
-                ("[y/N]", "bold red")),
-            title="delete", box=box.ROUNDED, border_style="red", padding=(0, 1))
+        return self._question(
+            "delete", "red",
+            ("forget ", "bold"), (self.board.confirm, "bold yellow"),
+            ("?  its record and the snapcraft.yaml stored with it go too. "
+             "The project directory stays.  ", "bold"))
+    def _caret(self, shown="▌", hidden=" "):
+        """The blink at the end of whatever is being typed."""
+        return shown if self.frame // 6 % 2 else hidden
+
     def _track_header(self, width=100):
         """Typing where one snap's releases should be looked for."""
-        caret = "▌" if self.frame // 6 % 2 else " "
+        caret = self._caret()
         # One line, whatever is typed: a wrapped header is a header of the
         # wrong height, and these specs run to a couple of hundred characters.
         room = max(20, width - len(self.board.tracking) - 10)
@@ -241,7 +241,7 @@ class Screen:
                      border_style=ACCENT, padding=(0, 1))
 
     def _prompt_header(self):
-        caret = "▌" if self.frame // 6 % 2 else " "
+        caret = self._caret()
         body = Text.assemble(("▸ ", ACCENT), ("find or add  ", "dim"),
                              (self.board.prompt, "bold " + ACCENT), (caret, ACCENT))
         lines = [body]
@@ -324,7 +324,7 @@ class Screen:
         if len(self.board.rows) > last - first:
             title = f"registered  {first + 1}-{last} of {len(self.board.rows)}"
         if self.board.needle:
-            caret = "|" if self.board.filtering and self.frame // 6 % 2 else ""
+            caret = self._caret("|", "") if self.board.filtering else ""
             title += f"   /{self.board.needle}{caret}"
             hidden = len(self.board.known) - len(self.board.rows)
             if hidden:
@@ -490,6 +490,15 @@ class Screen:
         return Panel(Group(head, Text(""), yaml),
                      title="any key to go back", box=box.ROUNDED,
                      border_style=ACCENT, padding=(0, 1))
+
+# The modes that take the whole screen, by the name tui.MODES gives them.
+FULL_SCREEN = {
+    "detail": Screen._details,
+    "picking": Screen._picker,
+    "helping": Screen._help,
+    "reading_log": Screen._logbook,
+}
+
 
 def _gradient(text, start=(0x4C, 0xE0, 0xFF), end=(0xB9, 0x8C, 0xFF)):
     """The wordmark and every snap name, cyan to violet across the letters."""
