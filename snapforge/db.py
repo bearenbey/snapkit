@@ -80,13 +80,13 @@ class Snap:
     builds: int = 0                              # how many there have been
 
     # None is "not read yet"; an imported project genuinely has no recipe.
-    recipe_text: Optional[str] = None
+    recipe_text: str | None = None
 
     # Which register this came from; not written down, it is where it was found.
-    store_root: Optional[Path] = None
+    store_root: Path | None = None
 
     # Where it was read from, when that is not where it would be written.
-    record_file: Optional[str] = None
+    record_file: str | None = None
 
     @property
     def store(self):

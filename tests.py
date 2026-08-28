@@ -538,6 +538,22 @@ def register():
     """The register: one file per snap, the recipe beside it, and migration."""
     from snapforge import db, github, recipe
 
+    @check("every annotation resolves, on a Python that evaluates them eagerly")
+    def _():
+        # 3.14 defers annotations, so a name that is not imported goes unseen
+        # here and raises NameError at import time on 3.13 and earlier.
+        import importlib
+        import pkgutil
+        import typing
+
+        import snapforge
+
+        for found in pkgutil.iter_modules(snapforge.__path__):
+            module = importlib.import_module(f"snapforge.{found.name}")
+            for thing in vars(module).values():
+                if isinstance(thing, type) and thing.__module__ == module.__name__:
+                    typing.get_type_hints(thing)
+
     @check("the register survives a round trip, and delete takes the recipe")
     def _():
         with tempfile.TemporaryDirectory() as home:
