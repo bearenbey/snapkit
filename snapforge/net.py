@@ -2,12 +2,15 @@
 
 import hashlib
 import platform
+import threading
 import time
 import urllib.error
 import urllib.request
+from contextlib import contextmanager
 
 META_TIMEOUT = 30       # seconds for one metadata request
 DOWNLOAD_TIMEOUT = 60   # seconds of no progress at all on a download
+CHECK_TIMEOUT = 15      # seconds for a whole check, however many requests
 CHUNK = 1 << 18
 
 # urllib says it is Python, and some CDNs treat that differently. The machine
@@ -18,6 +21,37 @@ USER_AGENT = f"Mozilla/5.0 (X11; Linux {platform.machine()}) snapkit/1"
 
 class NetworkError(Exception):
     """Upstream could not be reached, or did not say what was expected."""
+
+
+# Per thread, because a check of the whole register runs several at once.
+_clock = threading.local()
+
+
+@contextmanager
+def deadline(seconds):
+    """Bound everything done in here, however many requests it turns into.
+
+    A per-request timeout does not answer "how long may this take", since
+    one check can resolve an index, then a release, then an asset. This
+    does, and the requests inside it shorten to whatever is left.
+    """
+    was = getattr(_clock, "until", None)
+    _clock.until = time.monotonic() + seconds
+    try:
+        yield
+    finally:
+        _clock.until = was
+
+
+def _left(timeout, url):
+    """What one request may take, against whatever deadline is running."""
+    until = getattr(_clock, "until", None)
+    if until is None:
+        return timeout
+    remaining = until - time.monotonic()
+    if remaining <= 0:
+        raise NetworkError(f"{url}: timed out")
+    return min(timeout, remaining)
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -38,12 +72,14 @@ def _open(opener, url, method="GET", timeout=META_TIMEOUT, retries=1):
         try:
             request = urllib.request.Request(
                 url, method=method, headers={"User-Agent": USER_AGENT})
-            return opener.open(request, timeout=timeout)
+            return opener.open(request, timeout=_left(timeout, url))
         except urllib.error.HTTPError:
             raise
         except (urllib.error.URLError, OSError) as exc:
             last = exc
+            # A retry it has no time for is a wait nobody asked for.
             if attempt < retries:
+                _left(1 + attempt, url)
                 time.sleep(1 + attempt)
     raise NetworkError(f"{url}: {last}")
 

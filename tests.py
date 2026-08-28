@@ -1871,6 +1871,53 @@ def dashboard():
                 setattr(board, name, "" if name != "picking" else None)
             same(board.mode, "", "a mode was left up")
 
+    @check("a check that runs long is a timeout, not a wait")
+    def _():
+        import time as _time
+        from snapforge import net, update
+
+        # Nothing left on the clock: the request is refused before a socket.
+        with net.deadline(0.05):
+            _time.sleep(0.06)
+            try:
+                net.get_text("https://example.invalid/never-asked")
+                assert False, "should have given up"
+            except net.NetworkError as exc:
+                assert "timed out" in str(exc), exc
+
+        # With time left, a request is given what is left and no more.
+        asked = []
+
+        class Opener:
+            @staticmethod
+            def open(request, timeout=None):
+                asked.append(timeout)
+                raise OSError("not answering")
+
+        with net.deadline(2):
+            try:
+                net._open(Opener, "https://example.invalid/", retries=0)
+            except net.NetworkError:
+                pass
+        assert asked and asked[0] <= 2, f"asked for {asked}, not what was left"
+        same(net._left(30, "u"), 30, "the deadline outlived its block")
+
+        # And a snap whose upstream will not answer reads as unreachable.
+        was = update.check
+
+        def slow(snap, force=False):
+            _time.sleep(0.2)
+            raise net.NetworkError("https://nowhere.invalid/: timed out")
+
+        update.check = slow
+        try:
+            found = update.situation(db.Snap(name="demo", repo="a/b"),
+                                     timeout=0.05)
+            same(found.state, "error", "a timeout is not an up-to-date")
+            assert "timed out" in found.problem, found.problem
+        finally:
+            update.check = was
+
     @check("a filter narrows the eye, not the register")
     def _():
         from snapforge.tui import Dashboard

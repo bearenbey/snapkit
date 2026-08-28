@@ -52,10 +52,16 @@ class Situation:
         return self.release.version if self.release is not None else ""
 
 
-def situation(snap, force=False):
-    """`check`, with its two exceptions turned into answers."""
+def situation(snap, force=False, timeout=net.CHECK_TIMEOUT):
+    """`check`, with its two exceptions and its clock turned into answers.
+
+    One check can be several requests, so the bound is on the check rather
+    than on any of them: an upstream that cannot answer in `timeout` is
+    reported as unreachable, not waited for.
+    """
     try:
-        release, asset, note = check(snap, force)
+        with net.deadline(timeout):
+            release, asset, note = check(snap, force)
     except NotTracked as exc:
         return Situation("untracked", problem=str(exc))
     except (NetworkError, ForgeError) as exc:
@@ -127,7 +133,9 @@ def retrack(snap, upstream, force=False):
     was = dict(snap.upstream)
     snap.upstream = dict(upstream)
     try:
-        return resolve(snap)
+        # Bounded like a check: this is one, run before anything is written.
+        with net.deadline(net.CHECK_TIMEOUT):
+            return resolve(snap)
     except (NetworkError, ForgeError):
         if force:
             return None
