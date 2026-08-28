@@ -6,6 +6,7 @@
 ![base](https://img.shields.io/badge/snap%20base-core24-informational)
 ![confinement](https://img.shields.io/badge/confinement-classic-informational)
 ![deps](https://img.shields.io/badge/python%20deps-rich-informational)
+![licence](https://img.shields.io/badge/licence-MIT-informational)
 
 > [!IMPORTANT]
 > **This project is co-authored with Claude, Anthropic's Opus 5 model, and
