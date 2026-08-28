@@ -1,0 +1,29 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor in pyproject.toml, and a current one.
+        python: ["3.10", "3.13"]
+    name: python ${{ matrix.python }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      # The tool's only dependency. The tests need nothing else.
+      - run: pip install "rich>=13.0"
+
+      # Offline only: --online talks to GitHub and would be rate limited here.
+      - run: ./tests.py
