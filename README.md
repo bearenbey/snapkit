@@ -474,7 +474,7 @@ including `say`, `download` and a `module()` for a build that runs to more
 than one file.
 
 Six of them are not a GitHub release at all: Discord's download redirect,
-Emacs on ftp.gnu.org, ffmpeg.org, and the apt repositories Signal, Sublime
+Emacs on a GNU mirror, ffmpeg.org, and the apt repositories Signal, Sublime
 Text and Unity publish through, and two more build from the archive GitHub
 rolls out of a tag rather than from anything attached to the release. Those
 are shapes rather than exceptions, and the shape is in the record:

@@ -54,9 +54,10 @@ CONFIG = {
                                "{version}/{asset}")),
 
     # One index for every release; only the top-level tarballs match.
+    # A mirror, because ftp.gnu.org refuses as often as it answers.
     "emacs": dict(
         style="artifact", asset_glob="emacs-*.tar.xz",
-        upstream=dict(kind="index", url="https://ftp.gnu.org/gnu/emacs/",
+        upstream=dict(kind="index", url="https://mirrors.kernel.org/gnu/emacs/",
                       pattern=r'emacs-(\d+\.\d+(?:\.\d+)?)\.tar\.xz"',
                       asset="emacs-{version}.tar.xz"),
         verify=dict(kind="gpg", suffix=".sig")),
