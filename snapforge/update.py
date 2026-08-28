@@ -2,9 +2,9 @@
 
 import shutil
 import tempfile
-from pathlib import Path
-
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from pathlib import Path
 
 from . import classify, github, local, net, recipe, rewrite, sources
 from .db import now
@@ -17,6 +17,10 @@ class NotTracked(ForgeError):
 
 
 # What a check can conclude, in one copy: the two front ends had drifted.
+# Upstreams answer in their own time and none of them waits on another, so
+# asking them one at a time is the whole cost of a check.
+AT_ONCE = 8
+
 STATES = {
     "current": "up to date",
     "behind": "UPDATE AVAILABLE",
@@ -58,6 +62,15 @@ def situation(snap, force=False):
         return Situation("error", problem=str(exc))
     return Situation("behind" if asset is not None else "current",
                      release=release, asset=asset, note=note)
+
+
+def situations(snaps):
+    """Check several upstreams at once, answered in the order they were given."""
+    snaps = list(snaps)
+    if not snaps:
+        return []
+    with ThreadPoolExecutor(min(AT_ONCE, len(snaps))) as pool:
+        return list(pool.map(situation, snaps))
 
 
 def built_version(snap):

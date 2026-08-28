@@ -1647,7 +1647,7 @@ def dashboard():
 
             called = []
             for name in ("recheck", "update_selected", "build_selected",
-                         "pull_database"):
+                         "pull_database", "update_all"):
                 setattr(board, name, lambda name=name: called.append(name))
 
             # g read the database, and an earlier binding took it for `home`.
@@ -1657,14 +1657,34 @@ def dashboard():
             same(board.cursor, 3, "g moved the cursor instead")
 
             for key, name in (("r", "recheck"), ("u", "update_selected"),
-                              ("b", "build_selected")):
+                              ("b", "build_selected"), ("U", "update_all")):
                 called.clear()
                 board.handle(key)
                 same(called, [name], f"{key} did not reach {name}")
 
-            lettered = {key for key, _ in screen.KEYS if len(key) == 1}
-            same(lettered - set("nrubtgdq"), set(),
-                 "a key is advertised that nothing here presses")
+            # and the ones that only change what is on screen
+            board.handle("l")
+            same(board.reading_log, True, "l did not open the log")
+            board.handle("q")
+            same((board.reading_log, board.quit), (False, False),
+                 "q in the log should close it, not quit the dashboard")
+            board.handle("?")
+            same(board.helping, True, "? did not open the keys")
+            board.handle("x")
+            same(board.helping, False, "the keys page would not close")
+            board.handle("/")
+            same(board.filtering, True, "/ did not open the filter")
+            board.handle("escape")
+            same((board.filtering, board.needle), (False, ""),
+                 "escape left the filter behind")
+            was = board.order
+            board.handle("s")
+            assert board.order != was, "s did not change the order"
+
+            lettered = {key for key, _ in screen.KEYS + screen.SHORT_KEYS
+                        if len(key) == 1}
+            same(lettered - set("nrub/l?q"), set(),
+                 "a key is advertised in the footer that nothing here presses")
 
     @check("the list scrolls, and the cursor stays inside it")
     def _():
@@ -1827,7 +1847,78 @@ def dashboard():
         offered = {form.split()[0] for form, _ in screen._TRACK_HINTS}
         same(offered, set(sources.SHAPES) | {"repo", "none"},
              "the dashboard and the shapes have drifted")
-        assert ("t", "track") in screen.KEYS, "no key says it is there"
+        assert "t" in screen.advertised(), "no key says it is there"
+
+    @check("a filter narrows the eye, not the register")
+    def _():
+        from snapforge.tui import Dashboard
+        with tempfile.TemporaryDirectory() as home:
+            store = db.Database(Path(home) / "snapkit.json")
+            for name, repo in (("btop", "aristocratos/btop"),
+                               ("zen", "zen-browser/desktop"),
+                               ("floorp", "Floorp-Projects/Floorp")):
+                store.add(db.Snap(name=name, repo=repo, version="1.0",
+                                  summary="a browser" if name != "btop"
+                                  else "a resource monitor"))
+            board = Dashboard(db=store)
+            same(len(board.rows), 3)
+
+            board.handle("/")
+            for key in "brow":
+                board.handle(key)
+            same([r.name for r in board.rows], ["floorp", "zen"],
+                 "the filter reads the summary as well as the name")
+            same(len(board.known), 3, "the filter threw records away")
+
+            # r and U work on the register, so a filter cannot hide work.
+            board.known[0].state = "behind"
+            same([r.name for r in board.known if r.behind], ["btop"],
+                 "a filtered-out row stopped being behind")
+
+            board.handle("escape")
+            same((board.needle, len(board.rows)), ("", 3), "escape left it narrowed")
+
+    @check("ordering by attention puts what needs doing at the top")
+    def _():
+        from snapforge.tui import Dashboard
+        with tempfile.TemporaryDirectory() as home:
+            store = db.Database(Path(home) / "snapkit.json")
+            for name in ("aaa", "bbb", "ccc"):
+                store.add(db.Snap(name=name, repo=f"o/{name}", version="1.0"))
+            board = Dashboard(db=store)
+            same([r.name for r in board.rows], ["aaa", "bbb", "ccc"])
+
+            board.row_for("ccc").state = "behind"
+            board.row_for("bbb").state = "failed"
+            board.handle("s")
+            same([r.name for r in board.rows], ["ccc", "bbb", "aaa"],
+                 "behind, then failed, then the rest")
+            board.handle("s")
+            same([r.name for r in board.rows], ["aaa", "bbb", "ccc"],
+                 "s did not put the register order back")
+
+    @check("the log scrolls back, and stops at both ends")
+    def _():
+        from snapforge.tui import Dashboard
+        with tempfile.TemporaryDirectory() as home:
+            store = db.Database(Path(home) / "snapkit.json")
+            store.add(db.Snap(name="demo", repo="a/b"))
+            board = Dashboard(db=store)
+            for index in range(50):
+                board.say(f"line {index}")
+
+            board.handle("l")
+            same((board.reading_log, board.log_offset), (True, 0))
+            for _ in range(5):
+                board.handle("up")
+            same(board.log_offset, 5, "up did not scroll back")
+            for _ in range(500):
+                board.handle("up")
+            assert board.log_offset < len(board.log), "scrolled past the oldest"
+            board.handle("G")
+            same(board.log_offset, 0, "G did not come back to the newest")
+            board.handle("escape")
+            same(board.reading_log, False, "escape did not close the log")
 
     @check("delete asks before it forgets")
     def _():
@@ -1864,6 +1955,13 @@ def dashboard():
             board.prompting, board.confirm = False, "s0"
             console.print(board.render())
             board.confirm, board.detail = "", board.rows[0].snap
+            console.print(board.render())
+            # The three that take the whole screen to themselves.
+            board.detail, board.helping = None, True
+            console.print(board.render())
+            board.helping, board.reading_log = False, True
+            console.print(board.render())
+            board.reading_log, board.filtering, board.needle = False, True, "s1"
             console.print(board.render())
     @check("the screen fits the terminal it is given")
     def _():
@@ -2044,12 +2142,12 @@ def dashboard():
                 or types.SimpleNamespace(returncode=0))
             try:
                 board._install(types.SimpleNamespace(name="x", path=str(strict)),
-                               here / "x_1_amd64.snap", reporter)
+                               here / "x_1_amd64.snap")
                 same(ran[-1], ["sudo", "snap", "install", "--dangerous",
                                str(here / "x_1_amd64.snap")])
 
                 board._install(types.SimpleNamespace(name="x", path=str(classic)),
-                               here / "x_1_amd64.snap", reporter)
+                               here / "x_1_amd64.snap")
                 assert "--classic" in ran[-1], ran[-1]
             finally:
                 tui.subprocess = was

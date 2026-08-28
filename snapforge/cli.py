@@ -449,9 +449,10 @@ def cmd_check(db, args, reporter):
     if not targets:
         print("nothing registered yet")
         return 0
+    # Asked all at once: the wait is the slowest upstream, not the sum.
+    findings = update.situations(targets)
     print(f"{'NAME':<20} {'BUILT':<16} {'UPSTREAM':<16} STATUS")
-    for snap in targets:
-        found = update.situation(snap)
+    for snap, found in zip(targets, findings):
         upstream = found.latest or {"untracked": "-"}.get(found.state, "?")
         status = found.words
         if found.behind:

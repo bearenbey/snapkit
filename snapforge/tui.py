@@ -3,6 +3,7 @@
 import subprocess
 import threading
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -43,13 +44,26 @@ class Row:
     def behind(self):
         return self.state == "behind"
 
+    def matches(self, needle):
+        """Whether this row is one a filter of `needle` keeps."""
+        if not needle:
+            return True
+        snap = self.snap
+        return any(needle in (field or "").lower() for field in
+                   (snap.name, snap.repo, snap.summary, snap.kind))
+
+
+# What needs a person, first, when the list is ordered by attention.
+ATTENTION = {"behind": 0, "failed": 1, "error": 2, "untracked": 3}
+
 
 @dataclass
 class Dashboard:
     """Everything on screen, and the one thread allowed to change it."""
 
     db: object
-    rows: list = field(default_factory=list)
+    known: list = field(default_factory=list)     # a Row for every record
+    rows: list = field(default_factory=list)      # those the list is showing
     cursor: int = 0
     busy: str = ""
     status: str = ""
@@ -63,7 +77,14 @@ class Dashboard:
     matches: list = field(default_factory=list)   # what the prompt found
     match_cursor: int = 0
     detail: object = None     # a Snap being looked at, or None
+    reading_log: bool = False  # the activity log, full screen
+    log_offset: int = 0        # lines back from the newest, 0 at the tail
+    filtering: bool = False    # a filter is being typed
+    needle: str = ""           # what the list is narrowed to, "" for all
+    order: str = "register"    # or "attention": what needs doing, first
+    helping: bool = False      # the key list, full screen
     quit: bool = False
+    live = None               # rich's Live, once run_dashboard has one
     # Scroll, height and frame live on self.screen: drawing, not register.
 
     def __post_init__(self):
@@ -80,19 +101,37 @@ class Dashboard:
         for record, why in getattr(self.db, "problems", []):
             self.say(f"{record.name} could not be read and was left out: {why}",
                      "bold red")
-        self.status = (f"{len(self.rows)} registered -- press n to make one from "
-                       f"a github repository" if self.rows else
+        self.status = (f"{len(self.known)} registered -- press n to make "
+                       f"one from a github repository" if self.known else
                        "nothing registered yet -- press n and paste a github url")
 
     # -- state ---------------------------------------------------------------
 
     def reload(self):
         with self.lock:
-            keep = {r.name: r for r in self.rows}
-            self.rows = [keep.get(s.name) or Row(snap=s) for s in self.db.all()]
-            for row in self.rows:
+            keep = {r.name: r for r in self.known}
+            self.known = [keep.get(s.name) or Row(snap=s)
+                          for s in self.db.all()]
+            for row in self.known:
                 row.snap = self.db.snaps.get(row.name, row.snap)
-            self.cursor = min(self.cursor, max(0, len(self.rows) - 1))
+            self.restack()
+
+    def restack(self):
+        """What the list shows: every record, narrowed and ordered.
+
+        `known` is the register. `rows` is the view of it, so a filter hides
+        rows from the eye without hiding them from `r` or `U`.
+        """
+        with self.lock:
+            here = self.row.name if self.row else ""
+            rows = [row for row in self.known if row.matches(self.needle)]
+            if self.order == "attention":
+                rows.sort(key=lambda row: (ATTENTION.get(row.state, 4),
+                                           row.name))
+            self.rows = rows
+            self.cursor = min(self.cursor, max(0, len(rows) - 1))
+            if here:
+                self.select(here)
 
     @property
     def row(self):
@@ -134,32 +173,47 @@ class Dashboard:
         self.worker.start()
         return True
 
+    def look_at(self, row):
+        """Ask one upstream what it has, and put the answer on its row."""
+        if self.cancel.is_set():
+            row.state = "unknown"
+            return
+        try:
+            # Skipping on `repo` missed every non-GitHub upstream.
+            found = update.situation(row.snap)
+        except Exception as exc:                          # noqa: BLE001
+            # One unreadable record must not take the other twenty-four down.
+            row.state, row.note = "error", f"{type(exc).__name__}: {exc}"
+            self.say(f"{row.name}: {row.note}", "red")
+            return
+        row.state = found.state
+        row.release, row.asset = found.release, found.asset
+        row.latest = found.latest
+        row.note = found.note or found.problem
+        if found.note:
+            self.say(f"{row.name}: {found.note}", "yellow")
+        if found.state == "error":
+            self.say(f"{row.name}: {found.problem}", "red")
+
     def recheck(self):
         """Ask every registered repository what it has now."""
-        if not self.rows:
+        if not self.known:
             return
-        rows = list(self.rows)
+        rows = list(self.known)
 
         def work():
             for row in rows:
                 row.state, row.note = "checking", ""
-            self.status = f"checking {len(rows)} repositor" + \
-                          ("y" if len(rows) == 1 else "ies")
-            for row in rows:
-                if self.cancel.is_set():
-                    row.state = "unknown"
-                    continue
-                # Skipping on `repo` missed every non-GitHub upstream.
-                found = update.situation(row.snap)
-                row.state = found.state
-                row.release, row.asset = found.release, found.asset
-                row.latest = found.latest
-                row.note = found.note or found.problem
-                if found.note:
-                    self.say(f"{row.name}: {found.note}", "yellow")
-                if found.state == "error":
-                    self.say(f"{row.name}: {found.problem}", "red")
-            behind = sum(1 for r in self.rows if r.behind)
+            done = 0
+            self.status = f"checking {len(rows)} upstream" + \
+                          ("" if len(rows) == 1 else "s")
+            with ThreadPoolExecutor(min(update.AT_ONCE, len(rows))) as pool:
+                waiting = [pool.submit(self.look_at, row) for row in rows]
+                for finished in as_completed(waiting):
+                    finished.result()
+                    done += 1
+                    self.status = f"checked {done} of {len(rows)}"
+            behind = sum(1 for r in self.known if r.behind)
             self.status = (f"{behind} to update" if behind
                            else "everything is up to date")
 
@@ -181,7 +235,7 @@ class Dashboard:
                     self.say(f"{repo} is already registered as {known.name} -- "
                              f"select it and press u to update it", "yellow")
                     self.select(known.name)
-                    self.status = f"{len(self.rows)} registered"
+                    self.status = f"{len(self.known)} registered"
                     return
                 made = project.plan(text, reporter)
             if len(made.candidates) > 1:
@@ -218,7 +272,7 @@ class Dashboard:
                 self.say(f"{directory} is {snap.name} -- select it and press u "
                          f"to pick up what is in there", "yellow")
                 self.select(snap.name)
-                self.status = f"{len(self.rows)} registered"
+                self.status = f"{len(self.known)} registered"
                 return None
         return project.plan_local(text, reporter)
 
@@ -273,7 +327,7 @@ class Dashboard:
                     self.say(f"{name}: {exc}", "yellow")
             self.reload()
             self.say(f"wrote {taken} of {len(new)} into {where}", "bold green")
-            self.status = f"{len(self.rows)} registered"
+            self.status = f"{len(self.known)} registered"
 
         self.run_job("pulling", work)
 
@@ -305,7 +359,7 @@ class Dashboard:
             except (NetworkError, project.ForgeError) as exc:
                 # Written down untried, a wrong setting reads as up to date.
                 self.say(f"{name} was left as it was: {exc}", "red")
-                self.status = f"{len(self.rows)} registered"
+                self.status = f"{len(self.known)} registered"
                 return
 
             self.db.add(snap, replace=True)
@@ -319,7 +373,7 @@ class Dashboard:
                 row.state, row.latest = found.state, found.latest
                 row.release, row.asset = found.release, found.asset
                 row.note = found.note or found.problem
-            self.status = f"{len(self.rows)} registered"
+            self.status = f"{len(self.known)} registered"
 
         self.run_job("tracking", work)
 
@@ -335,7 +389,7 @@ class Dashboard:
         finally:
             self.asking = ""
 
-    def _install(self, snap, built, reporter):
+    def _install(self, snap, built):
         """Install what was just built, with the terminal handed back."""
         classic = ""
         try:
@@ -368,7 +422,7 @@ class Dashboard:
             self.status = f"packaging {snap.name} from the register"
             project.package(snap, reporter, build_it=False)
             self._build(snap, reporter, row)
-            self.status = f"{len(self.rows)} registered"
+            self.status = f"{len(self.known)} registered"
 
         self.run_job("packaging", work)
 
@@ -405,6 +459,59 @@ class Dashboard:
 
         self.run_job("updating", work)
 
+    def update_all(self):
+        """Update everything the last check found behind, one after another."""
+        behind = [row for row in self.known if row.behind]
+        if not behind:
+            self.say("nothing is behind -- press r to check", "yellow")
+            return
+
+        def work():
+            many = "" if len(behind) == 1 else "s"
+            if not self._ask_yes_no(f"update {len(behind)} snap{many}?"):
+                self.say("left them alone", "dim")
+                return
+            for row in behind:
+                row.state = "queued"
+            built = []
+            for index, row in enumerate(behind, 1):
+                if self.cancel.is_set():
+                    row.state = "behind"
+                    continue
+                reporter = DashboardReporter(self, row)
+                self.select(row.name)
+                row.state = "working"
+                self.status = f"updating {row.name} ({index} of {len(behind)})"
+                try:
+                    project.adopt(row.snap, reporter)
+                    update.update(row.snap, row.release, row.asset, reporter)
+                    self.db.add(row.snap)
+                    row.latest = row.snap.version
+                    made = self._build(row.snap, reporter, row,
+                                       ask_install=False)
+                    if made is not None:
+                        built.append((row.snap, made))
+                except (NetworkError, project.ForgeError) as exc:
+                    row.state, row.note = "failed", str(exc)
+                    self.say(f"{row.name}: {exc}", "red")
+                except Cancelled:
+                    row.state = "behind"
+                    raise
+                finally:
+                    row.done_bytes = row.total_bytes = 0
+
+            self.status = f"built {len(built)} of {len(behind)}"
+            # One question for the run, rather than one for every snap in it.
+            if built:
+                many = "" if len(built) == 1 else "s"
+                if self._ask_yes_no(f"install {len(built)} built snap{many}?"):
+                    for snap, made in built:
+                        self._install(snap, made)
+                else:
+                    self.say(f"built {len(built)}, installed none", "dim")
+
+        self.run_job("updating", work)
+
     def build_selected(self):
         """Hand the selected project to snapcraft as it stands."""
         row = self.row
@@ -417,11 +524,11 @@ class Dashboard:
             self.status = f"building {row.name}"
             project.adopt(row.snap, reporter)
             self._build(row.snap, reporter, row)
-            self.status = f"{len(self.rows)} registered"
+            self.status = f"{len(self.known)} registered"
 
         self.run_job("building", work)
 
-    def _build(self, snap, reporter, row=None):
+    def _build(self, snap, reporter, row=None, ask_install=True):
         """Build, and turn a failure into a red line rather than a crash."""
         try:
             built = project.build(snap, reporter)
@@ -433,13 +540,17 @@ class Dashboard:
             if row:
                 row.state, row.note = "failed", str(exc)
             self.say(f"{snap.name}: {exc}", "red")
-            return
+            return None
 
         # Offered, never assumed: this is the one thing here that needs root.
+        # A run of updates asks once at the end instead, not once per snap.
+        if not ask_install:
+            return built
         if self._ask_yes_no(f"install {built.name}?"):
-            self._install(snap, built, reporter)
+            self._install(snap, built)
         else:
             self.say(f"built {built.name}, not installed", "dim")
+        return built
 
     def delete_selected(self):
         """Forget the selected snap. Asked about first -- it is not undoable."""
@@ -452,7 +563,7 @@ class Dashboard:
         self.say(f"removed {name} from the register, and its recipe with it",
                  "yellow")
         self.say(f"the project directory is still at {row.snap.path}", "dim")
-        self.status = f"{len(self.rows)} registered"
+        self.status = f"{len(self.known)} registered"
 
     def render(self):
         """One frame of whatever the board currently is."""
@@ -465,7 +576,7 @@ class Dashboard:
                 return
 
     def row_for(self, name):
-        return next((r for r in self.rows if r.name == name), None)
+        return next((r for r in self.known if r.name == name), None)
 
     # -- keys ----------------------------------------------------------------
 
@@ -484,6 +595,13 @@ class Dashboard:
         if self.detail is not None:
             self.detail = None
             return
+        if self.helping:
+            self.helping = False
+            return
+        if self.reading_log:
+            return self._reading(key)
+        if self.filtering:
+            return self._typing_filter(key)
         if key == "q":
             # Only q: Escape means "not this", and there is nothing to leave.
             if self.busy:
@@ -513,10 +631,22 @@ class Dashboard:
             self.recheck()
         elif key == "u":
             self.update_selected()
+        elif key == "U":
+            self.update_all()
         elif key == "b":
             self.build_selected()
         elif key == "g":
             self.pull_database()
+        elif key == "l":
+            self.reading_log, self.log_offset = True, 0
+        elif key == "/":
+            self.filtering = True
+        elif key == "s":
+            self.order = "attention" if self.order == "register" else "register"
+            self.restack()
+            self.say(f"ordered by {self.order}", "dim")
+        elif key == "?":
+            self.helping = True
         elif key == "t" and self.row and not self.busy:
             # Seeded with what it tracks now, so changing one word is one word.
             self.tracking = self.row.name
@@ -569,6 +699,39 @@ class Dashboard:
         elif key and len(key) == 1 and key.isprintable():
             self.prompt += key
 
+    def _reading(self, key):
+        """Scrolling back through what has already gone past."""
+        page = max(1, self.screen.window)
+        oldest = max(0, len(self.log) - 1)
+        if key in ("escape", "q", "l"):
+            self.reading_log = False
+        elif key in ("k", "up"):
+            self.log_offset = min(self.log_offset + 1, oldest)
+        elif key in ("j", "down"):
+            self.log_offset = max(self.log_offset - 1, 0)
+        elif key == "pageup":
+            self.log_offset = min(self.log_offset + page, oldest)
+        elif key == "pagedown":
+            self.log_offset = max(self.log_offset - page, 0)
+        elif key == "home":
+            self.log_offset = oldest
+        elif key in ("end", "G"):
+            self.log_offset = 0
+
+    def _typing_filter(self, key):
+        """Narrowing the list as it is typed, over name, repo, summary, kind."""
+        if key == "escape":
+            self.filtering, self.needle = False, ""
+        elif key == "enter":
+            self.filtering = False
+        elif key == "backspace":
+            self.needle = self.needle[:-1]
+        elif key and len(key) == 1 and key.isprintable():
+            self.needle += key.lower()
+        else:
+            return
+        self.restack()
+
     def _close_prompt(self):
         self.prompting, self.prompt = False, ""
         self.matches, self.match_cursor = [], 0
@@ -606,21 +769,6 @@ class Dashboard:
         else:
             self.say(f"left {name} alone", "dim")
 
-    # -- drawing -------------------------------------------------------------
-
-
-    # -- the header ----------------------------------------------------------
-
-
-    # -- the list ------------------------------------------------------------
-
-
-    # -- the inspector -------------------------------------------------------
-
-
-    # -- the rest of the screen ----------------------------------------------
-
-
     @contextmanager
     def suspended(self):
         """Give the terminal back, for something that wants to write to it."""
@@ -636,8 +784,6 @@ class Dashboard:
                 live.start()
             if keyboard:
                 keyboard.resume()
-
-    live = None
 
 
 # -- drawing helpers ---------------------------------------------------------

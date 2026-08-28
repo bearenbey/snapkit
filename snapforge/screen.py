@@ -49,10 +49,50 @@ _TRACK_HINTS = tuple(
     + [("repo owner/name", "the releases of a github repository"),
        ("none", "stop checking it against anything")])
 KEYS = (("↑↓", "move"), ("n", "new or find"), ("r", "recheck"), ("u", "update"),
-        ("b", "build"), ("t", "track"), ("g", "get db"), ("d", "delete"),
-        ("enter", "record"), ("q", "quit"))
+        ("b", "build"), ("/", "filter"), ("l", "log"), ("?", "keys"),
+        ("q", "quit"))
 SHORT_KEYS = (("↑↓", "move"), ("n", "find"), ("r", "recheck"), ("u", "update"),
-              ("b", "build"), ("g", "get db"), ("q", "quit"))
+              ("b", "build"), ("?", "keys"), ("q", "quit"))
+
+# Every key the dashboard answers to, which the footer has never had room for.
+HELP = (
+    ("moving about", (
+        ("↑ ↓  j k", "move"),
+        ("PgUp PgDn", "a screenful"),
+        ("home  G", "the first, the last"),
+        ("/", "narrow the list to what you type; escape clears it"),
+        ("s", "order by the register, or by what needs doing"),
+    )),
+    ("one snap, the one under the cursor", (
+        ("enter", "its record, in full"),
+        ("u", "move it onto the release the last check found"),
+        ("b", "hand the project to snapcraft as it stands"),
+        ("t", "where its releases should be looked for"),
+        ("d", "forget it, after asking"),
+    )),
+    ("the whole register", (
+        ("n", "find something registered, or add something new"),
+        ("r", "ask every upstream what it has now"),
+        ("U", "update everything a check found behind"),
+        ("g", "read the shared database and offer what is missing"),
+    )),
+    ("while something is running", (
+        ("q  escape", "stop it"),
+        ("l", "the activity log, full screen and scrollable"),
+        ("y  n", "answer the question on screen"),
+    )),
+)
+
+
+def advertised():
+    """Every key the dashboard tells a person about, footer and keys page."""
+    keys = {key for key, _ in KEYS} | {key for key, _ in SHORT_KEYS}
+    for _, pairs in HELP:
+        for key, _ in pairs:
+            keys.update(key.split())
+    return keys
+
+
 ACCENT = "#4ce0ff"          # the one colour that means "this, here"
 EDGE = "grey42"             # panel borders, which should be seen and not read
 CURSOR_ROW = "on grey15"
@@ -71,6 +111,7 @@ class Screen:
         self.board = board
         self.frame = 0
         self.window = 1         # rows that fit; the first render works it out
+        self.height = 30        # ... and the whole screen, for a full-page view
         self.offset = 0
 
     def render(self):
@@ -79,13 +120,18 @@ class Screen:
         console = self.board.live.console if self.board.live else None
         height = console.size.height if console else 30
         width = console.size.width if console else 100
+        self.height = height
         self.window = max(1, height - self._header_height() - LOG_HEIGHT - 4)
 
-        # Both of these are the whole screen while they are up.
+        # Any of these is the whole screen while it is up.
         if self.board.detail is not None:
             return self._details()
         if self.board.picking is not None:
             return self._picker()
+        if self.board.helping:
+            return self._help()
+        if self.board.reading_log:
+            return self._logbook()
 
         body = Layout(name="body")
         if width >= SPLIT_AT and self.board.rows:
@@ -122,8 +168,9 @@ class Screen:
                      border_style=EDGE, padding=(0, 1))
     def _masthead(self):
         """The wordmark, and the shape of the register beside it."""
+        # Of the register, not of what a filter happens to be showing.
         counts = {}
-        for row in self.board.rows:
+        for row in self.board.known:
             counts[row.state] = counts.get(row.state, 0) + 1
         behind = counts.get("behind", 0)
         current = counts.get("current", 0)
@@ -133,7 +180,7 @@ class Screen:
         line = Text()
         line.append_text(_gradient(WORDMARK))
         line.append("   ")
-        line.append_text(_chip("▪", len(self.board.rows), "registered", "cyan"))
+        line.append_text(_chip("▪", len(self.board.known), "registered", "cyan"))
         if current:
             line.append("  ")
             line.append_text(_chip("●", current, "current", "green"))
@@ -276,6 +323,16 @@ class Screen:
         title = "registered"
         if len(self.board.rows) > last - first:
             title = f"registered  {first + 1}-{last} of {len(self.board.rows)}"
+        if self.board.needle:
+            caret = "|" if self.board.filtering and self.frame // 6 % 2 else ""
+            title += f"   /{self.board.needle}{caret}"
+            hidden = len(self.board.known) - len(self.board.rows)
+            if hidden:
+                title += f"  ({hidden} hidden)"
+        elif self.board.filtering:
+            title += "   /"
+        if self.board.order == "attention":
+            title += "   by attention"
         return Panel(table, title=title, box=box.ROUNDED, border_style=EDGE,
                      padding=(0, 1))
     def _status_cell(self, row):
@@ -355,6 +412,33 @@ class Screen:
 
         return Panel(Group(*lines), title="inspector", box=box.ROUNDED,
                      border_style=EDGE, padding=(0, 1))
+    def _logbook(self):
+        """The activity log, full screen, scrolled back to where it was left."""
+        lines = list(self.board.log)
+        room = max(1, self.height - 4)
+        end = len(lines) - self.board.log_offset
+        shown = lines[max(0, end - room):end]
+        where = ("newest" if not self.board.log_offset
+                 else f"{self.board.log_offset} line"
+                      f"{'' if self.board.log_offset == 1 else 's'} back")
+        return Panel(Group(*shown) if shown else Text("nothing yet", style="dim"),
+                     title=f"activity -- {len(lines)} kept, {where}",
+                     subtitle="↑↓ PgUp PgDn   home oldest   G newest   q closes",
+                     box=box.ROUNDED, border_style=EDGE, padding=(0, 1))
+
+    def _help(self):
+        """Every key, grouped, because the footer only ever fits a few."""
+        lines = []
+        for heading, keys in HELP:
+            if lines:
+                lines.append(Text(""))
+            lines.append(Text(f"  {heading}", style="bold " + ACCENT))
+            for key, what in keys:
+                lines.append(Text.assemble(("    ", ""), (f"{key:<12}", "bold"),
+                                           (what, "dim")))
+        return Panel(Group(*lines), title="keys", subtitle="any key closes",
+                     box=box.ROUNDED, border_style=EDGE, padding=(1, 1))
+
     def _log(self):
         lines = list(self.board.log)[-(LOG_HEIGHT - 2):]
         return Panel(Group(*lines) if lines else Text(""),

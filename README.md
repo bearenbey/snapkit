@@ -77,7 +77,8 @@ $ snapkit create aristocratos/btop
 
 Run it with no arguments for the dashboard. Up and down move through the
 list, `enter` shows a record in full, `t` says where the selected snap's
-releases should be looked for, and `q` is the only thing that quits.
+releases should be looked for, `?` puts every key on screen, and `q` is the
+only thing that quits.
 
 ```text
 ╭──────────────────────────────────────────────────────────────────────────────────╮
@@ -92,8 +93,18 @@ releases should be looked for, and `q` is the only thing that quits.
 │     mpv         0.41.0     0.41.0    ████▊░░░  ││ built    12.17.0               │
 │     nvim        0.12.5     0.12.5    ● up to…  ││ kind     archive               │
 ╰────────────────────────────────────────────────╯╰────────────────────────────────╯
-  [↑↓] move  [n] new or find  [r] recheck  [u] update  [b] build  [q] quit
+  [↑↓] move  [n] new or find  [r] recheck  [u] update  [b] build  [?] keys  [q] quit
 ```
+
+`r` asks every upstream what it has now, eight at a time rather than one
+after another: twenty-five of them took 29 seconds in a row and take a few
+together, and the dashboard runs a check when it opens, so that was most of
+what opening it cost. `U` then updates everything the check found behind,
+behind one confirmation and with one question about installing at the end
+rather than one per snap. `/` narrows the list to what you type, over the
+name, repository, summary and kind; `s` puts what needs doing at the top; and
+`l` opens the activity log full screen, so the output of a ten-minute build
+can be scrolled back through rather than watched go past six lines at a time.
 
 `t` opens the box that says where a snap's releases come from, seeded with
 what it tracks now, so changing one word is one word rather than all of them:
