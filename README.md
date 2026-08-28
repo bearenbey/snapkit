@@ -342,7 +342,7 @@ snapkit db publish <dir>      write the database out of the projects here
 In the dashboard, `g` reads the database, says how many of its snaps are not
 registered here, and asks before writing anything.
 
-A snap is more than its `snapcraft.yaml`. Three of the twenty-one build from
+A snap is more than its `snapcraft.yaml`. Three of the twenty-five build from
 the recipe alone, and the rest also need a launcher, an overlay tree, a
 `pack.py` or a hook, so a project is published whole, minus the release it
 was built from, the `.snap` it produced and any build tree. `index.json`
@@ -447,8 +447,8 @@ so they are named once and not repeated inside `upstream`. The exception is
 the `local` shape, where the glob is also how the file is found in the first
 place.
 
-A project registered this way keeps its own build. All twenty-one hand their
-recipe to snapcraft, but eleven of them wrap it in a `pack.py` that does the
+A project registered this way keeps its own build. All twenty-five hand their
+recipe to snapcraft, but fourteen of them wrap it in a `pack.py` that does the
 work a recipe cannot express, and `snapkit build` imports that and calls its
 `build(project)` with a `Build`:
 
@@ -652,6 +652,7 @@ same three records found it without being edited.
 | `snapkit track <name> repo owner/name` | put it back on GitHub releases |
 | `snapkit track <name> none` | stop checking it against anything |
 | `snapkit track kinds` | every kind of upstream, and what each one needs |
+| `snapkit import <dir>` | register packaging that already exists |
 | `snapkit build <name>` | hand the project to snapcraft |
 | `snapkit remove <name>` | forget a snap, and its recipe with it |
 | `snapkit db` | what the shared recipe database holds |
@@ -670,7 +671,9 @@ the clone URL, or a link to a release page.
 Useful flags: `--no-build` to write the project without building it, `--tag`
 to pin a release, `--asset` to build from a different file in it, `--name` to
 call the snap something other than the repository, `--dir` to put the project
-somewhere specific, `--plain` to keep the dashboard from opening.
+somewhere specific, `--plain` to keep the dashboard from opening, and
+`--destructive-mode` to let snapcraft build on this host rather than in a
+container.
 
 ## Tests
 

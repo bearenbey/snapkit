@@ -110,13 +110,16 @@ def stream(command, reporter=None, **kwargs):
 class Build:
     """One project's build, run from the project directory."""
 
-    def __init__(self, app, directory, reporter=None):
+    def __init__(self, app, directory, reporter=None, snapcraft_flags=()):
         self.app = app
         self.directory = Path(directory).resolve()
         os.chdir(self.directory)
         self.prime = self.directory / "prime"
         # Where the commentary goes. None prints it; the dashboard takes it.
         self.reporter = reporter
+        # Added to any snapcraft this build runs, so --destructive-mode
+        # reaches a project that drives snapcraft itself.
+        self.snapcraft_flags = list(snapcraft_flags)
 
     # -- saying things: on the Build, so a pack.py needs no import ----------
 
@@ -209,6 +212,8 @@ class Build:
         kwargs.setdefault("check", True)
         kwargs.setdefault("cwd", self.directory)
         argv = [str(c) for c in command]
+        if argv[:1] == ["snapcraft"]:
+            argv += [flag for flag in self.snapcraft_flags if flag not in argv]
 
         # A caller that asked for the output wants it back, not reported.
         wants_output = any(k in kwargs for k in
@@ -348,14 +353,15 @@ def pack_module(directory, filename="pack.py"):
     return module
 
 
-def run_pack(app, directory, filename="pack.py", reporter=None):
+def run_pack(app, directory, filename="pack.py", reporter=None,
+             snapcraft_flags=()):
     """Assemble and pack one project. Returns the .snap it produced."""
     here = Path.cwd()
     try:
         module = pack_module(directory, filename)
         if not hasattr(module, "build"):
             die(f"{Path(directory) / filename} defines no build(project) function")
-        return module.build(Build(app, directory, reporter))
+        return module.build(Build(app, directory, reporter, snapcraft_flags))
     finally:
         os.chdir(here)
 

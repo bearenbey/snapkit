@@ -33,6 +33,12 @@ def same(got, want, what=""):
     assert got == want, f"{what}: {got!r} != {want!r}"
 
 
+def subprocess_result(returncode=0):
+    """What a patched subprocess.run hands back."""
+    return type("Result", (), {"returncode": returncode, "stdout": "",
+                               "stderr": ""})()
+
+
 # -- a .deb, made here so the reader can be tested without the network --------
 
 def make_deb(path, package="demo", version="1.2.3", binary="usr/bin/demo"):
@@ -1373,6 +1379,20 @@ def tracking():
                 except SystemExit:
                     pass
 
+    @check("every command is in the usage text, so none is reachable but unlisted")
+    def _():
+        import re as regex
+        from snapforge import cli
+
+        listed = set(regex.findall(r"^  snapkit (\S+)", cli.USAGE, regex.M))
+        for name in cli.COMMANDS:
+            # "" is the dashboard, and an alias is the same command twice.
+            if not name or name in cli.ALIASES:
+                continue
+            assert name in listed, f"`snapkit {name}` runs and the usage text omits it"
+        for name in cli.ALIASES:
+            assert name in cli.COMMANDS, f"{name} is listed as an alias of nothing"
+
     @check("track kinds prints every kind, so none is reachable but unlisted")
     def _():
         import contextlib
@@ -2204,6 +2224,33 @@ def updater():
             was = os.getcwd()
             buildlib.run_pack("demo", here)
             same(os.getcwd(), was, "the cwd came back")
+
+    @check("--destructive-mode reaches the snapcraft a pack.py runs")
+    def _():
+        from snapforge import build as buildlib
+
+        seen = []
+
+        class FakeSubprocess:
+            @staticmethod
+            def run(argv, **kwargs):
+                seen.append(argv)
+                return subprocess_result()
+
+        with tempfile.TemporaryDirectory() as home:
+            here = Path(home)
+            (here / "pack.py").write_text(
+                "def build(project):\n"
+                "    project.run('snapcraft', 'pack')\n"
+                "    project.run('tar', 'xf', 'thing')\n")
+            with patched(buildlib, subprocess=FakeSubprocess):
+                buildlib.run_pack("demo", here,
+                                  snapcraft_flags=["--destructive-mode"])
+
+        same(seen[0], ["snapcraft", "pack", "--destructive-mode"],
+             "the flag did not reach snapcraft")
+        same(seen[1], ["tar", "xf", "thing"],
+             "the flag was put on something that is not snapcraft")
 
     @check("a wedged build container is recognised from snapcraft's own log")
     def _():

@@ -18,6 +18,7 @@ package file you already have, and keep it up to date afterwards.
   snapkit create ./thing.deb       ... or from a .deb, archive or AppImage
   snapkit create ~/Downloads       ... or from whichever of those is in there
   snapkit create                   ... and with nothing named, it asks
+  snapkit import <dir>             register packaging that already exists
   snapkit package <name|repo>      build one already registered, from the register
   snapkit search <text>            find a registered snap by name, repo or summary
   snapkit list                     what is registered
@@ -31,6 +32,7 @@ package file you already have, and keep it up to date afterwards.
   snapkit remove <name>            forget a snap, and its recipe with it
   snapkit db                       what the shared recipe database holds
   snapkit db pull [name ...]       write those projects here, or all of them
+  snapkit db publish <dir>         write the database out of the projects here
   snapkit install <name>           fetch it, build it, and offer to install it
 
 A repository can be given any way you have it: owner/name, the browser URL,
@@ -81,6 +83,11 @@ def die(message):
     raise SystemExit(1)
 
 
+def build_flags(args):
+    """What to hand snapcraft, out of the flags snapkit takes itself."""
+    return ["--destructive-mode"] if args.destructive_mode else []
+
+
 def parse_args(argv):
     parser = argparse.ArgumentParser(
         prog="snapkit", add_help=False,
@@ -106,6 +113,9 @@ def parse_args(argv):
                              "or a folder to look in, never as a repository")
     parser.add_argument("--plain", action="store_true",
                         help="never take over the terminal, even on a tty")
+    parser.add_argument("--destructive-mode", action="store_true",
+                        help="let snapcraft build on this host rather than in "
+                             "a container")
     parser.add_argument("-h", "--help", action="help", help="this")
     return parser.parse_args(argv)
 
@@ -124,13 +134,7 @@ def main(argv=None):
         from .tui import run_dashboard
         return run_dashboard(db)
 
-    handlers = {"": cmd_list, "create": cmd_create, "list": cmd_list,
-                "show": cmd_show, "check": cmd_check, "update": cmd_update,
-                "build": cmd_build, "remove": cmd_remove, "rm": cmd_remove,
-                "search": cmd_search, "find": cmd_search, "package": cmd_package,
-                "import": cmd_import, "adopt": cmd_import,
-                "db": cmd_db, "install": cmd_install, "track": cmd_track}
-    handler = handlers.get(args.command)
+    handler = COMMANDS.get(args.command)
     if handler is None:
         die(f"no such command: {args.command} (try --help)")
     try:
@@ -159,7 +163,8 @@ def cmd_create(db, args, reporter):
                         f"({known.version}) -- building it from the register")
         reporter.detail(f"(--name makes a second one; `snapkit update "
                         f"{known.name}` looks for a newer release)")
-        project.package(known, reporter, build_it=not args.no_build)
+        project.package(known, reporter, build_it=not args.no_build,
+                        extra=build_flags(args))
         db.add(known)
         return 0
 
@@ -209,7 +214,7 @@ def _finish_create(db, args, reporter, made, text):
         reporter.detail(f"build it with: cd {snap.path} && "
                         f"{snap.build_with or 'snapcraft'}")
         return 0
-    project.build(snap, reporter)
+    project.build(snap, reporter, build_flags(args))
     db.add(snap)
     return 0
 
@@ -309,7 +314,8 @@ def cmd_package(db, args, reporter):
     if not args.rest:
         die("package needs a name, a repository, or something to search for")
     snap = _one_of(db, " ".join(args.rest))
-    project.package(snap, reporter, build_it=not args.no_build)
+    project.package(snap, reporter, build_it=not args.no_build,
+                    extra=build_flags(args))
     db.add(snap)
     return 0
 
@@ -498,7 +504,7 @@ def update_one(db, args, reporter, snap):
     update.update(snap, found.release, found.asset, reporter)
     db.add(snap)
     if not args.no_build:
-        project.build(snap, reporter)
+        project.build(snap, reporter, build_flags(args))
         db.add(snap)
     return 0
 
@@ -658,7 +664,7 @@ def cmd_build(db, args, reporter):
         die("build needs a name")
     snap = db.get(args.rest[0])
     project.adopt(snap, reporter)
-    project.build(snap, reporter)
+    project.build(snap, reporter, build_flags(args))
     db.add(snap)
     return 0
 
@@ -794,7 +800,7 @@ def cmd_install(db, args, reporter):
         return 0
 
     project.adopt(snap, reporter)
-    built = project.build(snap, reporter)
+    built = project.build(snap, reporter, build_flags(args))
     db.add(snap)
     if not can_ask(args):
         reporter.detail(f"install it with: sudo snap install --dangerous {built}")
@@ -825,6 +831,18 @@ def cmd_remove(db, args, reporter):
     db.remove(snap.name)
     print(f"removed {snap.name}")
     return 0
+
+
+# Every command, in one place, so the usage text can be checked against it.
+COMMANDS = {"": cmd_list, "create": cmd_create, "list": cmd_list,
+            "show": cmd_show, "check": cmd_check, "update": cmd_update,
+            "build": cmd_build, "remove": cmd_remove, "rm": cmd_remove,
+            "search": cmd_search, "find": cmd_search, "package": cmd_package,
+            "import": cmd_import, "adopt": cmd_import,
+            "db": cmd_db, "install": cmd_install, "track": cmd_track}
+
+# The same command under another name, which the usage text does not repeat.
+ALIASES = ("rm", "find", "adopt")
 
 
 def entry():

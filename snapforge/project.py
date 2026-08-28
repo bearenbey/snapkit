@@ -349,7 +349,7 @@ def adopt(snap, reporter):
     return True
 
 
-def package(snap, reporter, build_it=True):
+def package(snap, reporter, build_it=True, extra=()):
     """Build a snap from its record, without going upstream for anything."""
     adopt(snap, reporter)
     write(snap, reporter)
@@ -358,7 +358,19 @@ def package(snap, reporter, build_it=True):
                                   else "snapcraft")
         reporter.detail(f"build it with: cd {snap.path} && {how}")
         return None
-    return build(snap, reporter)
+    return build(snap, reporter, extra)
+
+
+def run_reported(command, reporter, directory, shell=False):
+    """Run a command, streamed to the reporter or with the terminal handed over.
+
+    A front end taking the output wants every line of it; a terminal wants
+    the command to have the screen while it runs.
+    """
+    if reporter.captures_output:
+        return buildlib.stream(command, reporter, cwd=directory, shell=shell)
+    with reporter.suspended():
+        return subprocess.run(command, cwd=directory, shell=shell)
 
 
 def clean_stale_parts(directory, reporter, extra=()):
@@ -373,13 +385,7 @@ def clean_stale_parts(directory, reporter, extra=()):
         return
     reporter.detail(f"cleaning {', '.join(replaced)}: the source here is "
                     f"newer than what craft-parts pulled")
-    command = ["snapcraft", "clean", *replaced,
-               *[flag for flag in extra if flag == "--destructive-mode"]]
-    if reporter.captures_output:
-        buildlib.stream(command, reporter, cwd=directory)
-    else:
-        with reporter.suspended():
-            subprocess.run(command, cwd=directory)
+    run_reported(["snapcraft", "clean", *replaced, *extra], reporter, directory)
 
 
 def build(snap, reporter, extra=()):
@@ -399,7 +405,8 @@ def build(snap, reporter, extra=()):
             else reporter.suspended()
         with holding:
             try:
-                buildlib.run_pack(snap.name, directory, snap.pack, reporter)
+                buildlib.run_pack(snap.name, directory, snap.pack, reporter,
+                                  extra)
             except buildlib.BuildError as exc:
                 raise ForgeError(str(exc)) from exc
             except subprocess.CalledProcessError as exc:
@@ -422,20 +429,14 @@ def build(snap, reporter, extra=()):
             command, shell = ["snapcraft", "pack", *extra], False
             reporter.step(f"snapcraft pack ({directory})")
 
-        def run_it():
-            if reporter.captures_output:
-                return buildlib.stream(command, reporter, cwd=directory, shell=shell)
-            with reporter.suspended():
-                return subprocess.run(command, cwd=directory, shell=shell)
-
-        done = run_it()
+        done = run_reported(command, reporter, directory, shell)
         if done.returncode != 0 and not shell:
             # A wedged container kills every later build before it starts.
             stale = buildlib.stale_instance()
             if stale and buildlib.drop_instance(stale):
                 reporter.warn(f"removed the wedged build container {stale}, "
                               f"and building again")
-                done = run_it()
+                done = run_reported(command, reporter, directory, shell)
         if done.returncode != 0:
             raise ForgeError(f"the build exited with status {done.returncode}")
 
