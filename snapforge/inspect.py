@@ -253,10 +253,11 @@ def find_icon(root, wanted="", named=""):
     named = (named or "").lower()
 
     def size_of(path):
-        found = re.search(r"(\d+)x\d+", path.as_posix())
         # An SVG scales, so it beats every fixed size.
-        return 10_000 if path.suffix.lower().startswith(".svg") else \
-            int(found.group(1)) if found else 0
+        if path.suffix.lower().startswith(".svg"):
+            return 10_000
+        found = re.search(r"(\d+)x\d+", path.as_posix())
+        return int(found.group(1)) if found else 0
 
     def not_an_app_icon(path):
         # hicolor sorts icons by what they are for. Everything outside apps/
@@ -296,10 +297,11 @@ def is_terminal_app(root, desktop):
 def traits_of(root, desktop):
     """What the payload is, as far as it can be told from what is in it."""
     found = set()
-    if desktop and not is_terminal_app(root, desktop):
-        found.add("gui")
-    if is_terminal_app(root, desktop):
+    terminal = is_terminal_app(root, desktop)
+    if terminal:
         found.add("terminal")
+    elif desktop:
+        found.add("gui")
     names = set()
     for path in root.rglob("*"):
         if path.is_file():
@@ -309,7 +311,7 @@ def traits_of(root, desktop):
         if any(marker in names or any(n.endswith(marker) for n in names)
                for marker in markers):
             found.add(trait)
-    if found & {"electron", "qt", "gtk"} and "terminal" not in found:
+    if found & {"electron", "qt", "gtk"} and not terminal:
         found.add("gui")
     return found
 

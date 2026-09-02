@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from . import adopt, classify, github, local, project, snapdb, sources, update
-from .db import Database, NameTaken
+from .db import Database, DatabaseError, NameTaken
 from .net import NetworkError
 from .report import PlainReporter
 
@@ -122,11 +122,21 @@ def parse_args(argv):
 
 def main(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
-    db = Database()
     reporter = PlainReporter()
+    try:
+        # Opening the register is the one thing every command does first,
+        # and a register it cannot read is a sentence, not a traceback.
+        db = Database()
+    except (DatabaseError, OSError) as exc:
+        die(str(exc))
     for record, why in db.problems:
         # Loud and on every command: one record short beats failing to open.
         reporter.warn(f"{record} could not be read and was left out: {why}")
+    for name, was, live in db.resynced:
+        # Not a warning: the register was put right, and saying so is the
+        # only way a version that changed by itself is accounted for.
+        reporter.detail(f"{name} was recorded at {was}, but its project says "
+                        f"{live} -- the record now says so too")
 
     interactive = can_ask(args) and not args.command
     if interactive:
@@ -140,7 +150,7 @@ def main(argv=None):
     try:
         return handler(db, args, reporter)
     except (project.ForgeError, NetworkError, github.NotFound,
-            snapdb.DatabaseError) as exc:
+            snapdb.DatabaseError, DatabaseError) as exc:
         die(str(exc))
     except ValueError as exc:
         die(str(exc))
@@ -170,11 +180,7 @@ def cmd_create(db, args, reporter):
 
     made = project.plan(text, reporter, tag=args.tag, name=args.name,
                         asset=args.asset)
-    if len(made.candidates) > 1 and not args.asset:
-        reporter.detail("the rest of this release, if that is the wrong file "
-                        "(--asset takes a name or a number):")
-        for number, candidate in enumerate(made.candidates[1:6], 2):
-            reporter.detail(f"  {number}. {candidate.name}")
+    _show_runners_up(reporter, made.candidates, args.asset, "this release")
     return _finish_create(db, args, reporter, made, text)
 
 
@@ -190,12 +196,18 @@ def create_from_file(db, args, reporter, text):
         return update_one(db, args, reporter, known)
 
     made = project.plan_local(path, reporter, name=args.name, asset=args.asset)
-    if len(made.candidates) > 1 and not args.asset:
-        reporter.detail("the rest of what is in there, if that is the wrong "
-                        "one (--asset takes a name or a number):")
-        for number, candidate in enumerate(made.candidates[1:6], 2):
-            reporter.detail(f"  {number}. {candidate.name}")
+    _show_runners_up(reporter, made.candidates, args.asset, "what is in there")
     return _finish_create(db, args, reporter, made, text)
+
+
+def _show_runners_up(reporter, candidates, asset, where):
+    """The files that were passed over, in case the best one is the wrong one."""
+    if len(candidates) <= 1 or asset:
+        return
+    reporter.detail(f"the rest of {where}, if that is the wrong file "
+                    f"(--asset takes a name or a number):")
+    for number, candidate in enumerate(candidates[1:6], 2):
+        reporter.detail(f"  {number}. {candidate.name}")
 
 
 def _finish_create(db, args, reporter, made, text):
@@ -283,17 +295,15 @@ def _read_choice(found):
             raise SystemExit(0)
         if answer.isdigit() and 1 <= int(answer) <= min(len(found), CHOICES):
             return str(found[int(answer) - 1].path)
-        if low in ("r", "repo", "repository"):
-            typed = input("repository> ").strip()
-            if typed:
-                return typed
-        elif low in ("p", "path", "file"):
-            typed = input("path> ").strip()
-            if typed:
-                return typed
-        else:
+        again = {"r": "repository", "repo": "repository",
+                 "repository": "repository", "p": "path", "path": "path",
+                 "file": "path"}.get(low)
+        if not again:
             # Anything else is the answer: typing a repository in means it.
             return answer
+        typed = input(f"{again}> ").strip()
+        if typed:
+            return typed
 
 
 def cmd_search(db, args, reporter):
@@ -558,11 +568,7 @@ def track_repo(db, args, reporter, snap, rest):
     # Keep the kind this snap already is, unless nothing in the release is one.
     same_kind = [c for c in candidates if c.kind == snap.kind] or candidates
     chosen = project.choose(same_kind, args.asset)
-    if len(same_kind) > 1 and not args.asset:
-        reporter.detail("the rest of this release, if that is the wrong file "
-                        "(--asset takes a name or a number):")
-        for number, other in enumerate(same_kind[1:6], 2):
-            reporter.detail(f"  {number}. {other.name}")
+    _show_runners_up(reporter, same_kind, args.asset, "this release")
 
     if snap.kind and chosen.kind != snap.kind:
         reporter.detail(f"{repo} publishes no {snap.kind}, so this snap is "
@@ -810,10 +816,7 @@ def cmd_install(db, args, reporter):
         reporter.detail(f"built {built.name}, not installed")
         return 0
 
-    classic = "confinement: classic" in (Path(snap.path) / "snap"
-                                         / "snapcraft.yaml").read_text()
-    command = ["sudo", "snap", "install", "--dangerous",
-               *(["--classic"] if classic else []), str(built)]
+    command = project.install_command(snap, built)
     reporter.step(" ".join(command))
     return subprocess.run(command).returncode
 

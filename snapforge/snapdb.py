@@ -218,14 +218,23 @@ def fingerprint(files):
     return digest.hexdigest()
 
 
+def file_map(directory, kept):
+    """What the index records about each file: its hash, and its exec bit.
+
+    Recorded rather than guessed from the name, because a launcher that
+    arrives without its executable bit is a snap snapd will refuse.
+    """
+    directory = Path(directory)
+    return {str(relative): {"sha256": net.sha256_file(directory / relative),
+                            "exec": bool((directory / relative).stat().st_mode
+                                         & 0o111)}
+            for relative in kept}
+
+
 def local_fingerprint(directory):
     """The same hash, taken from a project on this disk."""
-    directory = Path(directory)
     kept, _ = project_files(directory)
-    return fingerprint({
-        str(r): {"sha256": net.sha256_file(directory / r),
-                 "exec": bool((directory / r).stat().st_mode & 0o111)}
-        for r in kept})
+    return fingerprint(file_map(directory, kept))
 
 
 # -- publishing ---------------------------------------------------------------
@@ -254,14 +263,7 @@ def publish(snaps, into, reporter=None):
             "version": snap.version,
             "summary": getattr(snap, "summary", "") or "",
             "upstream": snap.repo or (snap.upstream or {}).get("kind", ""),
-            "files": {
-                str(r): {
-                    "sha256": net.sha256_file(directory / r),
-                    # Recorded, not guessed: snapd refuses a launcher with no +x
-                    "exec": bool((directory / r).stat().st_mode & 0o111),
-                }
-                for r in kept
-            },
+            "files": file_map(directory, kept),
             "pack": snap.pack or "",
         }
         entries[snap.name]["fingerprint"] = fingerprint(entries[snap.name]["files"])
@@ -314,6 +316,14 @@ def fetch(name, into, found=None, url=None, reporter=None):
     """Download one snap's project files. Returns the directory written."""
     url = url or base_url()
     record = entry(name, found, url)
+    # Before anything is written: a project published without a file its
+    # build needs cannot be built, and half of one on disk helps nobody.
+    if record.get("incomplete"):
+        missing = ", ".join(record["incomplete"])
+        raise DatabaseError(f"{name} is published without {missing}, which its "
+                            f"build needs -- it cannot be built from the "
+                            f"database")
+
     into = Path(into)
     into.mkdir(parents=True, exist_ok=True)
 
@@ -331,11 +341,6 @@ def fetch(name, into, found=None, url=None, reporter=None):
         if reporter:
             reporter.detail(relative)
 
-    if record.get("incomplete"):
-        missing = ", ".join(record["incomplete"])
-        raise DatabaseError(f"{name} is published without {missing}, which its "
-                            f"build needs -- it cannot be built from the "
-                            f"database")
     return into
 
 

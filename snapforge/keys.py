@@ -102,5 +102,3 @@ def _ordinary(character):
     if character == "\t":
         return "tab"
     return character
-
-

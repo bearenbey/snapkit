@@ -9,7 +9,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from . import sources, update
+from . import local, sources, update
 
 # Keyed by name, so a new state fails loudly instead of taking a wrong colour.
 UPSTREAM_COLOUR = {"current": "green", "behind": "bold yellow",
@@ -156,6 +156,7 @@ class Screen:
             Layout(self._log(), size=LOG_HEIGHT),
             Layout(self._footer(width), size=1))
         return layout
+
     def _header_height(self):
         """Tall enough for what the header has to say."""
         if self.board.tracking:
@@ -163,6 +164,7 @@ class Screen:
         if not self.board.prompting:
             return 3
         return 2 + 1 + min(len(self.board.matches), 5) + 1
+
     def _header(self, width=100):
         if self.board.asking:
             return self._asking_header()
@@ -175,6 +177,7 @@ class Screen:
         # No box: two lines and a rule read as a heads-up display rather
         # than as a fourth container stacked on three others.
         return Group(Text(""), self._masthead(width), self._rule(width))
+
     def _rule(self, width=100):
         """A hairline under the masthead, bright at the left and fading out."""
         room = max(4, width - 2)
@@ -214,6 +217,7 @@ class Screen:
             line.append("   ")
             line.append(self.board.status, style="dim italic")
         return line
+
     def _question(self, title, style, *parts):
         """A yes-or-no across the top, with no as the default it shows."""
         return Panel(Text.assemble(*parts, ("[y/N]", "bold " + style)),
@@ -232,6 +236,7 @@ class Screen:
             ("forget ", "bold"), (self.board.confirm, "bold yellow"),
             ("?  its record and the snapcraft.yaml stored with it go too. "
              "The project directory stays.  ", "bold"))
+
     def _caret(self, shown="▌", hidden=" "):
         """The blink at the end of whatever is being typed."""
         return shown if self.frame // 6 % 2 else hidden
@@ -293,6 +298,7 @@ class Screen:
         return Panel(Group(*lines), title="find or add", title_align="left",
                      box=box.ROUNDED,
                      border_style=ACCENT, padding=(0, 1))
+
     def _table(self, width=100, compact=False):
         """The registered snaps, scrolled so the cursor is always on screen."""
         first, last = self._window()
@@ -359,6 +365,7 @@ class Screen:
         return Panel(table, title=title, title_align="left",
                      box=box.ROUNDED, border_style=EDGE,
                      padding=(0, 1))
+
     def _status_cell(self, row):
         """What this snap is doing, as one cell."""
         if row.state == "working" and row.total_bytes:
@@ -372,6 +379,7 @@ class Screen:
         if row.state in ("working", "queued", "checking"):
             glyph = _spinner(self.frame)
         return Text.assemble((glyph + " ", style), (label, style))
+
     def _window(self):
         """Which rows to draw, following the cursor."""
         total = len(self.board.rows)
@@ -385,6 +393,7 @@ class Screen:
             self.offset = self.board.cursor - height + 1
         self.offset = max(0, min(self.offset, total - height))
         return self.offset, self.offset + height
+
     def _inspector(self):
         """Everything about the highlighted snap that fits without asking."""
         row = self.board.row
@@ -438,6 +447,7 @@ class Screen:
         return Panel(Group(*lines), title="inspector", title_align="left",
                      box=box.ROUNDED,
                      border_style=EDGE, padding=(0, 1))
+
     def _logbook(self):
         """The activity log, full screen, scrolled back to where it was left."""
         lines = list(self.board.log)
@@ -473,6 +483,7 @@ class Screen:
         return Panel(Group(*lines) if lines else Text(""),
                      title="activity", box=box.ROUNDED, title_align="left",
                      border_style="grey35", padding=(0, 1))
+
     def _footer(self, width=100):
         if self.board.busy:
             return Text.assemble(("  ", ""), (_spinner(self.frame), ACCENT),
@@ -484,6 +495,7 @@ class Screen:
             if len(keys.plain) <= width:
                 return keys
         return _keys(tuple((key, "") for key, _ in SHORT_KEYS))
+
     def _picker(self):
         """The ranking, with the reason each file scored what it did."""
         table = Table(box=None, pad_edge=False, expand=True,
@@ -504,6 +516,7 @@ class Screen:
         return Panel(Group(table, Text(""), hint),
                      title=f"{self.board.picking.title} -- which file?",
                      box=box.ROUNDED, border_style=ACCENT, padding=(0, 1))
+
     def _details(self):
         """The record, with the recipe under it scrolling on its own.
 
@@ -553,6 +566,8 @@ def _gradient(text, start=(0x4C, 0xE0, 0xFF), end=(0xB9, 0x8C, 0xFF),
         weight = "bold " if bold else ""
         out.append(character, style=f"{weight}#%02x%02x%02x" % shade)
     return out
+
+
 def _fit(text, room):
     """`text`, shortened to `room` columns, so a header cannot wrap."""
     return text if len(text) <= room else text[:max(1, room - 1)] + "…"
@@ -585,14 +600,20 @@ def _meter(counts, total, width=24):
             used += cells
     bar.append("░" * (width - used), style="grey30")
     return bar
+
+
 def _keys(pairs):
     out = Text("  ")
     for key, label in pairs:
         out.append(key, style="bold " + ACCENT)
         out.append(" " + label + "    ", style="dim")
     return out
+
+
 def _spinner(frame):
     return SPINNER[(frame // 3) % len(SPINNER)]
+
+
 def _highlight(text, needle, base):
     """`text` with the part that matched picked out of it."""
     out = Text()
@@ -604,8 +625,12 @@ def _highlight(text, needle, base):
     out.append(text[where:where + len(needle)], style="bold " + ACCENT)
     out.append(text[where + len(needle):], style=base)
     return out
+
+
 def _kind_badge(kind):
     return Text(kind or "-", style=KIND_STYLE.get(kind, "dim"))
+
+
 def _source_of(snap):
     """Where this snap's releases come from, for the inspector."""
     text = sources.label(snap)
@@ -634,6 +659,8 @@ def _upstream_cell(row):
     if row.latest == row.snap.version:
         return Text("·", style="grey35")
     return Text(row.latest, style="dim")
+
+
 def _lineage(snap):
     """The last few versions this snap has been on, oldest first."""
     seen = []
@@ -649,6 +676,8 @@ def _lineage(snap):
             trail.append(" → ", style="dim " + ACCENT)
         trail.append(version, style="dim")
     return trail
+
+
 def _ago(stamp):
     """How long ago, in as few characters as it takes."""
     when = _parse(stamp)
@@ -661,12 +690,16 @@ def _ago(stamp):
         if seconds < cut:
             return "now" if size == 1 else f"{int(seconds // size)}{suffix}"
     return f"{int(seconds // 2629800)}mo"
+
+
 def _when(stamp):
     """The date, with how long ago it was after it."""
     when = _parse(stamp)
     if when is None:
         return stamp or ""
     return f"{when.date()}  ({_ago(stamp)} ago)"
+
+
 def _parse(stamp):
     if not stamp:
         return None
@@ -675,6 +708,8 @@ def _parse(stamp):
     except ValueError:
         return None
     return when.replace(tzinfo=timezone.utc) if when.tzinfo is None else when
+
+
 def _smooth_bar(share, width=12):
     """A bar that moves an eighth of a cell at a time."""
     share = min(1.0, max(0.0, share))

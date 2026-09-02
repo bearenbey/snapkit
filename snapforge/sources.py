@@ -60,7 +60,7 @@ def _apt(config, want):
     index = _fill(config["index"], base=base)
     version, filename, sha = apt_stanza(index, config["package"], want or "",
                                         want_arch=arch.host())
-    return _release(config, version, filename.rsplit("/", 1)[1],
+    return _release(config, version, filename.rsplit("/", 1)[-1],
                     f"{base}/{filename}", sha=sha)
 
 
@@ -278,10 +278,10 @@ def configure(kind, values):
             # not just the one it was written on.
             config[key] = template.format_map(_Partial(config))
 
-    # A key with a default only goes missing when what it is built from did.
-    missing = [key for key in shape.required
-               if not config.get(key) and key not in shape.defaults]
-    missing = missing or [key for key in shape.required if not config.get(key)]
+    # A key with a default only goes missing when what it is built from did,
+    # so name what was asked for outright before what is derived from it.
+    blank = [key for key in shape.required if not config.get(key)]
+    missing = [key for key in blank if key not in shape.defaults] or blank
     if missing:
         raise BadUpstream(
             f"{kind} needs {', '.join(missing)}\n"
@@ -375,9 +375,10 @@ def _gpg(config, path, release):
     """Check a detached signature published next to the download."""
     if not shutil.which("gpg"):
         return "gpg: not installed, signature not checked"
-    signature = Path(str(path) + config.get("suffix", ".sig"))
+    suffix = config.get("suffix", ".sig")
+    signature = Path(str(path) + suffix)
     try:
-        download(release.url + config.get("suffix", ".sig"), signature)
+        download(release.url + suffix, signature)
     except NetworkError:
         return "gpg: upstream published no signature for this release"
     try:

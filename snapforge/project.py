@@ -16,8 +16,6 @@ class ForgeError(Exception):
     """Something the tool cannot go on without."""
 
 
-
-
 @dataclass
 class Plan:
     """What making this snap is going to involve."""
@@ -336,6 +334,22 @@ def write(snap, reporter):
     return directory
 
 
+def is_classic(snap):
+    """Whether installing this one needs --classic, read off its own recipe."""
+    try:
+        recipe_text = (Path(snap.path) / "snap" / "snapcraft.yaml").read_text(
+            encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    return "confinement: classic" in recipe_text
+
+
+def install_command(snap, built):
+    """What to run to install a snap that was just built here."""
+    return ["sudo", "snap", "install", "--dangerous",
+            *(["--classic"] if is_classic(snap) else []), str(built)]
+
+
 def adopt(snap, reporter):
     """Take an edited snapcraft.yaml back into the record."""
     yaml_path = snap.path / "snap" / "snapcraft.yaml"
@@ -423,7 +437,8 @@ def build(snap, reporter, extra=()):
                 raise ForgeError(f"no snap/snapcraft.yaml at {directory} -- "
                                  f"write it out first")
             try:
-                buildlib.snapcraft_preflight("--destructive-mode" in extra)
+                buildlib.snapcraft_preflight("--destructive-mode" in extra,
+                                             reporter)
             except buildlib.BuildError as exc:
                 raise ForgeError(str(exc)) from exc
             command, shell = ["snapcraft", "pack", *extra], False
@@ -453,28 +468,6 @@ def build(snap, reporter, extra=()):
                     f"({built.stat().st_size / 1e6:.0f} MB)")
     snap.record_build(snap.version)
     return built
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def _readme(snap):

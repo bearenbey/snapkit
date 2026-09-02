@@ -34,7 +34,8 @@ class Reporter:
         yield
 
 
-def _colour(code, text, stream=None):
+def colour(code, text, stream=None):
+    """Wrap text in an ANSI code, or leave it alone when nothing will read it."""
     stream = stream or sys.stdout
     return f"\033[{code}m{text}\033[0m" if stream.isatty() else text
 
@@ -51,18 +52,18 @@ class PlainReporter(Reporter):
         print(text, file=self.stream, flush=True)
 
     def step(self, text):
-        self._print(f"{_colour(36, '==>', self.stream)} {text}")
+        self._print(f"{colour(36, '==>', self.stream)} {text}")
 
     def detail(self, text):
         self._print(f"    {text}")
 
     def warn(self, text):
         self._end_bar()
-        print(f"{_colour(33, 'warning:', sys.stderr)} {text}",
+        print(f"{colour(33, 'warning:', sys.stderr)} {text}",
               file=sys.stderr, flush=True)
 
     def result(self, text):
-        self._print(f"{_colour(32, '==>', self.stream)} {text}")
+        self._print(f"{colour(32, '==>', self.stream)} {text}")
 
     def output(self, line):
         # Verbatim: on a terminal this is what the build wrote there anyway.

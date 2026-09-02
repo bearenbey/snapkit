@@ -1038,6 +1038,38 @@ def projects():
             same(gone.get("demo").version, "1.1.0",
                  "a missing project should not blank the recorded version")
             same(gone.resynced, [])
+    @check("a record put right on load says so, rather than changing quietly")
+    def _():
+        import contextlib
+        from snapforge import cli
+        with tempfile.TemporaryDirectory() as work:
+            work = Path(work)
+            directory = work / "demo-snap"
+            (directory / "snap").mkdir(parents=True)
+            recipe = directory / "snap" / "snapcraft.yaml"
+            recipe.write_text("name: demo\nversion: '1.0.0'\nbase: core24\n")
+            register = work / "register"
+            db.Database(register).add(
+                db.Snap(name="demo", version="1.0.0", directory=str(directory)))
+
+            # something else moves the project on behind the register's back
+            recipe.write_text("name: demo\nversion: '2.0.0'\nbase: core24\n")
+
+            buffer = io.StringIO()
+            with patched(db, default_path=lambda: register):
+                with contextlib.redirect_stdout(buffer):
+                    cli.main(["list"])
+            said = buffer.getvalue()
+            assert "demo was recorded at 1.0.0" in said, said
+            assert "2.0.0" in said, said
+
+            # and nothing to say on the next command, because it is settled
+            second = io.StringIO()
+            with patched(db, default_path=lambda: register):
+                with contextlib.redirect_stdout(second):
+                    cli.main(["list"])
+            assert "was recorded at" not in second.getvalue(), second.getvalue()
+
     @check("importing does not damage the project it imports")
     def _():
         # write() used to overwrite a README and add an empty recipe.
@@ -1456,6 +1488,21 @@ def update_state(snap):
 def dashboard():
     """The dashboard: the keys, the one worker thread, and the drawing."""
     from snapforge import db
+
+    @check("every header the find-or-add box can draw actually draws")
+    def _():
+        # The path branch reached local.looks_like_path(), which screen.py
+        # used and never imported: typing anything unregistered killed the
+        # render loop with NameError.
+        from snapforge.tui import Dashboard
+
+        with tempfile.TemporaryDirectory() as home:
+            board = Dashboard(db=db.Database(Path(home) / "snapkit.json"))
+            board.prompting = True
+            for typed in ("", "owner/name", "./thing.deb", str(Path(home)),
+                          "~/Downloads"):
+                board.prompt, board.matches = typed, []
+                board.screen.render()
 
     @check("the picker blocks the worker until something is chosen")
     def _():

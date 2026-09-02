@@ -9,7 +9,9 @@ import sys
 from pathlib import Path
 
 from .arch import host as host_arch
+from .inspect import missing_libraries
 from .net import download, sha256_file
+from .report import PlainReporter
 from .versions import deb_compare, yaml_version
 
 # Where the desktop builds get their GTK and font helpers from.
@@ -67,22 +69,6 @@ class BuildError(Exception):
     """Something the build cannot go on without."""
 
 
-def _colour(code, text):
-    return f"\033[{code}m{text}\033[0m" if sys.stdout.isatty() else text
-
-
-def say(text):
-    print(f"{_colour(36, '==>')} {text}", flush=True)
-
-
-def note(text):
-    print(f"    {text}", flush=True)
-
-
-def warn(text):
-    print(f"{_colour(33, 'warning:')} {text}", file=sys.stderr, flush=True)
-
-
 def die(text):
     raise BuildError(text)
 
@@ -115,8 +101,9 @@ class Build:
         self.directory = Path(directory).resolve()
         os.chdir(self.directory)
         self.prime = self.directory / "prime"
-        # Where the commentary goes. None prints it; the dashboard takes it.
-        self.reporter = reporter
+        # Everything this build says goes through here, so a dashboard run
+        # never writes over the screen it is drawing.
+        self.reporter = reporter or PlainReporter()
         # Added to any snapcraft this build runs, so --destructive-mode
         # reaches a project that drives snapcraft itself.
         self.snapcraft_flags = list(snapcraft_flags)
@@ -124,22 +111,13 @@ class Build:
     # -- saying things: on the Build, so a pack.py needs no import ----------
 
     def say(self, text):
-        if self.reporter:
-            self.reporter.step(text)
-        else:
-            say(text)
+        self.reporter.step(text)
 
     def note(self, text):
-        if self.reporter:
-            self.reporter.detail(text)
-        else:
-            note(text)
+        self.reporter.detail(text)
 
     def warn(self, text):
-        if self.reporter:
-            self.reporter.warn(text)
-        else:
-            warn(text)
+        self.reporter.warn(text)
 
     die = staticmethod(die)
 
@@ -298,19 +276,17 @@ class Build:
                 if one.is_file():
                     one.chmod(one.stat().st_mode | 0o111)
 
-    def missing_libraries(self, binary):
+    def missing_libraries(self, binary, root=None):
         """Whatever ldd cannot resolve for a binary, empty when it can."""
-        done = subprocess.run(["ldd", str(binary)], capture_output=True, text=True)
-        return [line.split()[0] for line in done.stdout.splitlines()
-                if "not found" in line]
+        return missing_libraries(binary, root)
 
     def warn_missing(self, binary, hint=""):
         """Say what a classic snap will not find on this host."""
         missing = self.missing_libraries(binary)
         if missing:
-            warn("these libraries are missing on this host:\n"
-                 + "\n".join(f"           {name}" for name in missing)
-                 + (f"\n         {hint}" if hint else ""))
+            self.warn("these libraries are missing on this host:\n"
+                      + "\n".join(f"           {name}" for name in missing)
+                      + (f"\n         {hint}" if hint else ""))
         return missing
 
     # -- output --------------------------------------------------------------
@@ -318,12 +294,12 @@ class Build:
     def pack(self, name=None, arch=None):
         filename = name or (f"{self.app}_{self.version}_"
                             f"{arch or host_arch()}.snap")
-        say(f"packing version {self.version}")
+        self.say(f"packing version {self.version}")
         self.run("snap", "pack", self.prime, f"--filename={filename}", ".")
         built = self.directory / filename
         if not built.is_file():
             die(f"snap pack finished but {filename} was not produced")
-        note(f"{filename}  ({built.stat().st_size / 1e6:.0f} MB)")
+        self.note(f"{filename}  ({built.stat().st_size / 1e6:.0f} MB)")
         return built
 
 
@@ -391,7 +367,7 @@ def drop_instance(name):
                           capture_output=True).returncode == 0
 
 
-def snapcraft_preflight(destructive=False):
+def snapcraft_preflight(destructive=False, reporter=None):
     """What is worth saying before a build that takes minutes, not after."""
     if not shutil.which("snapcraft"):
         die("snapcraft is not installed: sudo snap install snapcraft --classic")
@@ -400,7 +376,8 @@ def snapcraft_preflight(destructive=False):
     lxd = shutil.which("lxc") and subprocess.run(
         ["lxc", "list"], capture_output=True).returncode == 0
     if not lxd:
-        warn("LXD is not answering, and it is snapcraft's default backend:\n"
-             "           sudo snap install lxd\n"
-             "           sudo lxd init --auto\n"
-             '           sudo usermod -aG lxd "$USER"   # then: newgrp lxd')
+        (reporter or PlainReporter()).warn(
+            "LXD is not answering, and it is snapcraft's default backend:\n"
+            "           sudo snap install lxd\n"
+            "           sudo lxd init --auto\n"
+            '           sudo usermod -aG lxd "$USER"   # then: newgrp lxd')

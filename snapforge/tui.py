@@ -114,6 +114,9 @@ class Dashboard:
         for record, why in getattr(self.db, "problems", []):
             self.say(f"{record.name} could not be read and was left out: {why}",
                      "bold red")
+        for name, was, live in getattr(self.db, "resynced", []):
+            self.say(f"{name} was recorded at {was}, but its project says "
+                     f"{live} -- the record now says so too", "yellow")
         self.status = (f"{len(self.known)} registered -- press n to make "
                        f"one from a github repository" if self.known else
                        "nothing registered yet -- press n and paste a github url")
@@ -417,21 +420,11 @@ class Dashboard:
 
     def _install(self, snap, built):
         """Install what was just built, with the terminal handed back."""
-        classic = ""
-        try:
-            recipe = (Path(snap.path) / "snap" / "snapcraft.yaml").read_text()
-            if "confinement: classic" in recipe:
-                classic = " --classic"
-        except OSError:
-            pass
-
-        command = f"sudo snap install --dangerous{classic} {built}"
-        self.say(f"installing: {command}", "cyan")
+        command = project.install_command(snap, built)
+        self.say("installing: " + " ".join(command), "cyan")
         with self.suspended():
-            print(f"\n{command}\n", flush=True)
-            done = subprocess.run(["sudo", "snap", "install", "--dangerous",
-                                   *(["--classic"] if classic else []),
-                                   str(built)])
+            print("\n" + " ".join(command) + "\n", flush=True)
+            done = subprocess.run(command)
         if done.returncode == 0:
             self.say(f"installed {snap.name}", "bold green")
         else:
@@ -463,24 +456,10 @@ class Dashboard:
             return
 
         def work():
-            reporter = DashboardReporter(self, row)
-            row.state = "working"
             self.status = f"updating {row.name}"
             try:
-                project.adopt(row.snap, reporter)
-                update.update(row.snap, row.release, row.asset, reporter)
-                self.db.add(row.snap)
-                row.latest = row.snap.version
-                row.state = "done"
-                self._build(row.snap, reporter, row)
-            except (NetworkError, project.ForgeError) as exc:
-                row.state, row.note = "failed", str(exc)
-                self.say(f"{row.name}: {exc}", "red")
-            except Cancelled:
-                row.state = "behind"
-                raise
+                self._onto_release(row, DashboardReporter(self, row))
             finally:
-                row.done_bytes = row.total_bytes = 0
                 self.status = "done -- press r to check again"
 
         self.run_job("updating", work)
@@ -504,27 +483,12 @@ class Dashboard:
                 if self.cancel.is_set():
                     row.state = "behind"
                     continue
-                reporter = DashboardReporter(self, row)
                 self.select(row.name)
-                row.state = "working"
                 self.status = f"updating {row.name} ({index} of {len(behind)})"
-                try:
-                    project.adopt(row.snap, reporter)
-                    update.update(row.snap, row.release, row.asset, reporter)
-                    self.db.add(row.snap)
-                    row.latest = row.snap.version
-                    made = self._build(row.snap, reporter, row,
-                                       ask_install=False)
-                    if made is not None:
-                        built.append((row.snap, made))
-                except (NetworkError, project.ForgeError) as exc:
-                    row.state, row.note = "failed", str(exc)
-                    self.say(f"{row.name}: {exc}", "red")
-                except Cancelled:
-                    row.state = "behind"
-                    raise
-                finally:
-                    row.done_bytes = row.total_bytes = 0
+                made = self._onto_release(row, DashboardReporter(self, row),
+                                          ask_install=False)
+                if made is not None:
+                    built.append((row.snap, made))
 
             self.status = f"built {len(built)} of {len(behind)}"
             # One question for the run, rather than one for every snap in it.
@@ -537,6 +501,30 @@ class Dashboard:
                     self.say(f"built {len(built)}, installed none", "dim")
 
         self.run_job("updating", work)
+
+    def _onto_release(self, row, reporter, ask_install=True):
+        """Move one row onto the release its last check found, and build it.
+
+        Both `u` and `U` are this, so neither can learn something the other
+        does not. Returns what was built, or None if it did not get there.
+        """
+        row.state = "working"
+        try:
+            project.adopt(row.snap, reporter)
+            update.update(row.snap, row.release, row.asset, reporter)
+            self.db.add(row.snap)
+            row.latest = row.snap.version
+            row.state = "done"
+            return self._build(row.snap, reporter, row, ask_install=ask_install)
+        except (NetworkError, project.ForgeError) as exc:
+            row.state, row.note = "failed", str(exc)
+            self.say(f"{row.name}: {exc}", "red")
+            return None
+        except Cancelled:
+            row.state = "behind"
+            raise
+        finally:
+            row.done_bytes = row.total_bytes = 0
 
     def build_selected(self):
         """Hand the selected project to snapcraft as it stands."""

@@ -9,6 +9,7 @@ from . import classify, inspect
 from .adopt import version_from
 from .versions import deb_key, version_key
 
+
 @dataclass
 class Found:
     """One package file in a directory, and what can be said about it."""
@@ -61,12 +62,7 @@ def name_from(path, kind=""):
     if declared:
         return declared
 
-    stem = path.name
-    for suffix in sorted(classify.ARCHIVES + (".deb", ".appimage"),
-                         key=len, reverse=True):
-        if stem.lower().endswith(suffix):
-            stem = stem[:-len(suffix)]
-            break
+    stem = classify.strip_suffix(path.name)
     found = _ends_the_name(classify.wanted_arch().pattern,
                            classify.other_arch().pattern).search(stem)
     if found and found.start():
@@ -78,10 +74,8 @@ def glob_for(name, version):
     """A shell glob matching this file in every version of it."""
     if not version:
         return name
-    spellings = {version, version.replace("-", "_"), version.replace(".", "_"),
-                 version.replace("-", ".")}
     glob = name
-    for spelling in sorted(filter(None, spellings), key=len, reverse=True):
+    for spelling in classify.spellings_of(version):
         glob = glob.replace(spelling, "*")
     # Collapse adjacent runs: one wildcard will do for app-1.2.3/app-1.2.3.deb.
     return re.sub(r"\*{2,}", "*", glob)

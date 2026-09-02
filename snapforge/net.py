@@ -77,10 +77,11 @@ def _open(opener, url, method="GET", timeout=META_TIMEOUT, retries=1):
             raise
         except (urllib.error.URLError, OSError) as exc:
             last = exc
-            # A retry it has no time for is a wait nobody asked for.
+            # A retry it has no time for is a wait nobody asked for, and a
+            # backoff longer than what is left of the deadline is the same
+            # thing: _left raises when there is none, and shortens the rest.
             if attempt < retries:
-                _left(1 + attempt, url)
-                time.sleep(1 + attempt)
+                time.sleep(_left(1 + attempt, url))
     raise NetworkError(f"{url}: {last}")
 
 

@@ -4,6 +4,7 @@ import re
 import textwrap
 
 from . import arch, classify
+from .rewrite import replace_version
 
 BASE = "core24"
 
@@ -184,10 +185,8 @@ def build(*, name, version, summary, description, license_id, kind, url,
         out += ["    # A GtkApplication registers its application id on the session",
                 "    # bus, and confinement refuses a name the snap has not declared.",
                 "    slots:",
-                f"      - dbus-{name}"]
-
-    if bus_name:
-        out += ["", "slots:", f"  dbus-{name}:", "    interface: dbus",
+                f"      - dbus-{name}",
+                "", "slots:", f"  dbus-{name}:", "    interface: dbus",
                 "    bus: session", f"    name: {bus_name}"]
 
     out += ["", "parts:", part_for(kind, name, url, sha).rstrip()]
@@ -237,7 +236,7 @@ def repoint(yaml_text, old_version, new_version, old_url, new_url, sha=""):
             line = line.replace(old_url, new_url)
         elif re.match(r"^\s*source-checksum:\s*sha256/", line) and sha:
             line = re.sub(r"(sha256/).*", lambda m: m.group(1) + sha, line)
-        elif old_version and old_version in line and "http" in line:
-            line = line.replace(old_version, new_version)
+        elif old_version and "http" in line:
+            line = replace_version(line, old_version, new_version)
         out.append(line)
     return "\n".join(out) + "\n"
