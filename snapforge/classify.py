@@ -138,26 +138,31 @@ def score(name):
         points += 10
         why.append("no architecture in the name")
 
-    linux = _has(name, LINUX)
+    tokens = set(_tokens(name))
+    linux = next((word for word in LINUX if word in tokens), "")
     if linux:
         points += 15
         why.append(linux)
-    if "musl" in _tokens(name):
+    if "musl" in tokens:
         points += 10
         why.append("statically linked against musl")
-    if "static" in _tokens(name):
+    if "static" in tokens:
         points += 8
         why.append("static")
     return points, kind, ", ".join(why)
 
 
+def strip_suffix(name):
+    """A filename with whatever package extension it carries taken off."""
+    for suffix in sorted(ARCHIVES + (".deb", ".appimage"), key=len, reverse=True):
+        if name.lower().endswith(suffix):
+            return name[:-len(suffix)]
+    return name
+
+
 def leading_name(name):
     """The part of a filename before the version starts."""
-    stem = name
-    for suffix in sorted(ARCHIVES + (".deb", ".appimage"), key=len, reverse=True):
-        if stem.lower().endswith(suffix):
-            stem = stem[:-len(suffix)]
-            break
+    stem = strip_suffix(name)
     found = re.search(r"[-_.](?:v?\d)", stem)
     return (stem[:found.start()] if found else stem).lower()
 
@@ -182,16 +187,25 @@ def classify(assets, wanted=""):
 
 def rejected(assets):
     """The assets that were passed over, with the reason, for a full view."""
-    return [(asset, rejection(asset.name)) for asset in assets
-            if rejection(asset.name)]
+    passed_over = ((asset, rejection(asset.name)) for asset in assets)
+    return [(asset, why) for asset, why in passed_over if why]
+
+
+def spellings_of(version):
+    """Every way a version can be written into a filename, longest first.
+
+    Upstreams are not consistent about it: the tag says 1.2.3 and the file
+    says 1_2_3, so a pattern built from the tag alone stops matching.
+    """
+    written = {version, version.replace("-", "_"), version.replace(".", "_"),
+               version.replace("-", "."), version.replace("_", "-")}
+    return sorted(filter(None, written), key=len, reverse=True)
 
 
 def asset_pattern(name, version):
     """A regex matching this asset in *later* releases too."""
     pattern = re.escape(name)
-    spellings = {version, version.replace("-", "_"), version.replace(".", "_"),
-                 version.replace("-", "."), version.replace("_", "-")}
-    for spelling in sorted(filter(None, spellings), key=len, reverse=True):
+    for spelling in spellings_of(version):
         pattern = pattern.replace(re.escape(spelling), r"[0-9][0-9A-Za-z.+~_-]*")
     return f"^{pattern}$"
 

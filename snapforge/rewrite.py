@@ -15,6 +15,20 @@ class FileChange:
     lines: list          # [(lineno, new text)]
 
 
+def replace_version(text, old, new):
+    """Swap one version for another, but only where it is the whole version.
+
+    A plain replace of "1.0" with "1.1" also rewrites the 21.0 in core21.0
+    and the 11.0 in gcc-11.0, quietly editing something that has nothing to
+    do with this project. A version does not start in the middle of a
+    number, and does not have another number directly after it.
+    """
+    if not old:
+        return text
+    return re.sub(rf"(?<![0-9]){re.escape(old)}(?![0-9])(?!\.[0-9])",
+                  new.replace("\\", "\\\\"), text)
+
+
 def _write_lines(path, lines):
     path.write_text("".join(line + "\n" for line in lines), encoding="utf-8")
 
@@ -39,8 +53,9 @@ def rewrite_versions(directory, old, new, old_asset="", new_asset=""):
         if old_asset and old_asset != new_asset:
             after = [line.replace(old_asset, new_asset) for line in after]
         if old:
-            after = [line.replace(old, new).replace(old.replace("-", "_"),
-                                                    new.replace("-", "_"))
+            after = [replace_version(
+                        replace_version(line, old, new),
+                        old.replace("-", "_"), new.replace("-", "_"))
                      for line in after]
 
         lines = _changed(before, after)

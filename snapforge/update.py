@@ -303,7 +303,8 @@ def _update_artifact(snap, release, asset, reporter, was):
             _fetch(asset.url, fetched, asset.sha, reporter)
         try:
             _verified(snap, fetched, release, reporter)
-        except Exception:
+        except BaseException:
+            # An interrupt must not leave a file that was never checked.
             fetched.unlink(missing_ok=True)
             raise
 

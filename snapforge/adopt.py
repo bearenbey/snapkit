@@ -13,7 +13,7 @@ META_YAML = "overlay/meta/snap.yaml"
 ICON_DIRS = ("snap/gui", "overlay/meta/gui", "meta/gui")
 ICON_SUFFIXES = (".png", ".svg")
 
-# Files a project keeps its upstream payload in, by what they are.
+
 class NotAProject(Exception):
     """There is no snap project in that directory."""
 
@@ -72,10 +72,7 @@ def find_repo(directory, text):
 
 def find_artifact(directory, text):
     """The upstream file this project builds from, and what kind it is."""
-    source = yaml_field(text, "source") or ""
-    found = re.search(r"(?m)^\s*source:\s*(\S+)", text)
-    if found:
-        source = found.group(1)
+    source = source_in(text)
     name = source.rsplit("/", 1)[-1].lstrip("./") if source else ""
 
     if not name or classify.kind_of(name) == "":

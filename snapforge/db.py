@@ -8,6 +8,8 @@ from dataclasses import asdict, dataclass, field, fields
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .github import parse_repo
+
 # How many builds of one snap to keep the detail of.
 HISTORY_KEPT = 20
 
@@ -172,9 +174,6 @@ class Database:
         # A path ending in .json is taken as the old single-file register.
         given = Path(path) if path else default_path()
         self.root = given.parent if given.suffix == ".json" else given
-        self.snaps = {}
-        self.problems = []        # records that could not be read
-        self.resynced = []        # records whose version was stale on disk
         self.load()
 
     # -- where things are ----------------------------------------------------
@@ -192,7 +191,7 @@ class Database:
         """Read every record. Recipes are left on disk until wanted."""
         self.migrate()
         self.snaps = {}
-        self.problems = []
+        self.problems = []        # records that could not be read
         self.resynced = []        # [(name, was, now)] corrected by this load
         folder = self.root / "snaps"
         if not folder.is_dir():
@@ -306,9 +305,8 @@ class Database:
             return []
         # A pasted URL is a repository, and should find the snap made from it.
         try:
-            from .github import parse_repo
             needle = parse_repo(needle).lower()
-        except (ValueError, ImportError):
+        except ValueError:
             pass
 
         scored = []
@@ -343,6 +341,10 @@ class Database:
         kept = snap.kept_icon
         del self.snaps[name]
         self.record_path(name).unlink(missing_ok=True)
+        # The file it was read from as well, which is not always the one
+        # named after it -- otherwise a removed snap is back on next load.
+        if snap.record_file:
+            Path(snap.record_file).unlink(missing_ok=True)
         snap.recipe_path.unlink(missing_ok=True)
         if kept:
             kept.unlink(missing_ok=True)

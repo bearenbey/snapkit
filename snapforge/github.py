@@ -7,7 +7,7 @@ from .net import NetworkError, get_text, head_location
 
 # Repository names GitHub accepts: alphanumerics, dot, dash, underscore.
 _NAME = r"[A-Za-z0-9._-]+"
-_REPO = re.compile(rf"^(?:https?://)?(?:www\.)?(?:github\.com/)?({_NAME})/({_NAME}?)/?$")
+_REPO = re.compile(rf"^(?:https?://)?(?:www\.)?(?:github\.com/)?({_NAME})/({_NAME})/?$")
 
 # What GitHub appends to a repository's own description in og:description.
 _BOILERPLATE = re.compile(
@@ -101,7 +101,7 @@ def parse_repo(text):
     if found:
         return f"{found.group(1)}/{found.group(2)}"
     found = _REPO.match(text)
-    if found and found.group(2):
+    if found:
         return f"{found.group(1)}/{found.group(2)}"
     raise ValueError(f"not a github repository: {text}")
 
