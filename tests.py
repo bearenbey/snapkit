@@ -2322,6 +2322,33 @@ def updater():
         assert versions.version_key("1.11~beta.1") > versions.version_key("1.11"), \
             "and sort -V is the ordering that would get this wrong"
 
+    @check("deb_compare answers what dpkg answers, wherever dpkg can be asked")
+    def _():
+        # deb_compare exists so a check does not fork dpkg per comparison.
+        # That is only worth doing while the two still agree, so ask dpkg.
+        import shutil
+        import subprocess
+        from snapforge import versions
+        if not shutil.which("dpkg"):
+            return                 # nothing to compare against on this host
+
+        # Only versions dpkg itself calls well formed, or it answers a
+        # question about its own parser rather than about the ordering.
+        pool = ("1.0", "1.0-1", "1:1.0", "0:1.0", "1.0~rc1", "1.0~", "1.0a",
+                "1.00", "1.0.0", "2.0", "1.0-1ubuntu1", "1.0+git20240101",
+                "10", "9", "1.0~beta.2", "3.10.0~beta.2", "3.10.0", "0",
+                "1:0", "1.0-1~exp1", "1.2.3+ds-2", "1.0-1+deb12u1")
+
+        def dpkg(a, op, b):
+            return subprocess.run(["dpkg", "--compare-versions", a, op, b],
+                                  stderr=subprocess.DEVNULL).returncode == 0
+
+        for a in pool:
+            for b in pool:
+                mine = versions.deb_compare(a, b)
+                theirs = 0 if dpkg(a, "eq", b) else (-1 if dpkg(a, "lt", b) else 1)
+                same((mine > 0) - (mine < 0), theirs, f"{a!r} against {b!r}")
+
     @check("a directory listing answers with the newest release in it")
     def _():
         listing = ('emacs-29.4.tar.xz" emacs-30.2.tar.xz" emacs-9.1.tar.xz" '
@@ -2667,6 +2694,54 @@ def from_a_file():
             # The .deb states its version; the others only have their names.
             same(found[0].version, "1.2.3")
             same(found[0].kind, classify.DEB)
+
+    @check("a pattern and a glob still find the file one release later")
+    def _():
+        # The whole update path rests on these two staying true of a real
+        # name across a real version bump, which nothing else here pins.
+        # Both names are spelled out: deriving the second by substituting
+        # the version silently does nothing when the file spells it
+        # differently, which is exactly the case worth covering.
+        import fnmatch
+
+        class Asset:
+            def __init__(self, name):
+                self.name = name
+
+        seed = (
+            # Names that carry no version: the pattern is literal, and the
+            # file is overwritten in place each release.
+            ("btop-x86_64-unknown-linux-musl.tbz", "1.4.0",
+             "btop-x86_64-unknown-linux-musl.tbz"),
+            ("zen.linux-x86_64.tar.xz", "1.21.15b", "zen.linux-x86_64.tar.xz"),
+            # And the ones that do.
+            ("Godot_v4.3-stable_linux.x86_64.zip", "4.3",
+             "Godot_v4.4-stable_linux.x86_64.zip"),
+            ("discord-0.0.75.deb", "0.0.75", "discord-0.0.76.deb"),
+            ("sublime-text_build-4180_amd64.deb", "4180",
+             "sublime-text_build-4181_amd64.deb"),
+            ("helium-bin_0.4.11.1_amd64.deb", "0.4.11.1",
+             "helium-bin_0.5.0.1_amd64.deb"),
+            ("emacs-30.1.tar.xz", "30.1", "emacs-30.2.tar.xz"),
+            # Not from the seed: no version it tracks holds an underscore, so
+            # nothing else reaches the spelling that swaps one for a dash.
+            ("app-1-2-3-linux.tar.gz", "1_2_3", "app-1-3-0-linux.tar.gz"),
+        )
+
+        for name, version, later in seed:
+            pattern = classify.asset_pattern(name, version)
+            assert classify.match_pattern([Asset(later)], pattern), \
+                f"{pattern} stopped matching at {later}"
+            glob = local.glob_for(name, version)
+            for one in (name, later):
+                assert fnmatch.fnmatch(one, glob), f"{glob} does not match {one}"
+
+        # And neither is so wide that it takes another project's file with it.
+        for name, version, _ in seed:
+            glob = local.glob_for(name, version)
+            for other, _, _ in seed:
+                assert other == name or not fnmatch.fnmatch(other, glob), \
+                    f"{glob} also matches {other}"
 
     @check("the newest of two copies in a folder is the one that counts")
     def _():
