@@ -2388,6 +2388,38 @@ def updater():
         same(found.url, "https://github.com/mpv-player/mpv/archive/refs/"
                         "tags/v0.41.0.tar.gz")
 
+    @check("a version is replaced as a version, and not inside another word")
+    def _():
+        # rewrite_versions edits README.md and snapcraft.yaml, so a rule that
+        # is a shade too eager silently edits something else in them. Every
+        # version shape the seed tracks, in the places one really appears
+        # and the places something merely looks like one.
+        spelled = ("1.4.0", "1.21.15b", "4.3", "0.10.2", "0.0.75", "4180",
+                   "0.4.11.1", "30.1", "0.25.2-beta", "1.0", "3.10", "24")
+        replaced = ("version: '{v}'", "app_{v}_amd64.snap", "app-{v}.tar.gz",
+                    "v{v}", "V{v}", "see {v} here", "/download/{v}/", "{v}",
+                    "  {v}", "{v}  ", "install ./demo_{v}_amd64.snap",
+                    "https://x/releases/download/v{v}/app-{v}.tar.gz")
+        # A digit either side means a longer number; a word in front means a
+        # name that happens to end in digits, which core24 and python3.10 are.
+        left = ("9{v}", "{v}9", "{v}.9", "1{v}", "core{v}", "python{v}",
+                "gtk{v}", "x{v}", "release{v}")
+
+        for version in spelled:
+            newer = "9" + version
+            for shape in replaced:
+                same(rewrite.replace_version(shape.format(v=version),
+                                             version, newer),
+                     shape.format(v=newer), f"{version} in {shape!r}")
+            for shape in left:
+                text = shape.format(v=version)
+                same(rewrite.replace_version(text, version, newer), text,
+                     f"{version} was taken out of {text!r}")
+
+        # Nothing to swap is not an excuse to touch the line.
+        same(rewrite.replace_version("version: '1.0'", "", "2.0"),
+             "version: '1.0'")
+
     @check("a version is replaced everywhere a project spells it out")
     def _():
         with tempfile.TemporaryDirectory() as home:
@@ -3154,10 +3186,81 @@ def database():
                 assert "upgrade snapkit" in str(exc), str(exc)
 
 
+def imports():
+    """What the package imports of itself, and in which direction."""
+    import ast
+    import snapforge
+
+    def imported_here(tree):
+        """The sibling modules a file imports at module level.
+
+        Module level only. An import inside a function is how this package
+        breaks a cycle on purpose -- db reaches for adopt that way -- and
+        counting those would report the very thing they exist to avoid.
+        """
+        found = set()
+
+        def walk(node, in_function):
+            for child in ast.iter_child_nodes(node):
+                nested = in_function or isinstance(
+                    child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda))
+                if not nested and isinstance(child, ast.ImportFrom) \
+                        and child.level == 1:
+                    if child.module:
+                        found.add(child.module.split(".")[0])
+                    else:
+                        found.update(a.name for a in child.names)
+                walk(child, nested)
+
+        walk(tree, False)
+        return found
+
+    root = Path(snapforge.__file__).parent
+    graph = {p.stem: imported_here(ast.parse(p.read_text(encoding="utf-8")))
+             for p in sorted(root.glob("*.py")) if p.stem != "__init__"}
+
+    @check("no module-level import in the package closes a cycle")
+    def _():
+        # A cycle here is not a style question: it is an ImportError, or
+        # worse a half-built module, depending only on which name is
+        # imported first.
+        def cycle_from(start):
+            stack = [(start, [start])]
+            seen = set()
+            while stack:
+                name, path = stack.pop()
+                for other in sorted(graph.get(name, ())):
+                    if other == start:
+                        return path + [other]
+                    if other in graph and (name, other) not in seen:
+                        seen.add((name, other))
+                        stack.append((other, path + [other]))
+            return None
+
+        for name in sorted(graph):
+            found = cycle_from(name)
+            assert found is None, " -> ".join(found)
+
+    @check("the import graph read here is the one the package really has")
+    def _():
+        # The cycle test above passes for the wrong reason if this misreads
+        # the tree and hands it an empty graph, so say what must be in it.
+        assert "arch" in graph["classify"], "classify imports arch, and this missed it"
+        assert "db" in graph["adopt"], "adopt imports db, and this missed it"
+        assert "rewrite" in graph["recipe"], "recipe imports rewrite, and this missed it"
+        # And db reaches adopt inside a function, on purpose, to break the
+        # cycle those two would otherwise be in. That must not be counted.
+        assert "adopt" not in graph["db"], \
+            "db imports adopt inside a function and this counted it anyway"
+        for name, edges in sorted(graph.items()):
+            for other in sorted(edges):
+                assert other in graph, f"{name} imports a missing .{other}"
+
+
 def main():
     for group in (upstreams, architectures, recipes, register, payloads,
                   reading_payloads, projects, checking, dashboard, updater,
-                  from_a_file, database, tracking):
+                  from_a_file, database, tracking, imports):
         group()
     if "--online" in sys.argv[1:]:
         online()
