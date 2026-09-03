@@ -13,9 +13,7 @@ DOWNLOAD_TIMEOUT = 60   # seconds of no progress at all on a download
 CHECK_TIMEOUT = 15      # seconds for a whole check, however many requests
 CHUNK = 1 << 18
 
-# urllib says it is Python, and some CDNs treat that differently. The machine
-# is the uname spelling, because that is what a browser puts there, and an
-# endpoint that picks a build off the user agent should pick this one.
+# urllib says it is Python, and some CDNs serve that differently.
 USER_AGENT = f"Mozilla/5.0 (X11; Linux {platform.machine()}) snapkit/1"
 
 
@@ -29,12 +27,7 @@ _clock = threading.local()
 
 @contextmanager
 def deadline(seconds):
-    """Bound everything done in here, however many requests it turns into.
-
-    A per-request timeout does not answer "how long may this take", since
-    one check can resolve an index, then a release, then an asset. This
-    does, and the requests inside it shorten to whatever is left.
-    """
+    """Bound everything in here, however many requests it turns into."""
     was = getattr(_clock, "until", None)
     _clock.until = time.monotonic() + seconds
     try:
@@ -77,9 +70,7 @@ def _open(opener, url, method="GET", timeout=META_TIMEOUT, retries=1):
             raise
         except (urllib.error.URLError, OSError) as exc:
             last = exc
-            # A retry it has no time for is a wait nobody asked for, and a
-            # backoff longer than what is left of the deadline is the same
-            # thing: _left raises when there is none, and shortens the rest.
+            # _left raises when the deadline is spent, and shortens the rest.
             if attempt < retries:
                 time.sleep(_left(1 + attempt, url))
     raise NetworkError(f"{url}: {last}")

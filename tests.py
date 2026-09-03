@@ -105,8 +105,7 @@ def upstreams():
                 pass
     @check("release notes in the tag feed are not mistaken for tags")
     def _():
-        # The atom feed carries the notes with their markup escaped, so a
-        # looser match walked out of a tag and into `&quot;&gt;Releases page`.
+        # The escaped release notes in the feed carry tag links of their own.
         feed = (
             '<feed><entry>'
             '<link rel="alternate" type="text/html" '
@@ -189,8 +188,7 @@ def upstreams():
                 assert "a.tar.gz" in str(exc), "the error should list the options"
     @check("a companion package does not outrank the application")
     def _():
-        # clamui attaches clamui-privileged-helper, which scores identically
-        # and sorted first on the name alone.
+        # clamui-privileged-helper scores identically and sorted first.
         class Asset:
             def __init__(self, name):
                 self.name, self.url = name, "http://x/" + name
@@ -198,8 +196,7 @@ def upstreams():
                   Asset("clamui_0.4.0_all.deb")]
         same(classify.classify(assets, wanted="clamui")[0].name,
              "clamui_0.4.0_all.deb")
-        # With nothing to compare against, the shorter name still wins: an
-        # application is rarely the one with the extra words on it.
+        # With nothing to compare against, the shorter name still wins.
         same(classify.classify(assets)[0].name, "clamui_0.4.0_all.deb")
 
     @check("the name a file leads with is what the project is called")
@@ -269,9 +266,7 @@ def architectures():
 
     @check("the override takes the spelling a person would actually type")
     def _():
-        # `uname -m` says x86_64, so that is what gets typed. Taken as a name
-        # of its own it made every amd64 asset foreign on an amd64 machine,
-        # which is the exact failure this module exists to prevent.
+        # x86_64 is what gets typed, and made every amd64 asset foreign.
         for typed, wanted in (("x86_64", "amd64"), ("aarch64", "arm64"),
                               ("AMD64", "amd64"), (" amd64 ", "amd64"),
                               ("ppc64le", "ppc64el"), ("arm64", "arm64")):
@@ -291,14 +286,12 @@ def architectures():
                     assert "is not an architecture this knows" in str(exc)
                     # The message has to list them, or there is no way back.
                     assert "amd64" in str(exc) and "riscv64" in str(exc)
-        # It is a ValueError, so the command line already turns it into a
-        # message rather than a traceback.
+        # A ValueError, which the command line already turns into a message.
         assert issubclass(arch.UnknownArchitecture, ValueError)
 
     @check("a machine this does not know about is still allowed to be itself")
     def _():
-        # Only what a person typed is second-guessed. A real port that is not
-        # in the table would otherwise be unable to run the tool at all.
+        # Only what a person typed: a real port not in the table still runs.
         import shutil
         was_which, was_machine = arch.shutil.which, arch.platform.machine
         arch.detected.cache_clear()
@@ -313,8 +306,7 @@ def architectures():
 
     @check("an asset is ours or somebody else's depending on the host")
     def _():
-        # x86_64 was hardcoded, so on any other machine every asset in every
-        # release read as foreign and nothing could be packaged at all.
+        # Hardcoded x86_64 made every asset foreign on every other machine.
         cases = (("btop-x86_64-unknown-linux-musl.tar.gz", "amd64"),
                  ("nvim-linux-arm64.tar.gz", "arm64"),
                  ("app_armv7l.deb", "armhf"),
@@ -361,8 +353,7 @@ def architectures():
 
     @check("an upstream keeps {arch} so the record works on another machine")
     def _():
-        # snap-db carries records between machines; a baked-in binary-amd64
-        # would have every port reading amd64's index and never updating.
+        # snap-db carries records between machines, so no baked-in binary-amd64.
         made = sources.configure("apt", {"base": "https://x/apt",
                                          "package": "thing"})
         assert "{arch}" in made["index"], made["index"]
@@ -457,8 +448,7 @@ def recipes():
         assert "extensions" not in plain and "audio-playback" not in plain
     @check("a desktop entry's app id becomes the bus name the snap may own")
     def _():
-        # lutris died at "not allowed to own the service net.lutris.Lutris":
-        # a GtkApplication registers its id, and the id is the entry's name.
+        # A GtkApplication owns its id on the bus, and snapd refuses undeclared.
         for desktop, wanted in (
                 ("usr/share/applications/net.lutris.Lutris.desktop",
                  "net.lutris.Lutris"),
@@ -540,8 +530,7 @@ def register():
 
     @check("every annotation resolves, on a Python that evaluates them eagerly")
     def _():
-        # 3.14 defers annotations, so a name that is not imported goes unseen
-        # here and raises NameError at import time on 3.13 and earlier.
+        # 3.14 defers annotations, so 3.13 and earlier raise NameError instead.
         import importlib
         import pkgutil
         import typing
@@ -703,8 +692,7 @@ def register():
             load = _time.perf_counter() - start
             same(len(reopened), 1000, "not all of them came back")
 
-            # Best of a few. One sample of a millisecond of disk is noise,
-            # and this has run on a shared runner since it was written.
+            # Best of a few: one sample of a millisecond of disk is noise.
             writes = []
             for _ in range(5):
                 start = _time.perf_counter()
@@ -832,8 +820,7 @@ def reading_payloads():
 
     @check("a program is an ELF binary or a script that says what runs it")
     def _():
-        # lutris ships usr/games/lutris, a python script, and nothing else to
-        # run: taking only ELF made every interpreted application refuse.
+        # Taking only ELF made every interpreted application unpackageable.
         with tempfile.TemporaryDirectory() as home:
             root = tree(Path(home), {
                 "usr/games/lutris": "#! /usr/bin/python3\nprint(1)\n",
@@ -848,9 +835,7 @@ def reading_payloads():
 
     @check("a script that runs the binary is the thing to run")
     def _():
-        # shotcut ships bin/shotcut and a launcher whose first comment is
-        # "Run this instead of trying to run bin/shotcut". Picking the binary
-        # started it with no QT_PLUGIN_PATH and it aborted on the Qt plugin.
+        # shotcut's launcher sets the Qt paths its binary needs.
         with tempfile.TemporaryDirectory() as home:
             root = tree(Path(home), {
                 "bin/thing": b"\x7fELF" + b"\0" * 60,
@@ -877,8 +862,7 @@ def reading_payloads():
 
     @check("the icon is the one the desktop entry asks for")
     def _():
-        # hicolor sorts by what an icon is for, and lutris ships a mimetype
-        # icon whose name matches as well as the real one's does.
+        # In hicolor a mimetype icon matches the name as well as the real one.
         with tempfile.TemporaryDirectory() as home:
             root = tree(Path(home), {
                 "usr/share/applications/net.lutris.Lutris.desktop":
@@ -913,9 +897,7 @@ def reading_payloads():
 
     @check("a library the payload ships is not reported as missing")
     def _():
-        # shotcut bundles its own Qt6 and MLT beside the binary; asking the
-        # host's loader alone called all nineteen of them missing, which
-        # reads as a broken package.
+        # A bundled Qt6 read as nineteen missing libraries, so look beside it.
         with tempfile.TemporaryDirectory() as home:
             root = Path(home)
             (root / "lib").mkdir()
@@ -1290,8 +1272,7 @@ def tracking():
     def _():
         made = sources.configure("apt", {"base": "https://x/apt",
                                          "package": "thing"})
-        # {arch} is left standing: a record has to work on any machine, not
-        # just the one it was written on, and snap-db carries them between.
+        # {arch} is left standing: the record must work on any machine.
         same(made["index"],
              "https://x/apt/dists/stable/main/binary-{arch}/Packages")
         same(sources._fill(made["index"], base="https://x/apt"),
@@ -1337,10 +1318,15 @@ def tracking():
             except NetworkError:
                 pass
             same(snap.upstream, was, "the new upstream was kept anyway")
-            # Forced, it is written down, and the caller is told there is no
-            # release rather than being handed a made-up one.
+            # Forced, it is written down and the caller is told of no release.
             same(update.retrack(snap, wanted, force=True), None)
             same(snap.upstream, wanted)
+
+    @check("folder and local name the same shape, wherever they are typed")
+    def _():
+        same(sources.configure("folder", {"glob": "d-*.deb"}),
+             sources.configure("local", {"glob": "d-*.deb"}))
+        same(sources.configure("folder", {})["kind"], "local")
 
     @check("both front ends refuse an upstream the same way")
     def _():
@@ -1386,6 +1372,18 @@ def tracking():
         assert any("source_anchor" in n for n in update.fitting(recipe, release))
         recipe.source_anchor = r"^(\s*source:\s*)x$"
         same(update.fitting(recipe, release), [])
+
+    @check("a release with no one file in it is still asked what a record needs")
+    def _():
+        from snapforge import github, update
+        # `track ... repo` hands fitting() a release, not one file in one.
+        release = github.Release(repo="a/b", tag="v2.0", version="2.0")
+        artifact = db.Snap(name="demo", style="artifact",
+                           asset="demo_2.0_amd64.deb")
+        notes = update.fitting(artifact, release)
+        assert any("demo_*_amd64.deb" in n for n in notes), notes
+        artifact.asset_glob = "demo_*_amd64.deb"
+        same(update.fitting(artifact, release), [])
 
     @check("track none stops a snap being checked against anything")
     def _():
@@ -1491,9 +1489,7 @@ def dashboard():
 
     @check("every header the find-or-add box can draw actually draws")
     def _():
-        # The path branch reached local.looks_like_path(), which screen.py
-        # used and never imported: typing anything unregistered killed the
-        # render loop with NameError.
+        # screen.py used local.looks_like_path() and never imported it.
         from snapforge.tui import Dashboard
 
         with tempfile.TemporaryDirectory() as home:
@@ -1817,8 +1813,7 @@ def dashboard():
 
     @check("an emptied track box is never mind, not stop tracking")
     def _():
-        # `t` then a cleared line then return threw the upstream away: the
-        # most natural way to back out was the destructive one.
+        # Backing out of `t` with a cleared line threw the upstream away.
         from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             store = db.Database(Path(home))
@@ -1839,8 +1834,7 @@ def dashboard():
 
     @check("stopping tracking clears the repository as well as the upstream")
     def _():
-        # Leaving `repo` behind has check() fall back to it, so a snap that
-        # was just told to stop being checked carries on being checked.
+        # Left behind, `repo` has check() fall back to it and carry on.
         from snapforge import update
         snap = db.Snap(name="demo", repo="a/b", url="https://github.com/a/b",
                        version="1.0", asset_pattern="^x$",
@@ -1872,8 +1866,7 @@ def dashboard():
             same(board.rows[0].state, "behind", "it did not check what it set")
             same(board.rows[0].latest, "2.0")
 
-            # A setting that resolves to nothing must not reach the record:
-            # written down untried it reads as up to date for ever.
+            # Written down untried, a setting reads as up to date for ever.
             board.track("demo", "local glob=nothing-like-this-*.deb")
             board.worker.join(timeout=20)
             same(store.get("demo").upstream,
@@ -1898,8 +1891,7 @@ def dashboard():
 
     @check("every mode is answered by a key handler and drawn by something")
     def _():
-        # The keys and the drawing used to be two chains that had to agree,
-        # and adding a mode to one and not the other left it stuck on screen.
+        # Two chains that had to agree left a new mode stuck on screen.
         from snapforge import screen, tui
 
         same(set(tui.HANDLERS), set(tui.MODES),
@@ -2023,8 +2015,7 @@ def dashboard():
             for index in range(50):
                 board.say(f"line {index}")
 
-            # The loop draws a frame between keystrokes, and the drawing is
-            # what tells the scroll how long the thing it is scrolling is.
+            # The drawing is what tells the scroll how long the page is.
             from rich.console import Console
             paper = Console(file=io.StringIO(), width=90, height=20)
 
@@ -2324,16 +2315,14 @@ def updater():
 
     @check("deb_compare answers what dpkg answers, wherever dpkg can be asked")
     def _():
-        # deb_compare exists so a check does not fork dpkg per comparison.
-        # That is only worth doing while the two still agree, so ask dpkg.
+        # deb_compare saves a fork per comparison, while it still agrees.
         import shutil
         import subprocess
         from snapforge import versions
         if not shutil.which("dpkg"):
             return                 # nothing to compare against on this host
 
-        # Only versions dpkg itself calls well formed, or it answers a
-        # question about its own parser rather than about the ordering.
+        # Only versions dpkg calls well formed, or it answers about its parser.
         pool = ("1.0", "1.0-1", "1:1.0", "0:1.0", "1.0~rc1", "1.0~", "1.0a",
                 "1.00", "1.0.0", "2.0", "1.0-1ubuntu1", "1.0+git20240101",
                 "10", "9", "1.0~beta.2", "3.10.0~beta.2", "3.10.0", "0",
@@ -2390,18 +2379,14 @@ def updater():
 
     @check("a version is replaced as a version, and not inside another word")
     def _():
-        # rewrite_versions edits README.md and snapcraft.yaml, so a rule that
-        # is a shade too eager silently edits something else in them. Every
-        # version shape the seed tracks, in the places one really appears
-        # and the places something merely looks like one.
+        # A rule a shade too eager silently edits the rest of a README.
         spelled = ("1.4.0", "1.21.15b", "4.3", "0.10.2", "0.0.75", "4180",
                    "0.4.11.1", "30.1", "0.25.2-beta", "1.0", "3.10", "24")
         replaced = ("version: '{v}'", "app_{v}_amd64.snap", "app-{v}.tar.gz",
                     "v{v}", "V{v}", "see {v} here", "/download/{v}/", "{v}",
                     "  {v}", "{v}  ", "install ./demo_{v}_amd64.snap",
                     "https://x/releases/download/v{v}/app-{v}.tar.gz")
-        # A digit either side means a longer number; a word in front means a
-        # name that happens to end in digits, which core24 and python3.10 are.
+        # A word in front means a name ending in digits, as core24 is.
         left = ("9{v}", "{v}9", "{v}.9", "1{v}", "core{v}", "python{v}",
                 "gtk{v}", "x{v}", "release{v}")
 
@@ -2473,6 +2458,12 @@ def updater():
 
             (here / "demo_2.0_amd64.snap").write_bytes(b"new")
             same(update.built_version(snap), "2.0", "the newest one counts")
+
+            # `snap pack --filename` does not have to name an architecture.
+            for name in here.glob("*.snap"):
+                name.unlink()
+            (here / "demo_3.0.snap").write_bytes(b"plain")
+            same(update.built_version(snap), "3.0", "no arch in the name")
 
     @check("a missing artifact reads as an update, however current the version")
     def _():
@@ -2729,11 +2720,7 @@ def from_a_file():
 
     @check("a pattern and a glob still find the file one release later")
     def _():
-        # The whole update path rests on these two staying true of a real
-        # name across a real version bump, which nothing else here pins.
-        # Both names are spelled out: deriving the second by substituting
-        # the version silently does nothing when the file spells it
-        # differently, which is exactly the case worth covering.
+        # Both names spelled out: deriving one hides the case worth covering.
         import fnmatch
 
         class Asset:
@@ -2741,8 +2728,7 @@ def from_a_file():
                 self.name = name
 
         seed = (
-            # Names that carry no version: the pattern is literal, and the
-            # file is overwritten in place each release.
+            # No version in the name: the pattern is literal, the file replaced.
             ("btop-x86_64-unknown-linux-musl.tbz", "1.4.0",
              "btop-x86_64-unknown-linux-musl.tbz"),
             ("zen.linux-x86_64.tar.xz", "1.21.15b", "zen.linux-x86_64.tar.xz"),
@@ -2755,8 +2741,7 @@ def from_a_file():
             ("helium-bin_0.4.11.1_amd64.deb", "0.4.11.1",
              "helium-bin_0.5.0.1_amd64.deb"),
             ("emacs-30.1.tar.xz", "30.1", "emacs-30.2.tar.xz"),
-            # Not from the seed: no version it tracks holds an underscore, so
-            # nothing else reaches the spelling that swaps one for a dash.
+            # Not from the seed: no version it tracks holds an underscore.
             ("app-1-2-3-linux.tar.gz", "1_2_3", "app-1-3-0-linux.tar.gz"),
         )
 
@@ -3103,6 +3088,35 @@ def database():
             same(bool((back / "overlay" / "bin" / "launcher").stat().st_mode & 0o111),
                  True)
 
+    @check("a project pulled from the database arrives whole, icon and record")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home)
+            directory = a_project(root, "demo", {"snap/gui/demo.png": "PNG"})
+            snap = db.Snap(name="demo", version="1.0", directory=str(directory),
+                           asset="demo-1.0.tar.gz", asset_glob="demo-*.tar.gz",
+                           style="artifact", repo="who/demo")
+            published = root / "snap-db"
+            snapdb.publish([snap], published)
+            url = published.resolve().as_uri()
+
+            # `install` and the dashboard's `g` are this one call, so neither
+            # can learn something the other does not.
+            back = root / "back"
+            pulled, recipe, is_snapcraft = snapdb.install(
+                "demo", back, url=url, store=root / "register")
+            same(is_snapcraft, True)
+            same(recipe, back / "snap" / "snapcraft.yaml")
+            # The record: what reading the project alone can never say.
+            same((pulled.style, pulled.asset_glob, pulled.repo),
+                 ("artifact", "demo-*.tar.gz", "who/demo"))
+            # And the icon, which one of the two front ends used to drop.
+            same(pulled.icon, "snap/gui/demo.png")
+            assert (back / "snap" / "gui" / "demo.png").is_file(), "icon not fetched"
+            # Beside the register it is going into, not beside the default one.
+            assert (root / "register" / "icons" / "demo.png").is_file(), \
+                "the kept icon did not land in this register"
+
     @check("the index carries what a pulled project needs to update itself")
     def _():
         with tempfile.TemporaryDirectory() as home:
@@ -3192,12 +3206,7 @@ def imports():
     import snapforge
 
     def imported_here(tree):
-        """The sibling modules a file imports at module level.
-
-        Module level only. An import inside a function is how this package
-        breaks a cycle on purpose -- db reaches for adopt that way -- and
-        counting those would report the very thing they exist to avoid.
-        """
+        """The sibling modules a file imports at module level, and no other."""
         found = set()
 
         def walk(node, in_function):
@@ -3221,9 +3230,7 @@ def imports():
 
     @check("no module-level import in the package closes a cycle")
     def _():
-        # A cycle here is not a style question: it is an ImportError, or
-        # worse a half-built module, depending only on which name is
-        # imported first.
+        # A cycle is an ImportError, or worse a half-built module.
         def cycle_from(start):
             stack = [(start, [start])]
             seen = set()
@@ -3243,13 +3250,11 @@ def imports():
 
     @check("the import graph read here is the one the package really has")
     def _():
-        # The cycle test above passes for the wrong reason if this misreads
-        # the tree and hands it an empty graph, so say what must be in it.
+        # An empty graph would pass the cycle test above for the wrong reason.
         assert "arch" in graph["classify"], "classify imports arch, and this missed it"
         assert "db" in graph["adopt"], "adopt imports db, and this missed it"
         assert "rewrite" in graph["recipe"], "recipe imports rewrite, and this missed it"
-        # And db reaches adopt inside a function, on purpose, to break the
-        # cycle those two would otherwise be in. That must not be counted.
+        # db reaches adopt inside a function, which is not an edge.
         assert "adopt" not in graph["db"], \
             "db imports adopt inside a function and this counted it anyway"
         for name, edges in sorted(graph.items()):

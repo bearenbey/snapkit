@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 
-from . import net
+from . import adopt, net
 
 REPO = "bearenbey/snapkit"
 BRANCH = "main"
@@ -219,11 +219,7 @@ def fingerprint(files):
 
 
 def file_map(directory, kept):
-    """What the index records about each file: its hash, and its exec bit.
-
-    Recorded rather than guessed from the name, because a launcher that
-    arrives without its executable bit is a snap snapd will refuse.
-    """
+    """What the index records per file: its hash, and its executable bit."""
     directory = Path(directory)
     return {str(relative): {"sha256": net.sha256_file(directory / relative),
                             "exec": bool((directory / relative).stat().st_mode
@@ -316,8 +312,7 @@ def fetch(name, into, found=None, url=None, reporter=None):
     """Download one snap's project files. Returns the directory written."""
     url = url or base_url()
     record = entry(name, found, url)
-    # Before anything is written: a project published without a file its
-    # build needs cannot be built, and half of one on disk helps nobody.
+    # Before anything is written: half a project on disk helps nobody.
     if record.get("incomplete"):
         missing = ", ".join(record["incomplete"])
         raise DatabaseError(f"{name} is published without {missing}, which its "
@@ -342,6 +337,17 @@ def fetch(name, into, found=None, url=None, reporter=None):
             reporter.detail(relative)
 
     return into
+
+
+def install(name, into, found=None, url=None, reporter=None, store=None):
+    """Fetch one project out of the database and read it back as a record."""
+    url = url or base_url()
+    record = entry(name, found, url)
+    fetch(name, into, {"snaps": {name: record}}, url, reporter)
+    snap, recipe, is_snapcraft, _confirmed = adopt.read(into)
+    adopt.take_icon(snap, into, store)
+    apply_record(snap, record)
+    return snap, recipe, is_snapcraft
 
 
 def apply_record(snap, record):

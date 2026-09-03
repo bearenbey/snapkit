@@ -22,8 +22,7 @@ FOREIGN = (".rpm", ".exe", ".msi", ".dmg", ".pkg", ".apk", ".ipa", ".snap",
 ARCHIVES = (".tar.gz", ".tgz", ".tar.xz", ".txz", ".tar.bz2", ".tbz",
             ".tbz2", ".tar.zst", ".tar", ".zip")
 
-# Which architecture counts as ours is a question about this machine, so both
-# of these are built per-host in arch.py rather than written out here.
+# Which architecture is ours is a host question, so arch.py builds these.
 
 
 def wanted_arch():
@@ -176,9 +175,7 @@ def classify(assets, wanted=""):
         points, kind, why = score(asset.name)
         if points:
             found.append(Candidate(asset=asset, kind=kind, score=points, why=why))
-    # A release can attach a companion package that scores exactly as well as
-    # the application: clamui ships clamui-privileged-helper beside clamui,
-    # and on the name alone the helper sorted first.
+    # A companion package can score as well as the app: prefer the wanted name.
     target = (wanted or "").lower()
     return sorted(found, key=lambda c: (-c.score,
                                         leading_name(c.name) != target,
@@ -192,11 +189,7 @@ def rejected(assets):
 
 
 def spellings_of(version):
-    """Every way a version can be written into a filename, longest first.
-
-    Upstreams are not consistent about it: the tag says 1.2.3 and the file
-    says 1_2_3, so a pattern built from the tag alone stops matching.
-    """
+    """Every way a version can be written into a filename, longest first."""
     written = {version, version.replace("-", "_"), version.replace(".", "_"),
                version.replace("-", "."), version.replace("_", "-")}
     return sorted(filter(None, written), key=len, reverse=True)

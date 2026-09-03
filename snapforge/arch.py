@@ -7,8 +7,7 @@ import re
 import shutil
 import subprocess
 
-# The Debian name, which snapcraft uses too, and the spellings that turn up in
-# release filenames. The first of each is the one to print.
+# The Debian name, then the spellings upstreams use. The first is printed.
 SPELLINGS = {
     "amd64": ("amd64", "x86_64", "x86-64", "x8664", "x64", "linux64", "64bit"),
     "arm64": ("arm64", "aarch64", "armv8l", "armv8"),
@@ -48,9 +47,7 @@ def host():
     named = os.environ.get(OVERRIDE, "").strip().lower()
     if not named:
         return detected()
-    # `uname -m` spellings are what a person reaches for, so take them; but
-    # a name nothing recognises would quietly make every asset foreign, which
-    # is the failure this whole module exists to prevent. Say so instead.
+    # Take a uname spelling, but refuse a name that would make all else foreign.
     wanted = FROM_MACHINE.get(named, named)
     if not known(wanted):
         raise UnknownArchitecture(
@@ -113,8 +110,7 @@ def _alternation(words):
     """One regex matching any of these words, none of them inside another."""
     parts = []
     for word in sorted(set(words), key=len, reverse=True):
-        # `x86` is 32-bit only when it is not the front of x86_64, and the
-        # separator there is not a character the word boundary below rejects.
+        # `x86` is 32-bit only when it is not the front of x86_64.
         parts.append(r"x86(?![_-]?64)" if word == "x86" else re.escape(word))
     return re.compile(r"(?<![a-z0-9])(?:" + "|".join(parts) + r")(?![a-z0-9])",
                       re.I)

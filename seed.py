@@ -53,8 +53,7 @@ CONFIG = {
                       download="https://dl.discordapp.net/apps/linux/"
                                "{version}/{asset}")),
 
-    # One index for every release; only the top-level tarballs match.
-    # A mirror, because ftp.gnu.org refuses as often as it answers.
+    # A mirror: ftp.gnu.org refuses as often as it answers.
     "emacs": dict(
         style="artifact", asset_glob="emacs-*.tar.xz",
         upstream=dict(kind="index", url="https://mirrors.kernel.org/gnu/emacs/",

@@ -35,7 +35,7 @@ class Reporter:
 
 
 def colour(code, text, stream=None):
-    """Wrap text in an ANSI code, or leave it alone when nothing will read it."""
+    """Wrap text in an ANSI code, or leave it alone off a terminal."""
     stream = stream or sys.stdout
     return f"\033[{code}m{text}\033[0m" if stream.isatty() else text
 

@@ -16,9 +16,7 @@ class NotTracked(ForgeError):
     """This snap has no upstream repository to ask about."""
 
 
-# What a check can conclude, in one copy: the two front ends had drifted.
-# Upstreams answer in their own time and none of them waits on another, so
-# asking them one at a time is the whole cost of a check.
+# Upstreams do not wait on one another, so asking one at a time is the cost.
 AT_ONCE = 8
 
 STATES = {
@@ -53,12 +51,7 @@ class Situation:
 
 
 def situation(snap, force=False, timeout=net.CHECK_TIMEOUT):
-    """`check`, with its two exceptions and its clock turned into answers.
-
-    One check can be several requests, so the bound is on the check rather
-    than on any of them: an upstream that cannot answer in `timeout` is
-    reported as unreachable, not waited for.
-    """
+    """`check`, with its exceptions and its clock turned into answers."""
     try:
         with net.deadline(timeout):
             release, asset, note = check(snap, force)
@@ -88,7 +81,7 @@ def built_version(snap):
                   key=lambda p: p.stat().st_mtime)
     if not made:
         return ""
-    stem = made[-1].name[len(snap.name) + 1:]
+    stem = made[-1].stem[len(snap.name) + 1:]
     return stem.rsplit("_", 1)[0] if "_" in stem else stem
 
 
@@ -123,13 +116,7 @@ def resolve(snap):
 
 
 def retrack(snap, upstream, force=False):
-    """Point a snap at a different upstream, having resolved it first.
-
-    The record is left exactly as it was when the new upstream resolves to
-    nothing, because one written down untried reads as "up to date" for as
-    long as nobody looks. Returns the release, or None when forced past a
-    failure.
-    """
+    """Point a snap at another upstream, resolved first or not written."""
     was = dict(snap.upstream)
     snap.upstream = dict(upstream)
     try:
@@ -144,11 +131,7 @@ def retrack(snap, upstream, force=False):
 
 
 def untrack(snap):
-    """Stop checking a snap against anything: no upstream, and no repository.
-
-    Both are cleared together. Leaving `repo` behind would have `check` fall
-    back to it and report on a snap that was just told to stop.
-    """
+    """Stop checking a snap: no upstream and no repository, cleared together."""
     snap.upstream, snap.repo, snap.url, snap.asset_pattern = {}, "", "", ""
     return snap
 
@@ -156,8 +139,11 @@ def untrack(snap):
 def fitting(snap, release):
     """What a record still needs, given the upstream it has just been given."""
     notes = []
-    if snap.style == "artifact" and not (snap.asset_glob or release.glob):
-        suggestion = local.glob_for(release.asset or snap.asset, release.version)
+    # getattr: a github.Release names a whole release, not one file in it.
+    if snap.style == "artifact" and not (snap.asset_glob
+                                         or getattr(release, "glob", "")):
+        named = getattr(release, "asset", "") or snap.asset
+        suggestion = local.glob_for(named, release.version)
         notes.append(f"nothing matches every version of that file, so the "
                      f"superseded one will be left behind -- add "
                      f"glob='{suggestion}'")
@@ -272,8 +258,7 @@ def _update_recipe(snap, release, asset, reporter):
             yaml_path, snap.source_anchor, asset.url, sha,
             release.version if snap.write_version else "")
         _say_changes(changes, reporter)
-        if yaml_path.is_file():
-            snap.snapcraft_yaml = yaml_path.read_text(encoding="utf-8")
+        _reread_recipe(snap)
         return
 
     old_url = _source_url(snap.snapcraft_yaml)
@@ -316,8 +301,12 @@ def _update_artifact(snap, release, asset, reporter, was):
         old.unlink()
         reporter.detail(f"removed superseded {old.name}")
 
-    # The register's copy has to follow, or `package` puts the old one back.
-    yaml_path = directory / "snap" / "snapcraft.yaml"
+    _reread_recipe(snap)
+
+
+def _reread_recipe(snap):
+    """Follow the rewrite, or `package` would put the old recipe back."""
+    yaml_path = snap.path / "snap" / "snapcraft.yaml"
     if yaml_path.is_file():
         snap.snapcraft_yaml = yaml_path.read_text(encoding="utf-8")
 

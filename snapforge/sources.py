@@ -169,8 +169,7 @@ class Shape:
         return tuple(k for k in self.keys if k not in self.required)
 
 
-# The two shapes that read a version off a page and then name the file to
-# fetch fill in the same placeholders in the same four settings.
+# The shapes that read a version off a page share these four settings.
 FETCHED = {"url": ("arch",), "asset": ("version", "arch"),
            "download": ("version", "asset", "arch"),
            "local": ("version", "arch")}
@@ -258,8 +257,13 @@ def parse_pairs(words):
     return values
 
 
+# What a person types, against what the record calls the same shape.
+ALIASES = {"folder": "local"}
+
+
 def configure(kind, values):
     """A checked upstream config, or a refusal that says what is missing."""
+    kind = ALIASES.get(kind, kind)
     shape = SPEC.get(kind)
     if shape is None:
         raise BadUpstream(f"no such upstream kind: {kind or '(none)'} "
@@ -274,12 +278,10 @@ def configure(kind, values):
     config.update({key: value for key, value in values.items() if value})
     for key, template in shape.defaults.items():
         if not config.get(key):
-            # {arch} is left standing: the record has to work on any machine,
-            # not just the one it was written on.
+            # {arch} is left standing: the record must work on any machine.
             config[key] = template.format_map(_Partial(config))
 
-    # A key with a default only goes missing when what it is built from did,
-    # so name what was asked for outright before what is derived from it.
+    # Name what was asked for outright before what is derived from it.
     blank = [key for key in shape.required if not config.get(key)]
     missing = [key for key in blank if key not in shape.defaults] or blank
     if missing:

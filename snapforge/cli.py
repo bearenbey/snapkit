@@ -124,8 +124,7 @@ def main(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
     reporter = PlainReporter()
     try:
-        # Opening the register is the one thing every command does first,
-        # and a register it cannot read is a sentence, not a traceback.
+        # Every command starts here, so an unreadable register is a sentence.
         db = Database()
     except (DatabaseError, OSError) as exc:
         die(str(exc))
@@ -133,8 +132,7 @@ def main(argv=None):
         # Loud and on every command: one record short beats failing to open.
         reporter.warn(f"{record} could not be read and was left out: {why}")
     for name, was, live in db.resynced:
-        # Not a warning: the register was put right, and saying so is the
-        # only way a version that changed by itself is accounted for.
+        # Not a warning: the register was put right, and that has to be said.
         reporter.detail(f"{name} was recorded at {was}, but its project says "
                         f"{live} -- the record now says so too")
 
@@ -187,7 +185,7 @@ def cmd_create(db, args, reporter):
 def create_from_file(db, args, reporter, text):
     """Make a snap out of a package file, rather than out of a release."""
     path = Path(text).expanduser()
-    known = _registered_at(db, path if path.is_dir() else path.parent)
+    known = db.at_directory(path if path.is_dir() else path.parent)
     if known and not args.name:
         reporter.detail(f"{path if path.is_dir() else path.parent} is already "
                         f"registered as {known.name} ({known.version})")
@@ -201,7 +199,7 @@ def create_from_file(db, args, reporter, text):
 
 
 def _show_runners_up(reporter, candidates, asset, where):
-    """The files that were passed over, in case the best one is the wrong one."""
+    """The files passed over, in case the best one is the wrong one."""
     if len(candidates) <= 1 or asset:
         return
     reporter.detail(f"the rest of {where}, if that is the wrong file "
@@ -229,18 +227,6 @@ def _finish_create(db, args, reporter, made, text):
     project.build(snap, reporter, build_flags(args))
     db.add(snap)
     return 0
-
-
-def _registered_at(db, directory):
-    """The snap whose project directory this is, if it is one."""
-    try:
-        wanted = Path(directory).expanduser().resolve()
-    except OSError:
-        return None
-    for snap in db:
-        if snap.directory and Path(snap.directory).resolve() == wanted:
-            return snap
-    return None
 
 
 def ask_what_to_package(db, args):
@@ -367,10 +353,7 @@ def cmd_import(db, args, reporter):
             skipped += 1
             continue
 
-        icon = adopt.find_icon(directory)
-        if icon:
-            snap.icon = f"snap/gui/{snap.name}{icon.suffix}"
-            snap.keep_icon(icon)
+        adopt.take_icon(snap, directory, db.root)
         reporter.step(f"{snap.name} {snap.version}  ({recipe})")
         if not confirmed and not snap.upstream:
             track_locally(snap, args, reporter)
@@ -546,9 +529,7 @@ def cmd_track(db, args, reporter):
         return untrack(db, snap, reporter)
     if kind in ("repo", "github"):
         return track_repo(db, args, reporter, snap, rest)
-    # `folder` is what the rest of the tool calls it; `local` is the config.
-    wanted = sources.configure("local" if kind == "folder" else kind,
-                               sources.parse_pairs(rest))
+    wanted = sources.configure(kind, sources.parse_pairs(rest))
     return settle(db, args, reporter, snap, wanted)
 
 
@@ -635,7 +616,7 @@ def show_tracking(snap):
         print(f"  matching         {pattern}")
     else:
         print("  tracked against  nothing")
-        print(f"\n  snapkit track {snap.name} kinds  lists what it could be")
+        print("\n  snapkit track kinds  lists what it could be")
         return 1
 
     found = update.situation(snap)
@@ -781,16 +762,11 @@ def cmd_install(db, args, reporter):
         where = Path(args.directory) if args.directory else Path.cwd()
         target = where / f"{name}-snap"
         reporter.step(f"fetching {name} from the database")
-        snapdb.fetch(name, target, reporter=reporter)
         try:
-            snap, recipe, is_snapcraft, confirmed = adopt.read(target)
+            snap, recipe, _is_snapcraft = snapdb.install(
+                name, target, reporter=reporter, store=db.root)
         except adopt.NotAProject as exc:
             die(f"{name} was fetched but does not read as a project: {exc}")
-        icon = adopt.find_icon(target)
-        if icon:
-            snap.icon = f"snap/gui/{snap.name}{icon.suffix}"
-            snap.keep_icon(icon)
-        snapdb.apply_record(snap, snapdb.entry(name))
         reporter.detail(f"{snap.name} {snap.version}  ({recipe})")
         db.add(snap, replace=True)
     else:

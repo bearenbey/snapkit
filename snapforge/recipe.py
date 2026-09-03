@@ -67,9 +67,7 @@ def plugs_for(traits):
     return chosen
 
 
-# snapcraft works the type out from the extension, and knows fewer of them
-# than the classifier accepts: shotcut ships .txz and the build refused to
-# start with "unable to determine source type".
+# snapcraft knows fewer extensions than the classifier accepts, so say which.
 SOURCE_TYPES = ((".zip", "zip"), (".7z", "7z"))
 
 
@@ -83,12 +81,7 @@ def source_type_for(url):
 
 
 def app_id(desktop):
-    """The bus name a desktop entry implies, or "" when it implies none.
-
-    A GTK application's id is its desktop entry's name, and that id is the
-    name it takes on the session bus. Without a slot declaring it, snapd
-    refuses: "not allowed to own the service net.lutris.Lutris".
-    """
+    """The bus name a desktop entry implies, or "" when it implies none."""
     if not desktop:
         return ""
     stem = desktop.rsplit("/", 1)[-1]

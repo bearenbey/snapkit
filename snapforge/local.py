@@ -26,8 +26,7 @@ class Found:
 
 
 def _declared(path, field, kind=""):
-    """What a .deb says about itself, or "" for anything else and for a .deb
-    that will not open."""
+    """What a .deb says about itself, or "" for anything that cannot say."""
     if (kind or classify.kind_of(Path(path).name)) != classify.DEB:
         return ""
     try:
@@ -44,11 +43,7 @@ def version_of(path, kind=""):
 
 @functools.lru_cache(maxsize=None)
 def _ends_the_name(spelled, missed):
-    """Where the name stops and the download's description starts.
-
-    Built per architecture rather than written out: which spellings are ours
-    and which are somebody else's is a question about the host.
-    """
+    """Where the name stops and the download's description starts."""
     return re.compile(
         r"(?<![a-z0-9])(?:v?\d+(?:[._]\d+)+|\d{2,}|"
         + "|".join(classify.LINUX) + r")(?![a-z0-9])"

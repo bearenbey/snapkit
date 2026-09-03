@@ -133,11 +133,7 @@ class Dashboard:
             self.restack()
 
     def restack(self):
-        """What the list shows: every record, narrowed and ordered.
-
-        `known` is the register. `rows` is the view of it, so a filter hides
-        rows from the eye without hiding them from `r` or `U`.
-        """
+        """What the list shows: `known` narrowed and ordered into `rows`."""
         with self.lock:
             here = self.row.name if self.row else ""
             rows = [row for row in self.known if row.matches(self.needle)]
@@ -169,11 +165,7 @@ class Dashboard:
 
     @property
     def mode(self):
-        """Whichever modal state is up, or "" for the list itself.
-
-        Both the keys and the drawing read this, so a new one cannot be
-        added to the board and go unhandled by either of them.
-        """
+        """Whichever modal state is up, or "" for the list itself."""
         return next((name for name in MODES if getattr(self, name)), "")
 
     # -- work ----------------------------------------------------------------
@@ -296,13 +288,13 @@ class Dashboard:
         """A file or a folder that was typed into the box instead of a repo."""
         directory = Path(text).expanduser()
         directory = directory if directory.is_dir() else directory.parent
-        for snap in self.db:
-            if snap.directory and Path(snap.directory).resolve() == directory.resolve():
-                self.say(f"{directory} is {snap.name} -- select it and press u "
-                         f"to pick up what is in there", "yellow")
-                self.select(snap.name)
-                self.idle()
-                return None
+        snap = self.db.at_directory(directory)
+        if snap is not None:
+            self.say(f"{directory} is {snap.name} -- select it and press u "
+                     f"to pick up what is in there", "yellow")
+            self.select(snap.name)
+            self.idle()
+            return None
         return project.plan_local(text, reporter)
 
     def _ask_which(self, made):
@@ -347,9 +339,9 @@ class Dashboard:
                 target = where / f"{name}-snap"
                 self.status = f"fetching {name}"
                 try:
-                    snapdb.fetch(name, target, found, reporter=reporter)
-                    snap, _, _, _ = adopt.read(target)
-                    snapdb.apply_record(snap, snaps[name])
+                    snap, _, _ = snapdb.install(name, target, found,
+                                                reporter=reporter,
+                                                store=self.db.root)
                     self.db.add(snap, replace=True)
                     taken += 1
                 except (snapdb.DatabaseError, adopt.NotAProject) as exc:
@@ -365,8 +357,7 @@ class Dashboard:
         snap = self.db.snaps.get(name)
         words = text.split()
         if snap is None or not words:
-            # An emptied box is "never mind". Untracking is asked for by
-            # name; a stray return key must not throw an upstream away.
+            # An emptied box is "never mind": untracking is asked for by name.
             return
 
         def work():
@@ -380,8 +371,7 @@ class Dashboard:
                     row.state, row.latest, row.note = "untracked", "", ""
                 return
 
-            kind = "local" if words[0] == "folder" else words[0]
-            wanted = sources.configure(kind, sources.parse_pairs(words[1:]))
+            wanted = sources.configure(words[0], sources.parse_pairs(words[1:]))
             self.status = f"resolving {sources.summarise(wanted)}"
             try:
                 release = update.retrack(snap, wanted)
@@ -503,11 +493,7 @@ class Dashboard:
         self.run_job("updating", work)
 
     def _onto_release(self, row, reporter, ask_install=True):
-        """Move one row onto the release its last check found, and build it.
-
-        Both `u` and `U` are this, so neither can learn something the other
-        does not. Returns what was built, or None if it did not get there.
-        """
+        """Move one row onto the release its last check found, and build it."""
         row.state = "working"
         try:
             project.adopt(row.snap, reporter)
@@ -557,7 +543,6 @@ class Dashboard:
             return None
 
         # Offered, never assumed: this is the one thing here that needs root.
-        # A run of updates asks once at the end instead, not once per snap.
         if not ask_install:
             return built
         if self._ask_yes_no(f"install {built.name}?"):

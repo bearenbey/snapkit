@@ -16,15 +16,7 @@ class FileChange:
 
 
 def replace_version(text, old, new):
-    """Swap one version for another, but only where it is the whole version.
-
-    A plain replace of "1.0" with "1.1" also rewrites the 21.0 in core21.0,
-    the 11.0 in gcc-11.0 and the 24 in core24, quietly editing something that
-    has nothing to do with this project. A version does not start in the
-    middle of a number or a word, and has no number directly after it. The
-    one word allowed in front of it is the v of a tag, which is part of how
-    the version is written rather than a word it has been glued to.
-    """
+    """Swap one version for another, only where it is the whole version."""
     if not old:
         return text
     return re.sub(rf"(?<![0-9A-Za-z])([vV]?){re.escape(old)}(?![0-9])(?!\.[0-9])",

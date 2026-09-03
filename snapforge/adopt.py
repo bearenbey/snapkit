@@ -131,6 +131,20 @@ def find_icon(directory):
     return None
 
 
+def take_icon(snap, directory, store=None):
+    """Record the icon a project ships, and keep a copy beside the register."""
+    icon = find_icon(Path(directory))
+    if not icon:
+        return ""
+    # Named before the copy: without it the copy lands in the default home,
+    # and the register this snap is going into then finds none.
+    if store is not None:
+        snap.store_root = Path(store)
+    snap.icon = f"snap/gui/{snap.name}{icon.suffix}"
+    snap.keep_icon(icon)
+    return snap.icon
+
+
 def read(directory, repo=None):
     """Everything that can be read off an existing project, as a record."""
     directory = Path(directory).resolve()

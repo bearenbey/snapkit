@@ -49,13 +49,7 @@ def file_source_parts(yaml_path):
 
 
 def stale_parts(directory):
-    """The parts whose file was replaced since the last snap was packed.
-
-    craft-parts re-pulls a source when the URL it names changes, but a file
-    it has already copied is never looked at again. A release published under
-    the same filename as the one before it would otherwise be packed as its
-    predecessor, which is how the version check catches it.
-    """
+    """The parts whose file was replaced since the last snap was packed."""
     directory = Path(directory)
     packed = [path.stat().st_mtime for path in directory.glob("*.snap")]
     if not packed:
@@ -101,11 +95,9 @@ class Build:
         self.directory = Path(directory).resolve()
         os.chdir(self.directory)
         self.prime = self.directory / "prime"
-        # Everything this build says goes through here, so a dashboard run
-        # never writes over the screen it is drawing.
+        # Through here, so a dashboard run never writes over its own screen.
         self.reporter = reporter or PlainReporter()
-        # Added to any snapcraft this build runs, so --destructive-mode
-        # reaches a project that drives snapcraft itself.
+        # Added to any snapcraft this build runs, --destructive-mode included.
         self.snapcraft_flags = list(snapcraft_flags)
 
     # -- saying things: on the Build, so a pack.py needs no import ----------

@@ -376,11 +376,7 @@ def package(snap, reporter, build_it=True, extra=()):
 
 
 def run_reported(command, reporter, directory, shell=False):
-    """Run a command, streamed to the reporter or with the terminal handed over.
-
-    A front end taking the output wants every line of it; a terminal wants
-    the command to have the screen while it runs.
-    """
+    """Run a command, streamed to the reporter or given the terminal."""
     if reporter.captures_output:
         return buildlib.stream(command, reporter, cwd=directory, shell=shell)
     with reporter.suspended():
@@ -388,12 +384,7 @@ def run_reported(command, reporter, directory, shell=False):
 
 
 def clean_stale_parts(directory, reporter, extra=()):
-    """Clean the parts craft-parts pulled from a file that has changed since.
-
-    craft-parts re-pulls a source when the URL it names changes, but never
-    a file it has already copied, so a release published under the filename
-    its predecessor used would be packed as that predecessor.
-    """
+    """Clean the parts whose file on disk has changed since the last pack."""
     replaced = buildlib.stale_parts(directory)
     if not replaced or not shutil.which("snapcraft"):
         return
@@ -455,19 +446,21 @@ def build(snap, reporter, extra=()):
         if done.returncode != 0:
             raise ForgeError(f"the build exited with status {done.returncode}")
 
-    made = sorted(p for p in directory.glob("*.snap") if p.name not in before)
-    built = made[-1] if made else None
-    if built is None:
-        # A rebuild of the same version overwrites rather than adds.
-        existing = sorted(directory.glob(f"{snap.name}_*.snap"),
-                          key=lambda p: p.stat().st_mtime)
-        built = existing[-1] if existing else None
+    made = _newest(p for p in directory.glob("*.snap") if p.name not in before)
+    # A rebuild of the same version overwrites rather than adds.
+    built = made or _newest(directory.glob(f"{snap.name}_*.snap"))
     if built is None:
         raise ForgeError("snapcraft finished but produced no .snap")
     reporter.result(f"built {built.name} "
                     f"({built.stat().st_size / 1e6:.0f} MB)")
     snap.record_build(snap.version)
     return built
+
+
+def _newest(paths):
+    """The most recently written of these files, or None if there are none."""
+    found = sorted(paths, key=lambda p: p.stat().st_mtime)
+    return found[-1] if found else None
 
 
 def _readme(snap):

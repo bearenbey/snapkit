@@ -135,8 +135,7 @@ class Screen:
         self.height = height
         self.window = max(1, height - self._header_height() - LOG_HEIGHT - 4)
 
-        # A mode that wants the whole screen takes it, off the one list of
-        # modes the keys are dispatched through.
+        # Off the one list of modes the keys are dispatched through.
         whole = FULL_SCREEN.get(self.board.mode)
         if whole:
             return whole(self)
@@ -174,8 +173,7 @@ class Screen:
             return self._track_header(width)
         if self.board.prompting:
             return self._prompt_header()
-        # No box: two lines and a rule read as a heads-up display rather
-        # than as a fourth container stacked on three others.
+        # No box: a rule reads as a heads-up display, not a fourth container.
         return Group(Text(""), self._masthead(width), self._rule(width))
 
     def _rule(self, width=100):
@@ -244,8 +242,7 @@ class Screen:
     def _track_header(self, width=100):
         """Typing where one snap's releases should be looked for."""
         caret = self._caret()
-        # One line, whatever is typed: a wrapped header is a header of the
-        # wrong height, and these specs run to a couple of hundred characters.
+        # One line whatever is typed: a wrapped header is the wrong height.
         room = max(20, width - len(self.board.tracking) - 10)
         typed = self.board.prompt
         if len(typed) > room:
@@ -518,11 +515,7 @@ class Screen:
                      box=box.ROUNDED, border_style=ACCENT, padding=(0, 1))
 
     def _details(self):
-        """The record, with the recipe under it scrolling on its own.
-
-        What the snap is stays on screen. The yaml is what runs past the
-        bottom of any terminal, so the yaml is the part that moves.
-        """
+        """The record, with the recipe under it scrolling on its own."""
         snap = self.board.detail
         rows = Table(box=None, pad_edge=False)
         rows.add_column(style="dim", width=16)
@@ -646,11 +639,7 @@ def _rail(row, here):
 
 
 def _upstream_cell(row):
-    """What upstream has, and only when that is not what is already here.
-
-    A column that repeats the version beside it is a column of noise. This
-    one is empty until there is something to say.
-    """
+    """What upstream has, and only when that is not what is already here."""
     if not row.latest:
         return Text("·", style="grey35")
     if row.behind:

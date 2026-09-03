@@ -180,11 +180,7 @@ def find_binaries(root):
 
 
 def _is_program(path):
-    """A compiled binary, or a script that says what runs it.
-
-    Taking only ELF made every interpreted application unpackageable: lutris
-    ships `usr/games/lutris`, a python script, and nothing else to run.
-    """
+    """A compiled binary, or a script that says what runs it."""
     with open(path, "rb") as handle:
         head = handle.read(4)
     return head[:4] == b"\x7fELF" or head[:2] == b"#!"
@@ -232,9 +228,7 @@ def desktop_icon(root, desktop):
     found = re.search(r"(?mi)^Icon\s*=\s*(.+?)\s*$", text)
     if not found:
         return ""
-    # It may be a bare name, a path, or carry an extension. Only strip a
-    # suffix that is really one: reverse-DNS names are mostly dots, and
-    # Path.stem turns net.lutris.Lutris into net.lutris.
+    # Strip only a real suffix: Path.stem makes net.lutris.Lutris net.lutris.
     name = Path(found.group(1).strip()).name
     stem, dot, suffix = name.rpartition(".")
     if dot and f".{suffix.lower()}" in ICON_SUFFIXES:
@@ -243,8 +237,7 @@ def desktop_icon(root, desktop):
 
 
 def find_icon(root, wanted="", named=""):
-    """The icon the desktop entry names, else the largest one named after the
-    application."""
+    """The icon the entry names, else the biggest one called after the app."""
     icons = [p for p in root.rglob("*") if p.is_file()
              and p.suffix.lower() in ICON_SUFFIXES]
     if not icons:
@@ -260,9 +253,7 @@ def find_icon(root, wanted="", named=""):
         return int(found.group(1)) if found else 0
 
     def not_an_app_icon(path):
-        # hicolor sorts icons by what they are for. Everything outside apps/
-        # is a file type or a status glyph: lutris ships a mimetype icon that
-        # matches its name just as well as the real one does.
+        # In hicolor, anything outside apps/ is a file type or a status glyph.
         where = path.as_posix().lower()
         return "/apps/" not in where and "/mimetypes/" in where
 
@@ -331,13 +322,7 @@ def bundled_lib_dirs(root):
 
 
 def missing_libraries(binary, root=None):
-    """What ldd cannot resolve, which is what will fail at runtime.
-
-    A portable build ships its own Qt or GTK beside the binary and finds it
-    through an rpath or a launcher. Asking the host's loader alone called
-    every one of those missing, which reads as a broken package: shotcut
-    bundles nineteen and every one was reported.
-    """
+    """What ldd cannot resolve, looking in the payload's own lib dirs too."""
     if not shutil.which("ldd"):
         return []
     environment = dict(os.environ)
@@ -354,8 +339,7 @@ def missing_libraries(binary, root=None):
 
 
 def launcher_among(root, candidates):
-    """A script that runs one of the other candidates, which makes it the
-    thing to run."""
+    """A script that runs another candidate, which makes it the one to run."""
     for relative in candidates:
         path = root / relative
         try:
@@ -378,10 +362,7 @@ def look(archive, kind, destination, wanted=""):
 
     payload = Payload(root=root, kind=kind)
     binaries = rank_binaries(find_binaries(root), wanted)
-    # A payload that ships both a binary and a script that runs it means the
-    # script: shotcut's says so in as many words, "Run this instead of trying
-    # to run bin/shotcut", and sets the Qt and MLT paths it will not start
-    # without.
+    # A script that runs the binary is the thing to run, not the binary.
     payload.command = launcher_among(root, binaries) or (
         binaries[0] if binaries else "")
     payload.desktop = find_desktop(root, wanted)

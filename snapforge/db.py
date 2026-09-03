@@ -328,6 +328,17 @@ class Database:
             scored.append((rank, snap.name, snap))
         return [snap for _, _, snap in sorted(scored, key=lambda row: row[:2])]
 
+    def at_directory(self, directory):
+        """The snap whose project directory this is, if it is one."""
+        try:
+            wanted = Path(directory).expanduser().resolve()
+        except OSError:
+            return None
+        for snap in self.snaps.values():
+            if snap.directory and Path(snap.directory).resolve() == wanted:
+                return snap
+        return None
+
     def find_repo(self, repo):
         """The snap already made from this repository, if there is one."""
         for snap in self.snaps.values():
@@ -341,8 +352,7 @@ class Database:
         kept = snap.kept_icon
         del self.snaps[name]
         self.record_path(name).unlink(missing_ok=True)
-        # The file it was read from as well, which is not always the one
-        # named after it -- otherwise a removed snap is back on next load.
+        # And the file it was read from, or it is back on the next load.
         if snap.record_file:
             Path(snap.record_file).unlink(missing_ok=True)
         snap.recipe_path.unlink(missing_ok=True)
