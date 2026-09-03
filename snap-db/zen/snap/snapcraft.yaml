@@ -1,7 +1,7 @@
 name: zen
 title: Zen Browser
 base: core24
-version: '1.21.15b'
+version: '1.21.16b'
 summary: A calmer way to browse the web
 description: |
   Zen is a Firefox fork built around a quieter reading experience: workspaces,

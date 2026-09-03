@@ -1,7 +1,7 @@
 name: discord
 title: Discord
 base: core24
-version: '1.0.155'
+version: '1.0.156'
 summary: Chat for Communities and Friends
 contact: https://support.discord.com
 license: Proprietary
@@ -49,7 +49,7 @@ apps:
 parts:
   discord:
     plugin: dump
-    source: discord-1.0.155.deb
+    source: discord-1.0.156.deb
     source-type: deb
     override-build: |
       craftctl default

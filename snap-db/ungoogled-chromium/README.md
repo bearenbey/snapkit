@@ -12,7 +12,7 @@ This snap is not published or endorsed by the upstream project.
 ```
 pack.py                                              builds the snap
                                                      (`snapkit update ungoogled-chromium` fetches the release)
-ungoogled-chromium-151.0.7922.173-1-x86_64_linux.tar.xz   upstream tarball (the source for the snap)
+ungoogled-chromium-152.0.7977.64-1-x86_64_linux.tar.xz   upstream tarball (the source for the snap)
 snap/snapcraft.yaml                                  snap recipe
 snap/gui/ungoogled-chromium.desktop                  desktop entry
 snap/gui/ungoogled-chromium.png                      256x256 icon
@@ -39,7 +39,7 @@ the version wherever this project spells it out, and builds the result;
 ## Versioning
 
 Upstream tags carry a packaging revision the Chromium version does not
-(`151.0.7922.173-1`), and the snap is versioned by the whole tag: a rebuild of
+(`152.0.7977.64-1`), and the snap is versioned by the whole tag: a rebuild of
 the same Chromium against a newer upstream package is a release of its own.
 `chrome --version` therefore reports the tag's leading component and not the
 whole of it.
@@ -52,7 +52,7 @@ Chromium's namespace sandbox), which is not auto-connected, so connect it
 manually:
 
 ```sh
-sudo snap install --dangerous ungoogled-chromium_151.0.7922.173-1_amd64.snap
+sudo snap install --dangerous ungoogled-chromium_152.0.7977.64-1_amd64.snap
 sudo snap connect ungoogled-chromium:browser-sandbox
 sudo snap connect ungoogled-chromium:u2f-devices
 ```

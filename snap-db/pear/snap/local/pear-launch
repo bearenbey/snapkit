@@ -1,0 +1,12 @@
+#!/bin/bash
+# chrome-sandbox must be setuid root, and no file in a snap can be. See README.
+set -e
+
+args=()
+
+# Electron's other sandbox needs no setuid bit, so keep it where there is one.
+if ! unshare --user --map-root-user true 2>/dev/null; then
+    args+=(--no-sandbox)
+fi
+
+exec "$SNAP/opt/YouTube Music/youtube-music" "${args[@]}" "$@"

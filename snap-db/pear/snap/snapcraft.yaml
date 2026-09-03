@@ -1,0 +1,79 @@
+# Written by snapkit from https://github.com/pear-devs/pear-desktop.
+# Everything here is a starting point -- edit it, it is yours now.
+
+name: pear
+base: core24
+version: '3.12.0'
+summary: Pear 🍐 is extension for music player
+description: |
+  YouTube Music Desktop App - including custom plugins
+
+  Packaged from the upstream release at https://github.com/pear-devs/pear-desktop.
+  This snap is not published or endorsed by the upstream project.
+grade: stable
+confinement: strict
+title: pear-desktop
+website: https://github.com/pear-devs/pear-desktop
+source-code: https://github.com/pear-devs/pear-desktop
+issues: https://github.com/pear-devs/pear-desktop/issues
+contact: https://github.com/pear-devs/pear-desktop/issues
+
+platforms:
+  amd64:
+
+apps:
+  pear:
+    command: bin/pear-launch
+    # The gnome extension wires up the desktop, fonts, themes and
+    # GTK/GL stack from the platform snap rather than bundling them.
+    extensions: [gnome]
+    desktop: usr/share/applications/com.github.th-ch.youtube-music.desktop
+    plugs:
+      - home
+      - network
+      - audio-playback
+      - opengl
+      - removable-media
+      - browser-support
+      - audio-record
+      - camera
+      - password-manager-service
+    # A GtkApplication registers its application id on the session
+    # bus, and confinement refuses a name the snap has not declared.
+    slots:
+      - dbus-pear
+
+slots:
+  dbus-pear:
+    interface: dbus
+    bus: session
+    name: com.github.th-ch.youtube-music
+
+parts:
+  pear:
+    # snapcraft unpacks the .deb and `dump` stages what was in it.
+    plugin: dump
+    source: https://github.com/pear-devs/pear-desktop/releases/download/v3.12.0/youtube-music_3.12.0_amd64.deb
+    source-type: deb
+    source-checksum: sha256/cbf8996f565cbe01cd3a37cc9df0e52da3dcc3b889541117b512be7e4f2afde3
+    # What the payload asks for that the base and the extension
+    # do not already supply. Read off the binary, not guessed at.
+    # A library it opens later by name is not visible here.
+    stage-packages:
+      - libgbm1
+      - libx11-6
+      - libxcb1
+      - libxdamage1
+      - libxext6
+      - libxfixes3
+
+  launcher:
+    plugin: dump
+    source: snap/local
+    organize:
+      pear-launch: bin/pear-launch
+
+# The icon snapd shows in the launcher. `icon:` is resolved against
+# this project directory, not against the payload, so the one found
+# inside the release was copied here next to the recipe.
+icon: snap/gui/pear.png

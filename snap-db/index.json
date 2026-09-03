@@ -127,7 +127,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "2dab70d3acb2342dbfaa59ad6a965897769db1fb57ef7145e088df8c432f342c"
+          "sha256": "c6a3421e515781e7fcef5d1b035345edd6dcc6f2dacd3f6e8a026188ad3d9360"
         },
         "launcher/discord-launch": {
           "exec": true,
@@ -139,14 +139,14 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "e43fdccc2cdd93cdd2a44a4a56687dc1530e3234ee1b3eb956a9abae3541915f"
+          "sha256": "7a5396fed617c9be8b325d1b909ed261a109a25b63c257e66b584ee6fe91c0a4"
         }
       },
-      "fingerprint": "959c0724c6235ca19aac533da1b9deead67802aa1dbc1320d0e4680b1b5985a5",
+      "fingerprint": "c745502094ca99e56c09e8dad65c16ff2465bf847e29ac42744bd224e517c0a0",
       "name": "discord",
       "pack": "",
       "record": {
-        "asset": "discord-1.0.155.deb",
+        "asset": "discord-1.0.156.deb",
         "asset_glob": "discord-*.deb",
         "kind": "deb",
         "style": "artifact",
@@ -158,12 +158,12 @@
           "pattern": "/apps/linux/([^/]+)/",
           "url": "https://discord.com/api/download?platform=linux&format=deb"
         },
-        "version": "1.0.155",
+        "version": "1.0.156",
         "write_version": false
       },
       "summary": "Chat for Communities and Friends",
       "upstream": "redirect",
-      "version": "1.0.155"
+      "version": "1.0.156"
     },
     "emacs": {
       "files": {
@@ -251,7 +251,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "27c220b24161be51fa336426bbc3c08bf38df601b647a093bb0dfe377af9156b"
+          "sha256": "d1ad6dd880b1b040b3ac309c0dd13a6405b037a25b4a64071a5a6fec54798dce"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -271,10 +271,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "faf36828734dae56f06a86862fc3424fbc9c21003ae414a908a31815ab540d93"
+          "sha256": "8da2566e8fa53fc56d9d21e2f0a176949385c42524cf9c2c7ed9bb6d0d9a167d"
         }
       },
-      "fingerprint": "7b2ba7e011750bb33ea9b4adb083a709e70e6c6cfdb59f924405c45c0c92d059",
+      "fingerprint": "85dbb2095e23db319aa7cc60dce2898c1ebd115a9995323f8464d323ebb2b45c",
       "name": "floorp",
       "pack": "pack.py",
       "record": {
@@ -290,14 +290,14 @@
         "repo": "Floorp-Projects/Floorp",
         "style": "artifact",
         "summary": "A Firefox-based browser built around vertical tabs and workspaces",
-        "tag": "v12.17.1",
+        "tag": "v12.17.2",
         "url": "https://github.com/Floorp-Projects/Floorp",
-        "version": "12.17.1",
+        "version": "12.17.2",
         "write_version": false
       },
       "summary": "A Firefox-based browser built around vertical tabs and workspaces",
       "upstream": "Floorp-Projects/Floorp",
-      "version": "12.17.1"
+      "version": "12.17.2"
     },
     "freetube": {
       "files": {
@@ -391,7 +391,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "c422eabe52006d285e6e79bb269afc03e1b6d6b5035db08be07ecf472d847526"
+          "sha256": "767d2a2f5ab8ed7e0018047254626579ec13a6e6eb85a9e025a20793d475917c"
         },
         "pack.py": {
           "exec": false,
@@ -411,14 +411,14 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "0691a4ae3d836dc445cd2aad68a1e5bdf43bd177da969b5c5c18b2a51ee8e9f8"
+          "sha256": "5244df2129e05110bbf4233621dd8ddb1505e17131f07ad627c60e63a164a244"
         }
       },
-      "fingerprint": "8bffd15153ea83f7096b916f29d7d508f299968f95e949f912322f3a8f751e7e",
+      "fingerprint": "70944a7cc54e0a9c155e305c92f5d37e17b50384960565cdb3e87c2d4bec5ce6",
       "name": "helium",
       "pack": "pack.py",
       "record": {
-        "asset": "helium-bin_0.16.1.1-1_amd64.deb",
+        "asset": "helium-bin_0.16.4.1-1_amd64.deb",
         "asset_glob": "helium-bin_*_amd64.deb",
         "asset_pattern": "^helium\\-bin_[0-9][0-9A-Za-z.+~_-]*\\-1_amd64\\.deb$",
         "kind": "deb",
@@ -426,14 +426,14 @@
         "repo": "imputnet/helium-linux",
         "style": "artifact",
         "summary": "Private, fast, and honest web browser",
-        "tag": "0.16.1.1",
+        "tag": "0.16.4.1",
         "url": "https://github.com/imputnet/helium-linux",
-        "version": "0.16.1.1",
+        "version": "0.16.4.1",
         "write_version": false
       },
       "summary": "Private, fast, and honest web browser",
       "upstream": "imputnet/helium-linux",
-      "version": "0.16.1.1"
+      "version": "0.16.4.1"
     },
     "irssi": {
       "files": {
@@ -508,6 +508,44 @@
       "summary": "video game preservation platform",
       "upstream": "lutris/lutris",
       "version": "0.5.22"
+    },
+    "min": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "978e871e9c61a15a850d665b19a30f656db2324d1a445b6aaf4a0e119ae1ba9d"
+        },
+        "snap/gui/min.png": {
+          "exec": false,
+          "sha256": "749fefc90a01483a805ff08798e98d97a3cb337f5af6fc78591bc7fdd239235b"
+        },
+        "snap/local/min-launch": {
+          "exec": true,
+          "sha256": "e830dd3a33710a0f2525a6c0e3f70f446181e1f731f53fb19b59b50adbab40a7"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "550041fa76b79037690cbaf37b5e99ecc22f96b0d453e138c3efc7a6df381542"
+        }
+      },
+      "fingerprint": "ed60ef456c4bb019f75822565bf02e77c1f52f3f696a2fc50feaeec471628624",
+      "name": "min",
+      "pack": "",
+      "record": {
+        "asset": "min-1.35.7-amd64.deb",
+        "asset_pattern": "^min\\-[0-9][0-9A-Za-z.+~_-]*\\-amd64\\.deb$",
+        "icon": "snap/gui/min.png",
+        "kind": "deb",
+        "repo": "minbrowser/min",
+        "summary": "A web browser with smarter search, improved tab management, and built-in ad bl",
+        "tag": "v1.35.7",
+        "url": "https://github.com/minbrowser/min",
+        "version": "1.35.7",
+        "write_version": false
+      },
+      "summary": "A web browser with smarter search, improved tab management, and built-in ad bl",
+      "upstream": "minbrowser/min",
+      "version": "1.35.7"
     },
     "mpv": {
       "files": {
@@ -604,10 +642,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "37a15a65618706a9f88856c60f0e3efcb4d87cab3795351aa936229e06b55556"
+          "sha256": "3842f00243fa6d2498c3162d2bd45338e4c624e147574aacc0bed4fd261f992d"
         }
       },
-      "fingerprint": "046181977b3a055c941448d0b8999751a8349e0c5ab2b075635f523ef333bc6a",
+      "fingerprint": "f10bcca9951aae052045d92ae04c38465c5261d54f7073fa5765cd232d9371b4",
       "name": "ollama",
       "pack": "",
       "record": {
@@ -621,14 +659,52 @@
         "source_anchor": "^(\\s*source:\\s*).*/ollama-linux-amd64\\.tar\\.zst\\s*$",
         "style": "recipe",
         "summary": "Get up and running with large language models",
-        "tag": "v0.33.1",
+        "tag": "v0.33.3",
         "url": "https://github.com/ollama/ollama",
-        "version": "0.33.1",
+        "version": "0.33.3",
         "write_version": false
       },
       "summary": "Get up and running with large language models",
       "upstream": "ollama/ollama",
-      "version": "0.33.1"
+      "version": "0.33.3"
+    },
+    "pear": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "219700a310b6761f607ff398d5deb66eb62abbb53718a273dbb8cbd15201c6ba"
+        },
+        "snap/gui/pear.png": {
+          "exec": false,
+          "sha256": "b646d32eec469348945fc9f07b22c06caf9e2bf0d2dd262d97ce31ca39623054"
+        },
+        "snap/local/pear-launch": {
+          "exec": true,
+          "sha256": "6747c0ae298ecf38346ce18501ae20041f34ded0c6ea9394469e6caf4881130c"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "402b7291e0db9043da9eef3bc88817c3a0456e0e61833ff42fab6fa4490671bd"
+        }
+      },
+      "fingerprint": "3bde7ba1462f88bbb99e3b93a15aacc1dc6c5c846f96e8e3f59e48a757757f14",
+      "name": "pear",
+      "pack": "",
+      "record": {
+        "asset": "youtube-music_3.12.0_amd64.deb",
+        "asset_pattern": "^youtube\\-music_[0-9][0-9A-Za-z.+~_-]*_amd64\\.deb$",
+        "icon": "snap/gui/pear.png",
+        "kind": "deb",
+        "repo": "pear-devs/pear-desktop",
+        "summary": "Pear \ud83c\udf50 is extension for music player",
+        "tag": "v3.12.0",
+        "url": "https://github.com/pear-devs/pear-desktop",
+        "version": "3.12.0",
+        "write_version": false
+      },
+      "summary": "Pear \ud83c\udf50 is extension for music player",
+      "upstream": "pear-devs/pear-desktop",
+      "version": "3.12.0"
     },
     "retroarch": {
       "files": {
@@ -738,14 +814,14 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "072c81f97bd0e3c845f3f0db92e9924285d4daed3df414b48e2b268d37667382"
+          "sha256": "c6f48f2e554fb52129874377c9773229dc6f4748b19acbf7868468036bdb2717"
         }
       },
-      "fingerprint": "6e33373a0470af85f05b06139ec6ce1e7cf09e2564aa186222768515f733df80",
+      "fingerprint": "ffe592a46ff932e6ef4a692c478af163acfcf0cd9af7a22e424b18f1821d1593",
       "name": "signal-desktop",
       "pack": "",
       "record": {
-        "asset": "signal-desktop_8.25.0_amd64.deb",
+        "asset": "signal-desktop_8.26.0_amd64.deb",
         "kind": "deb",
         "repo": "signalapp/Signal-Desktop",
         "source_anchor": "^(\\s*source:\\s*).*/signal-desktop_.*\\.deb\\s*$",
@@ -758,12 +834,12 @@
           "package": "signal-desktop"
         },
         "url": "https://github.com/signalapp/Signal-Desktop",
-        "version": "8.25.0",
+        "version": "8.26.0",
         "write_version": true
       },
       "summary": "Private messaging from your desktop",
       "upstream": "signalapp/Signal-Desktop",
-      "version": "8.25.0"
+      "version": "8.26.0"
     },
     "spotube": {
       "files": {
@@ -887,7 +963,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "a94604d671100deab3f725bde2e80ddecbf4fb77d56a3be3a00d3aa81a9f7f09"
+          "sha256": "548963b84a42903dc1e899cc342fe2b169a6cab8a6a6cbfa187332d5a2ad15a0"
         },
         "pack.py": {
           "exec": false,
@@ -907,14 +983,14 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "0c845223cfc46037f4fb4a1bfd2d091281d9e000da352757744bc7484b17fb22"
+          "sha256": "eb7ae71db8bc4fe166fba4c1907c7a70a077a7b4f0be2e9fea58d23eec9d0b86"
         }
       },
-      "fingerprint": "76d85bfa55426c5331adc1f2b9e73b21748fec2a236448b4da435144a0a2bbc9",
+      "fingerprint": "ed61069a477d461387f4320750f85a8fd780f74de6df7bab5dd48d004156a490",
       "name": "ungoogled-chromium",
       "pack": "pack.py",
       "record": {
-        "asset": "ungoogled-chromium-151.0.7922.173-1-x86_64_linux.tar.xz",
+        "asset": "ungoogled-chromium-152.0.7977.64-1-x86_64_linux.tar.xz",
         "asset_glob": "ungoogled-chromium-*-x86_64_linux.tar.xz",
         "asset_pattern": "^ungoogled\\-chromium\\-[0-9][0-9A-Za-z.+~_-]*\\-x86_64_linux\\.tar\\.xz$",
         "kind": "archive",
@@ -922,19 +998,20 @@
         "repo": "ungoogled-software/ungoogled-chromium-portablelinux",
         "style": "artifact",
         "summary": "Google Chromium, sans integration with Google",
+        "tag": "152.0.7977.64-1",
         "url": "https://github.com/ungoogled-software/ungoogled-chromium-portablelinux",
-        "version": "151.0.7922.173-1",
+        "version": "152.0.7977.64-1",
         "write_version": false
       },
       "summary": "Google Chromium, sans integration with Google",
       "upstream": "ungoogled-software/ungoogled-chromium-portablelinux",
-      "version": "151.0.7922.173-1"
+      "version": "152.0.7977.64-1"
     },
     "unityhub": {
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "373430d8609f82c9159436513ce6a9b62db92f568efed78714d3fa54071289f6"
+          "sha256": "388b3f481350aeae1171ccb2446aebc79ada041a2b5849cd01195f16066b1efa"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -946,14 +1023,14 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "2de56caff8fb81e891284b53b6a1ff9e5d0ec77cdc1e268baf177e5908333b63"
+          "sha256": "c8844f25d9b3a86090074d55afcf019d68641a9d379ec7e49c7a120b76c3eb49"
         }
       },
-      "fingerprint": "06560d4dc02909cec3a6806ea39f319810492e9f8b61b42830886fa47f7d1aab",
+      "fingerprint": "69f104db920a38d26e1df08f221c60e5c0fae98aa19afa459adb6b6eec4bcaa4",
       "name": "unityhub",
       "pack": "pack.py",
       "record": {
-        "asset": "UnityHubSetup-amd64.deb",
+        "asset": "unityhub_3.21.1_amd64.deb",
         "asset_glob": "UnityHubSetup-amd64.deb",
         "kind": "deb",
         "local_asset": "UnityHubSetup-amd64.deb",
@@ -966,12 +1043,12 @@
           "kind": "apt",
           "package": "unityhub"
         },
-        "version": "3.21.0",
+        "version": "3.21.1",
         "write_version": false
       },
       "summary": "The official Unity Hub",
       "upstream": "apt",
-      "version": "3.21.0"
+      "version": "3.21.1"
     },
     "yt-dlp": {
       "files": {
@@ -1015,7 +1092,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "3a716a753e815f36f36b3b43141abd2845bc4c245d56e2f821176ebd282aad5a"
+          "sha256": "d4a1cf875c31fbb9871e17fe6dd2c0853362df5dfa8f998299974267b85f731f"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -1035,10 +1112,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "8086f296a13f5c1d61b4bea509865dc238f5f7a712114df07ec3cd487b5a3de6"
+          "sha256": "67961b27bc5827c7f92b4b0c6b73018489df72bb7081c36982248cca5e4aa2cb"
         }
       },
-      "fingerprint": "070254ee68fe89b04d0e0ef426d688865010fcafe1028d404f7ca74a05374892",
+      "fingerprint": "5a827a5f6372ba3b8468d88007e188429801c0c05787d67e434aa6cf1923a8fc",
       "name": "zen",
       "pack": "pack.py",
       "record": {
@@ -1050,13 +1127,14 @@
         "repo": "zen-browser/desktop",
         "style": "artifact",
         "summary": "A calmer way to browse the web",
+        "tag": "1.21.16b",
         "url": "https://github.com/zen-browser/desktop",
-        "version": "1.21.15b",
+        "version": "1.21.16b",
         "write_version": false
       },
       "summary": "A calmer way to browse the web",
       "upstream": "zen-browser/desktop",
-      "version": "1.21.15b"
+      "version": "1.21.16b"
     }
   }
 }

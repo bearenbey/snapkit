@@ -1,7 +1,7 @@
 # Unity Hub snap (repack of the official .deb)
 
 Turns `UnityHubSetup-amd64.deb` into a classically confined snap
-(`unityhub_3.21.0_amd64.snap`). snapcraft builds it from `snap/snapcraft.yaml`;
+(`unityhub_3.21.1_amd64.snap`). snapcraft builds it from `snap/snapcraft.yaml`;
 `pack.py` adds the checks a recipe cannot express and then runs it. This snap
 is not published or endorsed by the upstream project.
 
@@ -19,7 +19,7 @@ spells it out, and builds the result.
 ## Install / run
 
 ```sh
-sudo snap install --dangerous --classic unityhub_3.21.0_amd64.snap
+sudo snap install --dangerous --classic unityhub_3.21.1_amd64.snap
 unityhub
 ```
 

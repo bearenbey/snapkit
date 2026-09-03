@@ -1,0 +1,71 @@
+# Written by snapkit from https://github.com/minbrowser/min.
+# Everything here is a starting point -- edit it, it is yours now.
+
+name: min
+base: core24
+version: '1.35.7'
+summary: A web browser with smarter search, improved tab management, and built-in ad bl
+description: |
+  Min is a fast, minimal browser that protects your privacy.
+
+  Packaged from the upstream release at https://github.com/minbrowser/min.
+  This snap is not published or endorsed by the upstream project.
+grade: stable
+confinement: strict
+license: Apache-2.0
+title: min
+website: https://github.com/minbrowser/min
+source-code: https://github.com/minbrowser/min
+issues: https://github.com/minbrowser/min/issues
+contact: https://github.com/minbrowser/min/issues
+
+platforms:
+  amd64:
+
+apps:
+  min:
+    command: bin/min-launch
+    # The gnome extension wires up the desktop, fonts, themes and
+    # GTK/GL stack from the platform snap rather than bundling them.
+    extensions: [gnome]
+    desktop: usr/share/applications/min.desktop
+    plugs:
+      - home
+      - network
+      - audio-playback
+      - opengl
+      - removable-media
+      - browser-support
+      - audio-record
+      - camera
+      - password-manager-service
+
+parts:
+  min:
+    # snapcraft unpacks the .deb and `dump` stages what was in it.
+    plugin: dump
+    source: https://github.com/minbrowser/min/releases/download/v1.35.7/min-1.35.7-amd64.deb
+    source-type: deb
+    source-checksum: sha256/11741cb9606b68dc5f8371c335571e72726acefd5e8c327638e80e9f14ab737f
+    # What the payload asks for that the base and the extension
+    # do not already supply. Read off the binary, not guessed at.
+    # A library it opens later by name is not visible here.
+    stage-packages:
+      - libgbm1
+      - libgtk2.0-0t64
+      - libx11-6
+      - libxcb1
+      - libxdamage1
+      - libxext6
+      - libxfixes3
+
+  launcher:
+    plugin: dump
+    source: snap/local
+    organize:
+      min-launch: bin/min-launch
+
+# The icon snapd shows in the launcher. `icon:` is resolved against
+# this project directory, not against the payload, so the one found
+# inside the release was copied here next to the recipe.
+icon: snap/gui/min.png

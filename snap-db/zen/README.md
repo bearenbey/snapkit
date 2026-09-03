@@ -1,7 +1,7 @@
 # Zen Browser snap (repack of the official tarball)
 
 Turns `zen.linux-x86_64.tar.xz` into a strictly confined snap
-(`zen_1.21.15b_amd64.snap`). snapcraft builds it from `snap/snapcraft.yaml`;
+(`zen_1.21.16b_amd64.snap`). snapcraft builds it from `snap/snapcraft.yaml`;
 `pack.py` adds the checks a recipe cannot express and then runs it. This snap
 is not published or endorsed by the upstream project.
 
@@ -19,7 +19,7 @@ the result.
 ## Install / run
 
 ```sh
-sudo snap install --dangerous zen_1.21.15b_amd64.snap
+sudo snap install --dangerous zen_1.21.16b_amd64.snap
 sudo snap connect zen:browser-sandbox            # see below — do this one
 snap connect zen:password-manager-service        # optional
 snap connect zen:u2f-devices                     # optional, hardware keys

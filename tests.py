@@ -3207,6 +3207,22 @@ def database():
             same(snapdb.unmet_sources(directory, kept, artifact="demo-1.0.tar.gz")
                  .count("demo-1.0.tar.gz"), 0)
 
+    @check("a file saved here under another name is not called a missing source")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home)
+            directory = a_project(root, "unityhub")
+            recipe = directory / "snap" / "snapcraft.yaml"
+            # Saved here under another name, which the recipe uses.
+            recipe.write_text(recipe.read_text().replace(
+                "source: unityhub-1.0.tar.gz", "source: UnityHubSetup.deb"))
+            kept, _ = snapdb.project_files(directory)
+            upstream, here = "unityhub_3.21.1_amd64.deb", "UnityHubSetup.deb"
+            same(snapdb.unmet_sources(directory, kept, upstream),
+                 ["UnityHubSetup.deb"], "the upstream name alone cannot match")
+            same(snapdb.unmet_sources(directory, kept, (upstream, here)), [],
+                 "the local name is what the recipe says, so nothing is unmet")
+
     @check("what is published is what comes back, mode and all")
     def _():
         with tempfile.TemporaryDirectory() as home:

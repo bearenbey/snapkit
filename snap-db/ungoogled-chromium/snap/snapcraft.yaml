@@ -1,5 +1,5 @@
 name: ungoogled-chromium
-version: '151.0.7922.173-1'
+version: '152.0.7977.64-1'
 summary: Google Chromium, sans integration with Google
 description: |
   ungoogled-chromium is Google Chromium with all Google web-service
@@ -90,7 +90,7 @@ plugs:
 parts:
   ungoogled-chromium:
     plugin: dump
-    source: ungoogled-chromium-151.0.7922.173-1-x86_64_linux.tar.xz
+    source: ungoogled-chromium-152.0.7977.64-1-x86_64_linux.tar.xz
     organize:
       '*': usr/lib/ungoogled-chromium/
     # No stage-packages: the platform snaps carry every library it links.
