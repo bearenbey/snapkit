@@ -1,6 +1,6 @@
 name: snapkit
 base: core24
-version: '0.1.0'
+version: '0.2.0'
 summary: Make a snap package out of a GitHub repository, or out of a .deb
 description: |
   Give snapkit a GitHub repository and it works out what that project
