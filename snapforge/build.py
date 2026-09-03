@@ -344,6 +344,37 @@ SNAPCRAFT_LOGS = Path.home() / ".local/state/snapcraft/log"
 STALE_INSTANCE = "Failed to add disk to instance"
 
 
+# snapcraft's log carries every line it printed, behind a timestamp.
+LOGGED = re.compile(r"^::\s+[\d-]+\s+[\d:.]+\s+(.*)$")
+LINT_HEADING = "Lint warnings:"
+LINT_LINE = re.compile(r"^- (\w+): (.+?)\s*(?:\(http\S+\))?$")
+
+
+def lint_findings(logs=None):
+    """What snapcraft's own linters said about the snap it has just packed."""
+    try:
+        newest = max(Path(logs or SNAPCRAFT_LOGS).glob("*.log"),
+                     key=lambda p: p.stat().st_mtime)
+    except (OSError, ValueError):
+        return []
+    found, reading = [], False
+    for line in newest.read_text(errors="replace").splitlines():
+        logged = LOGGED.match(line)
+        text = logged.group(1) if logged else line
+        if text.strip() == LINT_HEADING:
+            # Only the last run's block: the file holds more than one build.
+            found, reading = [], True
+            continue
+        if not reading:
+            continue
+        one = LINT_LINE.match(text.strip())
+        if one:
+            found.append((one.group(1), one.group(2)))
+        else:
+            reading = False
+    return found
+
+
 def stale_instance():
     """The container a wedged run left behind, read from snapcraft's log."""
     try:

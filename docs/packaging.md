@@ -239,6 +239,24 @@ sublime-text     4200      4200      up to date
 Signal publishes amd64 only. Unity and Sublime Text publish arm64, and the
 same three records found it without being edited.
 
+## What the build itself finds
+
+Static analysis cannot see a library a program opens by name at runtime, and
+that is the usual reason a snap builds and then does not start. snapcraft runs
+its own linters over the finished snap and does know, because it is looking at
+what was actually packed.
+
+Those findings scroll past in the middle of a build, so they are read back out
+of snapcraft's log and repeated at the end, sorted by what they mean:
+
+- **missing dependency**, which is what a snap that will not start looks like.
+  The library is named, so its package can be added to `stage-packages:`.
+  Reported as a warning, because nothing else here can catch this one.
+- **unused library**, staged and never opened. Usually something apt pulled in
+  behind a package that was asked for, and it can come back out.
+- **gpu**, a driver library bundled where the host's own would do it better.
+- **metadata**, a field the store shows that upstream never said.
+
 ---
 
 [Back to the README](../README.md)

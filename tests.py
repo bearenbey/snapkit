@@ -2564,6 +2564,43 @@ def updater():
         same(seen[1], ["tar", "xf", "thing"],
              "the flag was put on something that is not snapcraft")
 
+    @check("what snapcraft's linters found is read back out of its own log")
+    def _():
+        from snapforge import build as buildlib, project
+        with tempfile.TemporaryDirectory() as home:
+            logs = Path(home)
+            (logs / "old.log").write_text(
+                ":: 2026-09-03 21:00:00.000 Lint warnings:\n"
+                ":: 2026-09-03 21:00:00.000 - gpu: a/b.so: from an older build.\n")
+            newest = logs / "new.log"
+            newest.write_text(
+                ":: 2026-09-03 22:00:00.000 Running linters...\n"
+                ":: 2026-09-03 22:00:00.000 Lint warnings:\n"
+                ":: 2026-09-03 22:00:00.000 - library: lib/a.so: missing "
+                "dependency 'libjvm.so'. (https://x)\n"
+                ":: 2026-09-03 22:00:00.000 - library: b.so: unused library "
+                "'usr/lib/b.so'. (https://x)\n"
+                ":: 2026-09-03 22:00:00.000 Creating snap package...\n")
+            import os
+            os.utime(newest, (2 ** 31, 2 ** 31))
+            found = buildlib.lint_findings(logs)
+
+        same(len(found), 2, f"read the wrong block: {found}")
+        same([k for k, _ in found], ["library", "library"])
+        # A missing dependency will not start; an unused one is only weight.
+        same(project._advice(*found[0]), "missing")
+        same(project._advice(*found[1]), "unused")
+        same(project.LINT_ADVICE["missing"][0], "warn")
+        same(project.LINT_ADVICE["unused"][0], "detail")
+
+    @check("a build with no linter findings says nothing about them")
+    def _():
+        from snapforge import build as buildlib
+        with tempfile.TemporaryDirectory() as home:
+            same(buildlib.lint_findings(Path(home)), [])
+            (Path(home) / "a.log").write_text(":: 2026 00:00 Creating snap\n")
+            same(buildlib.lint_findings(Path(home)), [])
+
     @check("a wedged build container is recognised from snapcraft's own log")
     def _():
         with tempfile.TemporaryDirectory() as home:

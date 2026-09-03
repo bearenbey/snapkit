@@ -553,8 +553,45 @@ def build(snap, reporter, extra=()):
         raise ForgeError("snapcraft finished but produced no .snap")
     reporter.result(f"built {built.name} "
                     f"({built.stat().st_size / 1e6:.0f} MB)")
+    _say_lint(reporter)
     snap.record_build(snap.version)
     return built
+
+
+# What snapcraft's linters found, and what it means for a snap that has to run.
+LINT_ADVICE = {
+    "missing": ("warn", "this is what a snap that will not start looks like; "
+                        "the library is named, so add its package"),
+    "unused": ("detail", "staged and never opened, so it can come back out"),
+    "gpu": ("detail", "bundled, where the host's driver would do it better"),
+    "metadata": ("detail", "the store shows this, and upstream did not say"),
+}
+
+
+def _advice(kind, detail):
+    """Which of the linter's findings this is, in terms of what to do."""
+    if kind == "library":
+        return "missing" if "missing dependency" in detail else "unused"
+    return kind if kind in LINT_ADVICE else ""
+
+
+def _say_lint(reporter):
+    """Repeat what the linters found, which otherwise scrolls past."""
+    findings = buildlib.lint_findings()
+    if not findings:
+        return
+    seen = set()
+    for kind, detail in findings:
+        which = _advice(kind, detail)
+        if not which or which in seen:
+            continue
+        seen.add(which)
+        how, why = LINT_ADVICE[which]
+        same = [d for k, d in findings if _advice(k, d) == which]
+        getattr(reporter, how)(f"snapcraft's linter: {len(same)} {which} "
+                               f"({why})")
+        for one in same[:4]:
+            reporter.detail(f"  {one}")
 
 
 def _newest(paths):
