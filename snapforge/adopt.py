@@ -136,8 +136,7 @@ def take_icon(snap, directory, store=None):
     icon = find_icon(Path(directory))
     if not icon:
         return ""
-    # Named before the copy: without it the copy lands in the default home,
-    # and the register this snap is going into then finds none.
+    # Named first, or the copy lands in the default home and is lost.
     if store is not None:
         snap.store_root = Path(store)
     snap.icon = f"snap/gui/{snap.name}{icon.suffix}"

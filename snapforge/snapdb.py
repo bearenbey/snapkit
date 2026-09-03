@@ -4,6 +4,7 @@ import fnmatch
 import hashlib
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from . import adopt, net
@@ -19,8 +20,10 @@ SCHEMA = 1
 # What a pulled project cannot tell you about itself: where its release is.
 RECORD = ("repo", "url", "kind", "version", "tag", "asset", "asset_pattern",
           "upstream", "style", "local_asset", "asset_glob", "source_anchor",
-          "write_version", "checksums", "verify", "summary", "pack",
-          "build_with", "icon")
+          "write_version", "checksums", "verify", "summary", "pack", "icon")
+
+# How many files of one project to fetch at once.
+AT_ONCE = 8
 
 # A project's own source, as opposed to a download or something a build made.
 INCLUDE = ("snap/snapcraft.yaml", "snap/hooks/**", "snap/local/**",
@@ -308,6 +311,26 @@ def entry(name, found=None, url=None):
     raise DatabaseError(f"the database has no snap called {name}{hint}")
 
 
+def within(into, relative):
+    """Where this index entry writes, refused if it leaves the project."""
+    root = Path(into).resolve()
+    target = (root / relative).resolve()
+    if target != root and root not in target.parents:
+        raise DatabaseError(f"the database names a file outside the project it "
+                            f"belongs to: {relative!r} -- refusing to write it")
+    return target
+
+
+def _fetch_one(url, name, relative, about, target):
+    """One file of a project, checked against the hash the index published."""
+    try:
+        net.download(f"{url}/{name}/{relative}", target, about.get("sha256", ""))
+    except (net.NetworkError, OSError) as exc:
+        raise DatabaseError(f"{name}: could not fetch {relative}: {exc}") from exc
+    if about.get("exec"):
+        target.chmod(0o755)
+
+
 def fetch(name, into, found=None, url=None, reporter=None):
     """Download one snap's project files. Returns the directory written."""
     url = url or base_url()
@@ -322,19 +345,20 @@ def fetch(name, into, found=None, url=None, reporter=None):
     into = Path(into)
     into.mkdir(parents=True, exist_ok=True)
 
-    for relative, about in sorted(record.get("files", {}).items()):
-        destination = into / relative
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            # Bytes, not text: some of these are PNGs. The sha is free to check.
-            net.download(f"{url}/{name}/{relative}", destination,
-                         about.get("sha256", ""))
-        except (net.NetworkError, OSError) as exc:
-            raise DatabaseError(f"{name}: could not fetch {relative}: {exc}") from exc
-        if about.get("exec"):
-            destination.chmod(0o755)
-        if reporter:
-            reporter.detail(relative)
+    # All checked first: one bad path writes none of the project's files.
+    wanted = sorted(record.get("files", {}).items())
+    targets = [within(into, relative) for relative, _ in wanted]
+    for target in targets:
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+    # These wait only on the far end, so the wait is the slowest file.
+    with ThreadPoolExecutor(min(AT_ONCE, max(1, len(wanted)))) as pool:
+        started = [pool.submit(_fetch_one, url, name, relative, about, target)
+                   for (relative, about), target in zip(wanted, targets)]
+        for (relative, _), done in zip(wanted, started):
+            done.result()
+            if reporter:
+                reporter.detail(relative)
 
     return into
 

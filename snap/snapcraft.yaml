@@ -38,10 +38,10 @@ grade: devel
 confinement: classic
 license: MIT
 title: snapkit
-website: https://github.com/bearen/snapkit
-source-code: https://github.com/bearen/snapkit
-issues: https://github.com/bearen/snapkit/issues
-contact: https://github.com/bearen/snapkit/issues
+website: https://github.com/bearenbey/snapkit
+source-code: https://github.com/bearenbey/snapkit
+issues: https://github.com/bearenbey/snapkit/issues
+contact: https://github.com/bearenbey/snapkit/issues
 
 # Pure python and two stage-packages that exist on every port, so this snap
 # is not tied to one architecture. snapcraft builds the one it is run on.

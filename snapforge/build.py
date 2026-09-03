@@ -299,9 +299,13 @@ class Build:
 
 def pack_module(directory, filename="pack.py"):
     """Import a project's pack.py, without it being on the path."""
-    path = Path(directory) / filename
+    root = Path(directory).resolve()
+    path = (root / filename).resolve()
+    # This name can come off a fetched record, and importing it runs it.
+    if root not in path.parents:
+        die(f"{filename} is outside {root.name}, so it is not this project's")
     if not path.is_file():
-        die(f"no {filename} in {Path(directory).name}")
+        die(f"no {filename} in {root.name}")
     spec = importlib.util.spec_from_file_location(
         f"snapforge._pack.{Path(directory).name}", path)
     module = importlib.util.module_from_spec(spec)

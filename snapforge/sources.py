@@ -373,6 +373,10 @@ def manifest_sha(url, asset, required=True):
 
 # --- what a download is checked against -------------------------------------
 
+# gpg saying the signature is wrong, as opposed to saying it cannot tell.
+BAD_SIGNATURE = ("BADSIG", "REVKEYSIG", "EXPKEYSIG")
+
+
 def _gpg(config, path, release):
     """Check a detached signature published next to the download."""
     if not shutil.which("gpg"):
@@ -384,13 +388,19 @@ def _gpg(config, path, release):
     except NetworkError:
         return "gpg: upstream published no signature for this release"
     try:
-        done = subprocess.run(["gpg", "--verify", str(signature), str(path)],
-                              capture_output=True)
+        done = subprocess.run(
+            ["gpg", "--status-fd", "2", "--verify", str(signature), str(path)],
+            capture_output=True)
     finally:
         signature.unlink(missing_ok=True)
     if done.returncode == 0:
         return "gpg: signature verified"
-    return "gpg: NOT verified (release key not in your keyring) -- continuing"
+    status = done.stderr.decode("utf-8", "replace")
+    # A key not held cannot say either way. A bad signature is not that.
+    if any(f"[GNUPG:] {word}" in status for word in BAD_SIGNATURE):
+        raise NetworkError(f"gpg: the signature on {Path(path).name} is BAD -- "
+                           f"this file is not what upstream signed")
+    return "gpg: not verified (release key not in your keyring) -- continuing"
 
 
 def _tar_member(config, path, release):

@@ -2508,6 +2508,24 @@ def updater():
             except buildlib.BuildError as exc:
                 assert "build(project)" in str(exc), str(exc)
 
+    @check("a pack.py outside the project is refused, not imported")
+    def _():
+        from snapforge import build as buildlib
+        with tempfile.TemporaryDirectory() as home:
+            here = Path(home)
+            (here / "project").mkdir()
+            # Importing runs it, and the name can come off a fetched record.
+            (here / "outside.py").write_text("raise SystemExit('ran')\n")
+            try:
+                buildlib.pack_module(here / "project", "../outside.py")
+                assert False, "a file outside the project was imported"
+            except buildlib.BuildError as exc:
+                assert "outside" in str(exc), str(exc)
+            # A file of the project, in a subdirectory, is still fine.
+            (here / "project" / "lib").mkdir()
+            (here / "project" / "lib" / "helper.py").write_text("value = 1\n")
+            same(buildlib.pack_module(here / "project", "lib/helper.py").value, 1)
+
     @check("a pack.py is left where it was, whatever it does to the cwd")
     def _():
         import os
@@ -2680,6 +2698,25 @@ def updater():
 def from_a_file():
     """Packaging a file on disk, and keeping it in step with its folder."""
     from snapforge import classify, db, local, project, sources, update
+
+    @check("a zip entry cannot chmod its way out of where it is unpacked")
+    def _():
+        import zipfile
+        from snapforge import inspect
+        with tempfile.TemporaryDirectory() as home:
+            here = Path(home)
+            victim = here / "victim"
+            victim.write_text("not executable")
+            victim.chmod(0o644)
+            archive = here / "payload.zip"
+            with zipfile.ZipFile(archive, "w") as zipped:
+                # ZipFile sanitises what it writes; the exec-bit pass did not.
+                entry = zipfile.ZipInfo("../victim")
+                entry.external_attr = 0o755 << 16
+                zipped.writestr(entry, "x")
+            inspect._unpack_archive(archive, here / "out")
+            same(bool(victim.stat().st_mode & 0o111), False,
+                 "a zip entry chmod +x a file outside the unpack directory")
 
     @check("every shape the classifier packages is found on a disk")
     def _():
@@ -3100,8 +3137,7 @@ def database():
             snapdb.publish([snap], published)
             url = published.resolve().as_uri()
 
-            # `install` and the dashboard's `g` are this one call, so neither
-            # can learn something the other does not.
+            # `install` and the dashboard's `g` are this one call now.
             back = root / "back"
             pulled, recipe, is_snapcraft = snapdb.install(
                 "demo", back, url=url, store=root / "register")
@@ -3116,6 +3152,45 @@ def database():
             # Beside the register it is going into, not beside the default one.
             assert (root / "register" / "icons" / "demo.png").is_file(), \
                 "the kept icon did not land in this register"
+
+    @check("a database naming a file outside the project writes nothing at all")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home)
+            directory = a_project(root, "demo")
+            snap = db.Snap(name="demo", version="1.0", directory=str(directory),
+                           asset="demo-1.0.tar.gz", style="artifact")
+            published = root / "snap-db"
+            snapdb.publish([snap], published)
+
+            # `into / relative` follows an absolute path or a ../ right out.
+            index = json.loads((published / "index.json").read_text())
+            index["snaps"]["demo"]["files"]["../../pwned"] = {
+                "sha256": "0" * 64, "exec": True}
+            (published / "index.json").write_text(json.dumps(index))
+
+            target = root / "pull" / "demo"
+            try:
+                snapdb.fetch("demo", target, url=published.resolve().as_uri())
+                assert False, "a path outside the project was accepted"
+            except snapdb.DatabaseError as exc:
+                assert "outside the project" in str(exc), str(exc)
+            assert not (root / "pull" / "pwned").exists(), "it escaped anyway"
+            assert not (root / "pwned").exists(), "it escaped anyway"
+            # Refused before anything is written, not halfway through.
+            assert not any(target.rglob("*")) if target.exists() else True, \
+                "half a project was written before the refusal"
+
+    @check("a shell command cannot arrive in a record off the network")
+    def _():
+        # build_with runs through a shell, so the index may not set it.
+        assert "build_with" not in snapdb.RECORD, \
+            "build_with is back in RECORD, and the index can run shell again"
+        snap = db.Snap(name="demo")
+        snapdb.apply_record(snap, {"record": {"build_with": "rm -rf ~",
+                                              "pack": "pack.py"}})
+        same(snap.build_with, "", "the index set build_with")
+        same(snap.pack, "pack.py", "pack.py is the supported way, and stays")
 
     @check("the index carries what a pulled project needs to update itself")
     def _():

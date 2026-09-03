@@ -102,16 +102,25 @@ def _unpack_archive(archive, destination):
             # ZipFile drops the exec bit, so put it back or nothing will run.
             for info in zipped.infolist():
                 mode = info.external_attr >> 16
-                if mode & stat.S_IXUSR:
-                    target = destination / info.filename
-                    if target.is_file():
-                        target.chmod(target.stat().st_mode | 0o111)
+                if not mode & stat.S_IXUSR:
+                    continue
+                # Where extractall put it, not what the entry called itself.
+                target = _extracted_as(destination, info.filename)
+                if target is not None and target.is_file():
+                    target.chmod(target.stat().st_mode | 0o111)
         return
     try:
         with tarfile.open(archive, mode="r:*") as tar:
             tar.extractall(destination, filter="tar")
     except tarfile.TarError as exc:
         raise InspectionError(f"{archive.name}: {exc}") from exc
+
+
+def _extracted_as(destination, name):
+    """Where ZipFile put an entry, which drops the parts that would escape."""
+    parts = [p for p in name.replace("\\", "/").split("/")
+             if p not in ("", os.curdir, os.pardir)]
+    return destination.joinpath(*parts) if parts else None
 
 
 def _unpack_appimage(archive, destination):
