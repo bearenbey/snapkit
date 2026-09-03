@@ -1,6 +1,7 @@
 """A repository URL, and what that repository publishes."""
 
 import re
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 from .net import NetworkError, get_text, head_location
@@ -108,10 +109,12 @@ def parse_repo(text):
 
 def describe(repo):
     """The repository's description and licence."""
-    info = Repository(repo=repo)
-    info.description = _description(repo)
-    info.license = licence_of(repo)
-    return info
+    # Two pages that know nothing about each other, so one wait, not two.
+    with ThreadPoolExecutor(2) as pool:
+        described = pool.submit(_description, repo)
+        licensed = pool.submit(licence_of, repo)
+        return Repository(repo=repo, description=described.result(),
+                          license=licensed.result())
 
 
 def _description(repo):

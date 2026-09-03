@@ -4,6 +4,7 @@ import shutil
 import contextlib
 import subprocess
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -135,8 +136,12 @@ def plan(repo_text, reporter, tag=None, name=None, asset=None):
     """Work out what would be built, without building it."""
     repo = github.parse_repo(repo_text)
     reporter.step(f"looking up {repo}")
-    info = github.describe(repo)
-    release = github.release(repo, tag)
+    # Asked together; the release is read first, its absence ending this.
+    with ThreadPoolExecutor(2) as pool:
+        described = pool.submit(github.describe, repo)
+        found = pool.submit(github.release, repo, tag)
+        release = found.result()
+        info = described.result()
     reporter.detail(f"newest release {release.tag} ({release.version}), "
                     f"{len(release.assets)} files attached")
 
