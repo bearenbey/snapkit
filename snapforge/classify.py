@@ -42,6 +42,10 @@ OTHER_OS = re.compile(
 
 LINUX = ("linux", "gnu", "musl", "ubuntu", "debian")
 
+# A distro with its release stuck on: Ubuntu22.04, Debian10, and the base.
+DISTRO = re.compile(r"(?<![a-z0-9])(ubuntu|debian|fedora|el|centos)"
+                    r"[._-]?(\d[\d.]*)(?![a-z])", re.I)
+
 
 @dataclass(frozen=True)
 class Candidate:
@@ -139,9 +143,16 @@ def score(name):
 
     tokens = set(_tokens(name))
     linux = next((word for word in LINUX if word in tokens), "")
+    named = DISTRO.search(name)
     if linux:
         points += 15
         why.append(linux)
+    elif named:
+        # Ubuntu first: a Debian 10 build wants a libssl noble dropped.
+        for_us = named.group(1).lower() == "ubuntu"
+        points += 15 if for_us else 8
+        why.append(f"built for {named.group(0)}"
+                   + ("" if for_us else ", and the base is Ubuntu"))
     if "musl" in tokens:
         points += 10
         why.append("statically linked against musl")
@@ -166,6 +177,18 @@ def leading_name(name):
     return (stem[:found.start()] if found else stem).lower()
 
 
+def distro_release(name):
+    """The distro release a build names, as a number, or 0 when it names none."""
+    found = DISTRO.search(name)
+    if not found:
+        return 0.0
+    try:
+        return float(found.group(2).split(".", 2)[0]
+                     + "." + (found.group(2).split(".") + ["0"])[1])
+    except (ValueError, IndexError):
+        return 0.0
+
+
 def classify(assets, wanted=""):
     """Every usable asset in a release, best first."""
     found = []
@@ -177,8 +200,10 @@ def classify(assets, wanted=""):
             found.append(Candidate(asset=asset, kind=kind, score=points, why=why))
     # A companion package can score as well as the app: prefer the wanted name.
     target = (wanted or "").lower()
+    # Newer of two builds for the same distro: closer to what the base is.
     return sorted(found, key=lambda c: (-c.score,
                                         leading_name(c.name) != target,
+                                        -distro_release(c.name),
                                         len(c.name), c.name))
 
 

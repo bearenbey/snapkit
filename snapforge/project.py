@@ -147,6 +147,9 @@ def plan(repo_text, reporter, tag=None, name=None, asset=None):
                     f"{len(release.assets)} files attached")
 
     candidates = classify.classify(release.assets, wanted=repo.split('/')[-1])
+    if not candidates and not tag:
+        # A monorepo releases its crates too, and those carry no build.
+        release, candidates = _looking_back(repo, release, reporter)
     if not candidates:
         raise ForgeError(_nothing_usable(repo, release))
 
@@ -211,6 +214,39 @@ def choose(candidates, asset=None):
     raise ForgeError(
         f"no candidate called {asset}. This release offers:\n" +
         "\n".join(f"  {n}. {c.name}" for n, c in enumerate(candidates, 1)))
+
+
+# How far back to look when the newest release is not one of the program.
+LOOK_BACK = 12
+
+
+def _looking_back(repo, release, reporter):
+    """The newest release that actually publishes something packageable."""
+    try:
+        tags = github.recent_tags(repo, limit=LOOK_BACK)
+    except NetworkError:
+        return release, []
+    wanted = repo.split("/")[-1]
+    later = [tag for tag in tags if tag != release.tag]
+    if not later:
+        return release, []
+    reporter.detail(f"{release.tag} publishes nothing that can be packaged, "
+                    f"so the {len(later)} releases before it are being read")
+
+    def read(tag):
+        try:
+            return tag, classify.classify(github.assets(repo, tag), wanted=wanted)
+        except (NetworkError, github.NotFound):
+            return tag, []
+
+    with ThreadPoolExecutor(min(8, len(later))) as pool:
+        for tag, candidates in pool.map(read, later):
+            if candidates:
+                # Ordered newest first, so the first hit is the newest one.
+                reporter.warn(f"{release.tag} has no build attached; using "
+                              f"{tag}, which is the newest release that has one")
+                return github.release(repo, tag), candidates
+    return release, []
 
 
 def _nothing_usable(repo, release):

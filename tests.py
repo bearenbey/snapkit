@@ -2697,7 +2697,7 @@ def updater():
 
 def from_a_file():
     """Packaging a file on disk, and keeping it in step with its folder."""
-    from snapforge import classify, db, local, project, sources, update
+    from snapforge import classify, db, github, local, project, sources, update
 
     @check("a zip entry cannot chmod its way out of where it is unpacked")
     def _():
@@ -2851,6 +2851,38 @@ def from_a_file():
             same(local.newest(here).version, "1.11~beta")
             make_deb(here / "demo_1.11_amd64.deb", version="1.11")
             same(local.newest(here).version, "1.11")
+
+    @check("an Ubuntu build beats a Debian one, and the newer of two beats the older")
+    def _():
+        # None of wezterm's debs names an architecture, so length decided.
+        names = ["w-1.Debian10.deb", "w-1.Debian12.deb",
+                 "w-1.Ubuntu20.04.deb", "w-1.Ubuntu22.04.deb"]
+        assets = [github.Asset(name=n, url="") for n in names]
+        order = [c.name for c in classify.classify(assets, wanted="w")]
+        same(order[0], "w-1.Ubuntu22.04.deb", f"picked {order[0]}")
+        # The base is Ubuntu, so every Ubuntu build sorts above every Debian.
+        assert order[1] == "w-1.Ubuntu20.04.deb", order
+        same(classify.distro_release("w-1.Ubuntu22.04.deb"), 22.04)
+        same(classify.distro_release("w-1.tar.gz"), 0.0)
+
+    @check("a release that is a crate of a monorepo is looked past")
+    def _():
+        # wezterm's newest tags are vtparse and termwiz, with no build.
+        real = "20240203-110809"
+        assets = {real: [github.Asset(name="wezterm-1.Ubuntu22.04.deb", url="")]}
+        tags = ["vtparse-0.7.0", "termwiz-0.23.3", real]
+
+        def recent_tags(repo, limit=30):
+            return tags[:limit]
+
+        def attached(repo, tag):
+            return assets.get(tag, [])
+
+        with patched(project.github, recent_tags=recent_tags, assets=attached):
+            empty = github.Release(repo="wez/wezterm", tag=tags[0], version="0.7.0")
+            found, candidates = project._looking_back("wez/wezterm", empty, Quiet())
+        same(found.tag, real, "did not reach the release with a build on it")
+        same([c.name for c in candidates], ["wezterm-1.Ubuntu22.04.deb"])
 
     @check("a package's name survives the hyphens in it")
     def _():
