@@ -3446,6 +3446,26 @@ def dependencies():
         same(depends.parse_depends("a | b | c"), ["a"])
         same(depends.parse_depends(""), [])
 
+    @check("of two alternatives, the one core24 has is the one taken")
+    def _():
+        # An old electron-builder .deb offers the dead name first.
+        legacy = ("libgtk2.0-0, libudev0 | libudev1, "
+                  "libgcrypt11 | libgcrypt20, python | python3")
+        chosen = depends.parse_depends(legacy)
+        assert "libudev1" in chosen and "libudev0" not in chosen, chosen
+        assert "libgcrypt20" in chosen and "libgcrypt11" not in chosen, chosen
+        # libgcrypt11 has not existed for years, and naming it does not build.
+        staged = depends.resolve(control={"Depends": legacy}, gui=True).packages
+        for gone in ("libgcrypt11", "libudev0", "libgtk2.0-0"):
+            assert gone not in staged, f"{gone} was staged: {staged}"
+        # gtk2 is real, but noble spells it with the rename on the end.
+        same(staged, ["libgtk2.0-0t64"])
+
+    @check("with nothing to choose between them, the packager's order stands")
+    def _():
+        same(depends.parse_depends("kde-cli-tools | trash-cli"), ["kde-cli-tools"])
+        same(depends.parse_depends("a | b | c"), ["a"])
+
     @check("noble renamed some packages, and a recipe that says otherwise fails")
     def _():
         # core24 has no libasound2, so the build stops at "no such package".

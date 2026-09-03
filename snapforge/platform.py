@@ -485,26 +485,29 @@ libzmq.so.5 libzstd.so libzvbi-chains.so.0 libzvbi.so.0
 
 # noble renamed these for 64-bit time_t: libasound2 is libasound2t64.
 RENAMED_T64 = frozenset("""
-libarchive13 libasound2 libatk-bridge2.0-0 libatk1.0-0 libatopology2
-libatspi2.0-0 libbasicobjects0 libcamel-1.2-64 libcdio-cdda2 libcdio-
-paranoia2 libcdio19 libcollection4 libcolord-gtk4-1 libcups2
+libaa1 libarchive13 libasound2 libatk-bridge2.0-0 libatk1.0-0
+libatopology2 libatspi2.0-0 libbasicobjects0 libcamel-1.2-64 libcdio-cdda2
+libcdio-paranoia2 libcdio19 libcollection4 libcolord-gtk4-1 libcups2
 libcupsfilters2 libcupsimage2 libcurl4 libdb5.3 libdebuginfod1 libdhash1
 libdv4 libdvdread8 libdw1 libebackend-1.2-11 libebook-1.2-21 libebook-
 contacts-1.2-4 libedata-book-1.2-27 libedata-cal-2.0-2
 libedataserver-1.2-27 libedataserverui-1.2-4 libefiboot1 libefivar1
-libelf1 libevent-core-2.1-7 libext2fs2 libgdbm-compat4 libgdbm6
+libelf1 libevent-core-2.1-7 libext2fs2 libgail18 libgdbm-compat4 libgdbm6
 libglib2.0-0 libgnome-bg-4-2 libgnome-desktop-3-20 libgnome-desktop-4-2
 libgnutls30 libgphoto2-6 libgphoto2-port12 libgsound0 libgtk-3-0
-libgweather-4-0 libgxps2 libhogweed6 libhwy1 libical3 libieee1284-3
-libini-config5 libipa-hbac0 liblouisutdml9 libmagic1 libmpg123-0
-libmspack0 libmtdev1 libmtp9 libnettle8 libnorm1 libnpth0 libntfs-3g89
-libnvme1 libonnx1 libopenmpt0 liborc-0.4-0 libparted2 libpath-utils1
-libpcap0.8 libpgm-5.3-0 libpipewire-0.3-0 libpkcs11-helper1 libpng16-16
-libpoppler-glib8 libprotobuf32 libpsl5 libreadline8 libref-array1
-libsnmp40 libsource-highlight4 libssh2-1 libssl3 libtevent0 libtirpc3
-libtss2-esys-3.0.2-0 libtss2-mu-4.0.1-0 libtss2-rc0 libtss2-sys1
+libgtk2.0-0 libgtkmm-2.4-1v5 libgweather-4-0 libgxps2 libhogweed6 libhwy1
+libical3 libieee1284-3 libini-config5 libipa-hbac0 liblouisutdml9 libmad0
+libmagic1 libmpg123-0 libmspack0 libmtdev1 libmtp9 libnettle8 libnorm1
+libnpth0 libntfs-3g89 libnvme1 libonnx1 libopenal1 libopenmpt0
+liborc-0.4-0 libparted2 libpath-utils1 libpcap0.8 libpgm-5.3-0
+libpipewire-0.3-0 libpkcs11-helper1 libpng16-16 libpoppler-glib8
+libprotobuf32 libpsl5 libraw1394-11 libreadline8 libref-array1
+libsamplerate0 libsdl1.2debian libslang2 libsndio7.0 libsnmp40
+libsoup2.4-1 libsource-highlight4 libssh2-1 libssl3 libtag1v5 libtevent0
+libtirpc3 libtss2-esys-3.0.2-0 libtss2-mu-4.0.1-0 libtss2-rc0 libtss2-sys1
 libtss2-tcti-cmd0 libtss2-tcti-device0 libtss2-tcti-mssim0 libtss2-tcti-
-swtpm0 liburcu8 libuv1 libv4l-0 libv4lconvert0 libxt6 libzvbi0
+swtpm0 libunwind8 liburcu8 libuv1 libv4l-0 libv4lconvert0 libvte-2.91-0
+libvte9 libwxbase3.2-1 libwxgtk3.2-1 libxt6 libzip4 libzvbi0
 """.split())
 
 # Packages the base already covers, whatever a Depends: says.

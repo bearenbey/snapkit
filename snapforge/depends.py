@@ -1,5 +1,6 @@
 """What a payload needs at runtime, and which of it the snap has to stage."""
 
+import functools
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -33,17 +34,26 @@ def parse_depends(text):
     """The package names in a Debian `Depends:` field, alternatives resolved."""
     found = []
     for clause in (text or "").split(","):
-        clause = clause.strip()
-        if not clause:
-            continue
-        # `a | b` is a choice, and the first is the packager's preference.
-        first = clause.split("|")[0].strip()
-        # Drop a version constraint, an architecture qualifier and any profile.
-        name = re.split(r"[\s(\[<]", first, 1)[0].strip()
-        name = name.split(":")[0]
-        if name and re.match(r"^[a-z0-9][a-z0-9.+-]*$", name):
-            found.append(name)
+        options = [one for one in (_one_name(o) for o in clause.split("|")) if one]
+        if options:
+            found.append(_preferred(options))
     return found
+
+
+def _one_name(text):
+    """One alternative, without its version, architecture or build profile."""
+    name = re.split(r"[\s(\[<]", text.strip(), 1)[0].strip().split(":")[0]
+    return name if re.match(r"^[a-z0-9][a-z0-9.+-]*$", name) else ""
+
+
+def _preferred(options):
+    """Of `a | b`, the one core24 has, which is not the first often enough."""
+    known = _verified()
+    for option in options:
+        if option in known or noble(option) in known:
+            return option
+    # Nothing recognised either of them, so the packager's order stands.
+    return options[0]
 
 
 def noble(package):
@@ -150,10 +160,11 @@ def _looks_supplied(package, lowered):
     return f"{found.group(1)}.so.{found.group(2)}" in lowered
 
 
+@functools.lru_cache(maxsize=1)
 def _verified():
     """Package names something has actually seen, as opposed to been told."""
-    return (set(platform.PACKAGE_OF.values()) | platform.SUPPLIED_BY_BASE
-            | platform.SUPPLIED_BY_GNOME)
+    return frozenset(set(platform.PACKAGE_OF.values())
+                     | platform.SUPPLIED_BY_BASE | platform.SUPPLIED_BY_GNOME)
 
 
 def _is_library(package):

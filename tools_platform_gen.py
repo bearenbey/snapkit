@@ -31,9 +31,18 @@ def sonames(root):
     return found
 
 
+# Renamed too, but absent here, so hand-checked rather than read off dpkg.
+ALSO_T64 = frozenset("""
+libgtk2.0-0 libgail18 libcups2 libcupsimage2 libsdl1.2debian libsndio7.0
+libraw1394-11 libvte-2.91-0 libvte9 libgtkmm-2.4-1v5 libwxbase3.2-1
+libwxgtk3.2-1 libaa1 libdv4 libmad0 libmpg123-0 libopenal1 libsamplerate0
+libslang2 libsoup2.4-1 libtag1v5 libunwind8 libzip4
+""".split())
+
+
 def renamed_t64():
     """Packages noble renamed for 64-bit time_t, read off this host's dpkg."""
-    found = set()
+    found = set(ALSO_T64)
     for listing in Path("/var/lib/dpkg/info").glob("*t64*.list"):
         name = listing.name[: -len(".list")].split(":")[0]
         if name.endswith("t64"):
