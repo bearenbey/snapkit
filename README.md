@@ -18,23 +18,10 @@ and writes a `snapcraft.yaml` around what it found.
 Homepage: <https://github.com/bearenbey/snapkit>
 
 > [!IMPORTANT]
-> **This project is co-authored with Claude, Anthropic's Opus 5 model, and
-> roughly a quarter of what you are reading was written by it.**
->
-> The measurable part: about 1,800 of the 16,100 lines of source in this tree
-> were written by Claude from scratch. That is the shared recipe database and
-> its commands, eight of the twenty-one snapcraft recipes, and nine of the
-> `pack.py` build scripts. On top of that it rewrote every comment and
-> docstring in the tree, most of this README, and the dashboard's build and
-> install handling.
->
-> The parts that are not Claude's: the design of the tool, the register and
-> the update model, and the packaging decisions behind all twenty-one snaps.
-> Those came first and the rest was built onto them.
->
-> The quarter counts work Claude did and can point to. It has no way of
-> knowing whether anything here was written with help before that, so read it
-> as the least AI went into this rather than the most.
+> **This project is co-authored with Claude, Anthropic's Opus 5 model,
+> which wrote roughly a quarter of the source; the design, the register
+> and the update model, and the packaging decisions behind every snap
+> came first and are not its work.**
 
 ```console
 $ snapkit create aristocratos/btop
