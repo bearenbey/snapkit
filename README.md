@@ -64,6 +64,7 @@ $ snapkit create aristocratos/btop
 | [Upstreams that are not a release](#upstreams-that-are-not-a-release) | apt, a listing, a redirect, a bare tag |
 | [The shared database](#the-shared-database) | recipes published for another machine to build |
 | [Source releases](#source-releases) | why a source tarball is refused rather than packaged |
+| [Electron and the sandbox](#electron-and-the-sandbox-it-cannot-have) | why those apps get a wrapper instead of a command |
 | [What it needs at runtime](#what-it-needs-at-runtime) | how stage-packages is worked out, not guessed |
 | [What this trusts](#what-this-trusts) | what runs code, and what a checksum does not promise |
 | [The register](#the-register) | where records live, and why it is a directory |
@@ -397,6 +398,24 @@ Building from source is a different recipe: `plugin: autotools` or `meson` or
 `cmake`, and the `-dev` packages it builds against, which nothing here can
 work out on its own. `emacs`, `ffmpeg` and `irssi` in the shared database are
 that shape, written by hand and brought in with `snapkit import`.
+
+## Electron, and the sandbox it cannot have
+
+Electron ships `chrome-sandbox`, a helper that has to be owned by root with
+mode 4755. No file in a snap can carry a setuid bit, so an Electron app
+started from its own binary aborts before it draws anything:
+
+    The SUID sandbox helper binary was found, but is not configured
+    correctly. Rather than run without sandboxing I'm aborting now.
+
+Electron has a second sandbox that uses user namespaces and needs no such bit.
+So an app that looks like Electron is started through a small wrapper that
+keeps that one where the kernel provides it, and gives the sandbox up only
+where it does not. Dropping it unconditionally is the usual advice and it
+turns the sandbox off on every machine that did not need it off.
+
+The wrapper is written to `snap/local/`, staged into `bin/`, and named as the
+app's `command:`. It is written once and left alone, so editing it is safe.
 
 ## What it needs at runtime
 

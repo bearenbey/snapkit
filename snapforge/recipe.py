@@ -105,6 +105,35 @@ def staged(packages):
             + "".join(f"      - {one}\n" for one in packages).rstrip("\n"))
 
 
+LAUNCHER = """#!/bin/bash
+# chrome-sandbox must be setuid root, and no file in a snap can be. See README.
+set -e
+
+args=()
+
+# Electron's other sandbox needs no setuid bit, so keep it where there is one.
+if ! unshare --user --map-root-user true 2>/dev/null; then
+    args+=(--no-sandbox)
+fi
+
+exec "$SNAP/{command}" "${{args[@]}}" "$@"
+"""
+
+
+def launcher_script(command):
+    """The wrapper an Electron app is started through, and why it needs one."""
+    return LAUNCHER.format(command=command)
+
+
+def launcher_part(name):
+    """The part that puts that wrapper on the path inside the snap."""
+    return (f"  launcher:\n"
+            f"    plugin: dump\n"
+            f"    source: snap/local\n"
+            f"    organize:\n"
+            f"      {name}-launch: bin/{name}-launch\n")
+
+
 def part_for(kind, name, url, sha="", packages=()):
     """The `parts:` stanza that gets the payload into the snap."""
     checksum = f"\n    source-checksum: sha256/{sha}" if sha else ""
@@ -170,13 +199,16 @@ def build(*, name, version, summary, description, license_id, kind, url,
                 f"source-code: {repo_url}",
                 f"issues: {repo_url}/issues",
                 f"contact: {repo_url}/issues"]
+    # Electron cannot start from its own binary in a snap; see launcher_script.
+    wrapped = "electron" in traits and command
     out += ["",
             "platforms:",
             f"  {arch.host()}:",
             "",
             "apps:",
             f"  {name}:",
-            f"    command: {command}"]
+            f"    command: bin/{name}-launch" if wrapped
+            else f"    command: {command}"]
     if gui:
         out.append("    # The gnome extension wires up the desktop, fonts, themes and")
         out.append("    # GTK/GL stack from the platform snap rather than bundling them.")
@@ -196,6 +228,8 @@ def build(*, name, version, summary, description, license_id, kind, url,
                 "    bus: session", f"    name: {bus_name}"]
 
     out += ["", "parts:", part_for(kind, name, url, sha, packages).rstrip()]
+    if wrapped:
+        out += ["", launcher_part(name).rstrip()]
     if icon:
         out += ["",
                 "# The icon snapd shows in the launcher. `icon:` is resolved against",

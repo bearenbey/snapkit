@@ -3507,6 +3507,32 @@ def dependencies():
         assert needs.complete, "nothing was unaccounted for"
         assert depends.Needs(unresolved=["libx.so.1"]).complete is False
 
+    @check("an Electron app is started through a wrapper, not from its binary")
+    def _():
+        from snapforge import recipe
+        # chrome-sandbox must be setuid root, which no snap file can be.
+        yaml = recipe.build(name="min", version="1.0", summary="s",
+                            description="d", license_id="", kind="deb",
+                            url="http://x/y.deb", command="opt/Min/min",
+                            traits={"gui", "electron"})
+        assert "command: bin/min-launch" in yaml, yaml
+        assert "min-launch: bin/min-launch" in yaml, "the wrapper is not staged"
+        script = recipe.launcher_script("opt/Min/min")
+        assert script.startswith("#!"), script
+        assert 'exec "$SNAP/opt/Min/min"' in script, script
+        # The namespace sandbox needs no setuid bit, so it is kept.
+        assert "unshare --user" in script and "--no-sandbox" in script, script
+
+    @check("an app that is not Electron is started from its own binary")
+    def _():
+        from snapforge import recipe
+        yaml = recipe.build(name="btop", version="1.0", summary="s",
+                            description="d", license_id="", kind="archive",
+                            url="http://x/y.tar.gz", command="bin/btop",
+                            traits={"terminal"})
+        assert "command: bin/btop" in yaml, yaml
+        assert "launcher" not in yaml, "a wrapper was written for no reason"
+
     @check("the recipe carries what was worked out, and no empty block")
     def _():
         with_packages = recipe.part_for("deb", "demo", "http://x/y.deb",

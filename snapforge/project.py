@@ -402,6 +402,8 @@ def write(snap, reporter):
     if not readme.exists():
         readme.write_text(_readme(snap), encoding="utf-8")
 
+    _restore_launcher(snap, directory, reporter)
+
     # The icon path is relative, so it has to come back with the directory.
     if snap.icon and not (directory / snap.icon).is_file():
         kept = snap.kept_icon
@@ -415,6 +417,21 @@ def write(snap, reporter):
                           f"it was kept; remove the icon: line or recreate")
     reporter.step(f"wrote {yaml_path}")
     return directory
+
+
+def _restore_launcher(snap, directory, reporter):
+    """Write the wrapper the recipe names, if it is not beside it already."""
+    named = f"{snap.name}-launch"
+    if named not in snap.snapcraft_yaml or not snap.command:
+        return False
+    script = directory / "snap" / "local" / named
+    if script.is_file():
+        return False
+    script.parent.mkdir(parents=True, exist_ok=True)
+    script.write_text(recipe.launcher_script(snap.command), encoding="utf-8")
+    script.chmod(0o755)
+    reporter.detail(f"wrote snap/local/{named}, which the app starts through")
+    return True
 
 
 def is_classic(snap):
