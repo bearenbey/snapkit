@@ -2718,6 +2718,49 @@ def from_a_file():
             same(bool(victim.stat().st_mode & 0o111), False,
                  "a zip entry chmod +x a file outside the unpack directory")
 
+    @check("a source release is refused rather than packaged as a snap of source")
+    def _():
+        from snapforge import inspect
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home) / "tmux-1.0"
+            (root / "etc").mkdir(parents=True)
+            # What tmux ships: sources, a configure, and autotools' helpers.
+            (root / "configure.ac").write_text("AC_INIT([tmux])\n")
+            (root / "Makefile.am").write_text("bin_PROGRAMS = tmux\n")
+            (root / "tmux.c").write_text("int main(void){return 0;}\n")
+            for helper in ("compile", "install-sh", "missing", "depcomp"):
+                script = root / "etc" / helper
+                script.write_text("#!/bin/sh\necho no command\n")
+                script.chmod(0o755)
+            configure = root / "configure"
+            configure.write_text("#!/bin/sh\nexit 0\n")
+            configure.chmod(0o755)
+            # A stray executable script, which is why "nothing built" decides.
+            hook = root / "pre-commit"
+            hook.write_text("#!/bin/sh\nexit 0\n")
+            hook.chmod(0o755)
+
+            same(inspect.build_system(root), "autotools")
+            same(inspect.anything_compiled(root), False)
+            same(inspect.source_only(root), "autotools")
+            # None of the helpers may be offered as the thing to run.
+            same(inspect.find_binaries(root), ["pre-commit"])
+
+    @check("a tree with something compiled in it is a build, not a source tree")
+    def _():
+        from snapforge import inspect
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home) / "app"
+            (root / "bin").mkdir(parents=True)
+            # Ships a Makefile, but also a real binary, so it is a build.
+            (root / "Makefile").write_text("all:\n")
+            binary = root / "bin" / "app"
+            binary.write_bytes(b"\x7fELF" + b"\0" * 60)
+            binary.chmod(0o755)
+            same(inspect.build_system(root), "make")
+            same(inspect.anything_compiled(root), True)
+            same(inspect.source_only(root), "")
+
     @check("every shape the classifier packages is found on a disk")
     def _():
         # Three hand-written lists drifted; .txz and .tbz2 went invisible.

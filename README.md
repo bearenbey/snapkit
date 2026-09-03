@@ -63,6 +63,7 @@ $ snapkit create aristocratos/btop
 | [When there is no repository](#when-there-is-no-repository) | packaging a file you already have |
 | [Upstreams that are not a release](#upstreams-that-are-not-a-release) | apt, a listing, a redirect, a bare tag |
 | [The shared database](#the-shared-database) | recipes published for another machine to build |
+| [Source releases](#source-releases) | why a source tarball is refused rather than packaged |
 | [What it needs at runtime](#what-it-needs-at-runtime) | how stage-packages is worked out, not guessed |
 | [What this trusts](#what-this-trusts) | what runs code, and what a checksum does not promise |
 | [The register](#the-register) | where records live, and why it is a directory |
@@ -377,6 +378,25 @@ whole project is left unwritten rather than half of it. `build_with`, which
 runs through a shell, is deliberately not a field the index may set: a project
 that assembles itself does it with `pack.py`, which is a real file with a
 sha256 in the index rather than a string nobody can see.
+
+## Source releases
+
+Not every project attaches a built program to its release. tmux publishes
+`tmux-3.7c.tar.gz`, which is C source and a `configure` script, and nothing in
+it has been compiled. `create` packages what a project already built, so it
+refuses those and says which build system it found rather than copying a
+source tree into a snap.
+
+What settles it is not the file name and not what looks executable. A source
+tree carries its own executable scripts, autotools' `compile` and `install-sh`
+and `missing` among them, and picking one of those makes a snap whose command
+prints `compile: No command`. It is decided by whether anything in the tree is
+compiled at all.
+
+Building from source is a different recipe: `plugin: autotools` or `meson` or
+`cmake`, and the `-dev` packages it builds against, which nothing here can
+work out on its own. `emacs`, `ffmpeg` and `irssi` in the shared database are
+that shape, written by hand and brought in with `snapkit import`.
 
 ## What it needs at runtime
 

@@ -255,6 +255,8 @@ def _open_payload(archive, plan_, reporter, destination):
     except inspect.InspectionError as exc:
         raise ForgeError(str(exc)) from exc
 
+    if payload.builds_with:
+        raise ForgeError(_is_source(plan_, payload))
     if not payload.command:
         raise ForgeError(
             f"no program found inside {plan_.chosen.name} -- it may be a "
@@ -267,6 +269,22 @@ def _open_payload(archive, plan_, reporter, destination):
     if payload.traits:
         reporter.detail("looks like " + ", ".join(sorted(payload.traits)))
     return payload
+
+
+def _is_source(plan_, payload):
+    """Why a source release cannot be packaged the way a built one is."""
+    where = getattr(plan_.origin, "repo", "") or plan_.chosen.name
+    return (
+        f"{plan_.chosen.name} is source, not a build: nothing in it is "
+        f"compiled, and it builds with {payload.builds_with}.\n"
+        f"           This packages what a project already built, so copying "
+        f"that tree into a snap makes a snap full of source.\n\n"
+        f"           If {where} publishes a built one as well, take that:\n"
+        f"             snapkit create {where} --asset <name>\n"
+        f"           Otherwise it needs a recipe that compiles it: "
+        f"`plugin: {payload.builds_with}`, the -dev packages it\n"
+        f"           builds against, and `snapkit import` once written. "
+        f"emacs and irssi in `snapkit db` are that shape.")
 
 
 def _what_it_needs(archive, plan_, payload, reporter):

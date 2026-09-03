@@ -11,6 +11,8 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import elf
+
 # Best first: a binary under one of these is the app, elsewhere a helper.
 BIN_DIRS = ("usr/bin", "bin", "usr/local/bin", "usr/games", "opt", "usr/lib")
 
@@ -19,6 +21,22 @@ NOT_THE_APP = re.compile(
     r"(uninstall|update|crashpad|crash_handler|chrome[-_]?sandbox|"
     r"chrome_crashpad|helper|postinst|prerm|postrm|preinst|\.so(\.|$)|"
     r"\.sh$|\.py$|\.pl$)", re.I)
+
+# The executable scripts a tree carries to build itself with, never the app.
+BUILD_HELPER = re.compile(
+    r"(?:^|/)(?:configure|config\.guess|config\.sub|config\.status|compile|"
+    r"depcomp|install-sh|missing|ylwrap|ltmain\.sh|libtool|mkinstalldirs|"
+    r"test-driver|ar-lib|py-compile|autogen|bootstrap|gradlew|waf)$", re.I)
+
+# What a tree that has to be built first looks like, and what builds it.
+BUILD_SYSTEMS = (
+    ("autotools", ("configure.ac", "configure.in", "Makefile.am", "configure")),
+    ("cmake", ("CMakeLists.txt",)),
+    ("meson", ("meson.build",)),
+    ("cargo", ("Cargo.toml",)),
+    ("go", ("go.mod",)),
+    ("make", ("Makefile", "GNUmakefile")),
+)
 
 ICON_SUFFIXES = (".png", ".svg", ".svgz", ".xpm", ".jpg")
 
@@ -37,6 +55,7 @@ class Payload:
     description: str = ""
     libraries: list = field(default_factory=list)   # unresolved NEEDED
     traits: set = field(default_factory=set)       # gui, electron, gtk, qt
+    builds_with: str = ""              # set when this is source, not a build
 
 
 class InspectionError(Exception):
@@ -180,7 +199,7 @@ def find_binaries(root):
         relative = path.relative_to(root).as_posix()
         if not path.stat().st_mode & stat.S_IXUSR:
             continue
-        if NOT_THE_APP.search(relative):
+        if NOT_THE_APP.search(relative) or BUILD_HELPER.search(relative):
             continue
         if not _is_program(path):
             continue
@@ -193,6 +212,29 @@ def _is_program(path):
     with open(path, "rb") as handle:
         head = handle.read(4)
     return head[:4] == b"\x7fELF" or head[:2] == b"#!"
+
+
+def build_system(root):
+    """Which build system a source tree uses, or "" when it is not one."""
+    for name, markers in BUILD_SYSTEMS:
+        if any((Path(root) / marker).is_file() for marker in markers):
+            return name
+    return ""
+
+
+def anything_compiled(root):
+    """Whether the tree holds a compiled program or library at all."""
+    for path in Path(root).rglob("*"):
+        if path.is_file() and not path.is_symlink() and elf.is_elf(path):
+            return True
+    return False
+
+
+def source_only(root):
+    """The build system of a tree that has to be built, or "" if it is built."""
+    system = build_system(root)
+    # Source trees carry stray scripts, so nothing compiled is what settles it.
+    return system if system and not anything_compiled(root) else ""
 
 
 def rank_binaries(binaries, wanted):
@@ -385,6 +427,10 @@ def look(archive, kind, destination, wanted=""):
         payload.summary = blurb.splitlines()[0] if blurb else ""
         payload.description = "\n".join(blurb.splitlines()[1:]).strip()
 
+    payload.builds_with = source_only(root)
+    if payload.builds_with:
+        # Whatever turned up executable in there, it is not the application.
+        payload.command = ""
     payload.traits = traits_of(root, payload.desktop)
     if payload.command:
         payload.libraries = missing_libraries(root / payload.command, root)
