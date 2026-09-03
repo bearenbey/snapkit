@@ -94,15 +94,27 @@ def app_id(desktop):
     return stem
 
 
-def part_for(kind, name, url, sha=""):
+def staged(packages):
+    """The stage-packages block, or nothing when the platform has it all."""
+    if not packages:
+        return ""
+    return ("\n    # What the payload asks for that the base and the extension\n"
+            "    # do not already supply. Read off the binary, not guessed at.\n"
+            "    # A library it opens later by name is not visible here.\n"
+            "    stage-packages:\n"
+            + "".join(f"      - {one}\n" for one in packages).rstrip("\n"))
+
+
+def part_for(kind, name, url, sha="", packages=()):
     """The `parts:` stanza that gets the payload into the snap."""
     checksum = f"\n    source-checksum: sha256/{sha}" if sha else ""
+    extra = staged(packages)
     if kind == classify.DEB:
         return (f"  {name}:\n"
                 f"    # snapcraft unpacks the .deb and `dump` stages what was in it.\n"
                 f"    plugin: dump\n"
                 f"    source: {url}\n"
-                f"    source-type: deb{checksum}\n")
+                f"    source-type: deb{checksum}{extra}\n")
     if kind == classify.APPIMAGE:
         return (f"  {name}:\n"
                 f"    # An AppImage is an ELF launcher with a squashfs on the end, and\n"
@@ -110,7 +122,7 @@ def part_for(kind, name, url, sha=""):
                 f"    # unpack itself, and what falls out is what gets staged.\n"
                 f"    plugin: nil\n"
                 f"    source: {url}\n"
-                f"    source-type: file{checksum}\n"
+                f"    source-type: file{checksum}{extra}\n"
                 f"    override-build: |\n"
                 f"      # Not every project spells the extension the same way --\n"
                 f"      # neovim ships .appimage, most ship .AppImage -- and the\n"
@@ -125,12 +137,13 @@ def part_for(kind, name, url, sha=""):
             f"    # top-level directory, which is why the paths above start below it.\n"
             f"    plugin: dump\n"
             f"    source: {url}\n"
-            f"    source-type: {source_type_for(url)}{checksum}\n")
+            f"    source-type: {source_type_for(url)}{checksum}{extra}\n")
 
 
 def build(*, name, version, summary, description, license_id, kind, url,
           command, desktop="", icon="", traits=(), sha="", repo_url="",
-          title="", confinement="strict", grade="stable", base=BASE, plugs=None):
+          title="", confinement="strict", grade="stable", base=BASE, plugs=None,
+          packages=()):
     """The whole snapcraft.yaml, as text."""
     traits = set(traits or ())
     plugs = plugs if plugs is not None else plugs_for(traits)
@@ -182,7 +195,7 @@ def build(*, name, version, summary, description, license_id, kind, url,
                 "", "slots:", f"  dbus-{name}:", "    interface: dbus",
                 "    bus: session", f"    name: {bus_name}"]
 
-    out += ["", "parts:", part_for(kind, name, url, sha).rstrip()]
+    out += ["", "parts:", part_for(kind, name, url, sha, packages).rstrip()]
     if icon:
         out += ["",
                 "# The icon snapd shows in the launcher. `icon:` is resolved against",
@@ -192,7 +205,8 @@ def build(*, name, version, summary, description, license_id, kind, url,
     return "\n".join(out).rstrip() + "\n"
 
 
-def from_record(snap, payload, url, sha="", description="", icon=""):
+def from_record(snap, payload, url, sha="", description="", icon="",
+                packages=()):
     """The recipe for a record and the payload it was made from."""
     repo_url = f"https://github.com/{snap.repo}" if snap.repo else ""
     summary = summarise(payload.summary or description,
@@ -216,6 +230,7 @@ def from_record(snap, payload, url, sha="", description="", icon=""):
         confinement=snap.confinement,
         grade=snap.grade,
         base=snap.base,
+        packages=packages,
     )
 
 

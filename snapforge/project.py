@@ -9,7 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import build as buildlib
-from . import arch, classify, github, inspect, local, net, recipe, sources
+from . import arch, classify, depends, github, inspect, local, net, recipe
+from . import sources
 from .db import Snap, now
 
 
@@ -234,10 +235,12 @@ def create(plan_, reporter, directory=None):
         payload = _open_payload(archive, plan_, reporter, Path(scratch) / "payload")
         snap = _record(plan_, payload, directory)
         snap.icon = _install_icon(snap, payload, reporter)
+        needs = _what_it_needs(archive, plan_, payload, reporter)
         source, checksum = origin.source_for(snap, chosen, archive, sha, reporter)
         snap.snapcraft_yaml = recipe.from_record(
             snap, payload, source, sha=checksum,
-            description=origin.description, icon=snap.icon)
+            description=origin.description, icon=snap.icon,
+            packages=needs.packages)
 
     write(snap, reporter)
     return snap
@@ -263,11 +266,32 @@ def _open_payload(archive, plan_, reporter, destination):
             reporter.detail(f"{label} {value}")
     if payload.traits:
         reporter.detail("looks like " + ", ".join(sorted(payload.traits)))
-    if payload.libraries:
-        # Not fatal: a strict snap takes its libraries from the base anyway.
-        reporter.warn(f"{payload.command} wants libraries this host does not "
-                      f"have: {' '.join(payload.libraries)}")
     return payload
+
+
+def _what_it_needs(archive, plan_, payload, reporter):
+    """Work out what to stage, and say what could not be accounted for."""
+    control = inspect.control_fields(archive) if plan_.chosen.kind == "deb" else {}
+    needs = depends.resolve(root=payload.root, command=payload.command,
+                            gui="gui" in payload.traits, control=control)
+    reporter.step("working out what it needs at runtime")
+    if needs.packages:
+        reporter.detail(f"staging {len(needs.packages)}: "
+                        f"{' '.join(needs.packages)}")
+    else:
+        reporter.detail("the base and the extension supply all of it")
+    if needs.bundled:
+        reporter.detail(f"{len(needs.bundled)} it brings with it, left alone")
+    for soname in needs.from_host:
+        reporter.detail(f"{soname} comes from the host's driver, not a package")
+    if needs.unverified:
+        reporter.detail(f"{' '.join(needs.unverified)}: named by the .deb, and "
+                        f"nothing here can say core24 still has that name")
+    if needs.unresolved:
+        # Named, not guessed: a package noble lacks does not build at all.
+        reporter.warn(f"no package known for {' '.join(needs.unresolved)} -- "
+                      f"add it to stage-packages: if the snap will not start")
+    return needs
 
 
 def _record(plan_, payload, directory=None):

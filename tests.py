@@ -3337,10 +3337,127 @@ def imports():
                 assert other in graph, f"{name} imports a missing .{other}"
 
 
+
+
+def dependencies():
+    """What a payload needs at runtime, and which of it has to be staged."""
+    from snapforge import depends, elf, platform, recipe
+
+    @check("an ELF says what it needs without being run or resolved")
+    def _():
+        # /bin/sh is here on any machine this could run on, and readelf is not.
+        needed, _soname, _paths = elf.read("/bin/sh")
+        assert any(n.startswith("libc.so") for n in needed), needed
+        assert all(n.endswith(".so") or ".so." in n for n in needed), needed
+        assert elf.is_elf("/bin/sh") and not elf.is_elf("/etc/hostname")
+
+    @check("a file that is not an ELF says so rather than being read as one")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            junk = Path(home) / "junk"
+            junk.write_bytes(b"not an elf at all")
+            try:
+                elf.read(junk)
+                assert False, "junk was read as an ELF"
+            except elf.NotAnELF:
+                pass
+
+    @check("a Depends: field is read the way dpkg reads it")
+    def _():
+        same(depends.parse_depends("libfoo1 (>= 1.2), libbar2:amd64, "
+                                   "kde-cli-tools | trash-cli, libbaz3"),
+             ["libfoo1", "libbar2", "kde-cli-tools", "libbaz3"])
+        # An alternative is a choice, and the first is what the packager meant.
+        same(depends.parse_depends("a | b | c"), ["a"])
+        same(depends.parse_depends(""), [])
+
+    @check("noble renamed some packages, and a recipe that says otherwise fails")
+    def _():
+        # core24 has no libasound2, so the build stops at "no such package".
+        same(depends.noble("libasound2"), "libasound2t64")
+        same(depends.noble("libgbm1"), "libgbm1")
+        assert "libasound2" in platform.RENAMED_T64
+
+    @check("what the base and the extension already supply is never staged")
+    def _():
+        deb = {"Depends": "libgtk-3-0, libgbm1, libc6, tar, xdg-utils"}
+        with_gnome = depends.resolve(control=deb, gui=True).packages
+        without = depends.resolve(control=deb, gui=False).packages
+        # gtk comes from the extension, so staging it as well is a conflict.
+        assert "libgtk-3-0t64" not in with_gnome, with_gnome
+        assert "libgtk-3-0t64" in without, without
+        # The base has libc6 whatever happens, and tar and xdg-utils are tools.
+        for both in (with_gnome, without):
+            assert "libc6" not in both and "tar" not in both, both
+            assert "libgbm1" in both, both
+
+    @check("a library nothing can name is reported, never invented")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home)
+            # A binary needing something no table knows about.
+            fake = "libnothingknowsthis.so.99"
+            asked = {fake, "libc.so.6"}
+            here = depends.supplied(gui=False)
+            unknown = [s for s in asked
+                       if s not in here and s not in platform.PACKAGE_OF]
+            same(unknown, [fake])
+            # It must not turn into a package name, because noble has none.
+            assert fake not in platform.PACKAGE_OF
+
+    @check("what a payload brings with it is not staged again")
+    def _():
+        needs = depends.Needs(packages=["libgbm1"], bundled=["libffmpeg.so"],
+                              unresolved=[])
+        assert needs.complete, "nothing was unaccounted for"
+        assert depends.Needs(unresolved=["libx.so.1"]).complete is False
+
+    @check("the recipe carries what was worked out, and no empty block")
+    def _():
+        with_packages = recipe.part_for("deb", "demo", "http://x/y.deb",
+                                        packages=["libgbm1", "libnss3"])
+        assert "stage-packages:" in with_packages
+        assert "      - libgbm1\n" in with_packages, with_packages
+        assert "      - libnss3" in with_packages, with_packages
+        # Nothing to stage means no empty block, which snapcraft refuses.
+        assert "stage-packages" not in recipe.part_for("deb", "demo", "u")
+
+    @check("a Depends: full of daemons and tools stages neither")
+    def _():
+        # spotube's .deb asks for avahi-daemon, mpv and mdns-scan.
+        deb = {"Depends": "avahi-daemon, mpv, mdns-scan, libnotify-bin, "
+                          "gir1.2-appindicator3-0.1, xdg-user-dirs, "
+                          "libjsoncpp1, libcairo-gobject2"}
+        staged = depends.resolve(control=deb, gui=True).packages
+        for tool in ("avahi-daemon", "mpv", "mdns-scan", "libnotify-bin",
+                     "gir1.2-appindicator3-0.1", "xdg-user-dirs"):
+            assert tool not in staged, f"{tool} was staged: {staged}"
+        # Only the libraries survive, and cairo-gobject is the extension's.
+        same(staged, ["libjsoncpp1"])
+        assert "libcairo-gobject2" in depends.resolve(control=deb,
+                                                      gui=False).packages
+
+    @check("a name only the .deb vouches for is staged, and said to be unchecked")
+    def _():
+        # libmpv1 was right once; core24 has libmpv2 and would not build.
+        needs = depends.resolve(control={"Depends": "libmpv1"}, gui=True)
+        assert "libmpv1" in needs.packages, needs.packages
+        assert "libmpv1" in needs.unverified, needs.unverified
+        # One the platform vouches for is not flagged.
+        known = depends.resolve(control={"Depends": "libgbm1"}, gui=True)
+        same(known.unverified, [])
+
+    @check("a driver's library comes from the host, so no package is named")
+    def _():
+        assert "libcuda.so.1" in platform.FROM_THE_HOST
+        assert "libcuda.so.1" not in platform.PACKAGE_OF, \
+            "staging a package for libcuda pins one driver version"
+
+
 def main():
     for group in (upstreams, architectures, recipes, register, payloads,
                   reading_payloads, projects, checking, dashboard, updater,
-                  from_a_file, database, tracking, imports):
+                  from_a_file, database, tracking, dependencies, imports):
         group()
     if "--online" in sys.argv[1:]:
         online()

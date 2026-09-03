@@ -63,6 +63,7 @@ $ snapkit create aristocratos/btop
 | [When there is no repository](#when-there-is-no-repository) | packaging a file you already have |
 | [Upstreams that are not a release](#upstreams-that-are-not-a-release) | apt, a listing, a redirect, a bare tag |
 | [The shared database](#the-shared-database) | recipes published for another machine to build |
+| [What it needs at runtime](#what-it-needs-at-runtime) | how stage-packages is worked out, not guessed |
 | [What this trusts](#what-this-trusts) | what runs code, and what a checksum does not promise |
 | [The register](#the-register) | where records live, and why it is a directory |
 | [Projects you already have](#snap-projects-you-already-have) | importing packaging that predates this |
@@ -376,6 +377,43 @@ whole project is left unwritten rather than half of it. `build_with`, which
 runs through a shell, is deliberately not a field the index may set: a project
 that assembles itself does it with `pack.py`, which is a real file with a
 sha256 in the index rather than a string nobody can see.
+
+## What it needs at runtime
+
+A prebuilt binary is not self-contained. It links against libraries that were
+on the machine that built it, and a snap only has what the base gives it plus
+whatever the recipe stages. Getting that list wrong is the difference between
+a snap that runs and one that dies on a missing `.so`, so it is worked out
+rather than guessed:
+
+- **The binary is asked directly.** `DT_NEEDED` is read out of the ELF header,
+  which says what it loads without running it or resolving it against this
+  machine. What the payload ships for itself is followed too, so a portable
+  build that brings its own Qt is not asked to stage one.
+- **A `.deb` is asked as well.** Its `Depends:` is the packager's own answer
+  and covers things the binary never names, such as a plugin opened later.
+- **What the platform already has is subtracted.** `core24` supplies 287
+  libraries and the gnome extension another 1376. Staging those again is
+  wasted space at best and a fight with the platform snap at worst, which is
+  why no recipe here both uses the extension and stages GTK.
+- **noble renamed a hundred packages.** `libasound2` is `libasound2t64` on
+  core24, and a recipe that says otherwise stops at "no such package".
+
+Where a library cannot be traced to a package, it is **named in a warning
+rather than turned into a guess**. Guessing wrong in that direction produces a
+recipe that does not build at all; being one package short produces one that
+builds and possibly runs, and says what to add. The naming convention alone
+gets it right about 40% of the time, which is why it is not relied on: the
+table is built from packages that recipes here already build with.
+
+Two things it cannot see. A library opened by name at runtime appears in no
+header and no `Depends:` -- hardware video decoding and tray icons are usually
+this. And a driver's own libraries come from the host through an interface, so
+`libcuda.so.1` is reported and never staged, because naming a package for it
+would pin one driver version.
+
+`tools_platform_gen.py` rebuilds that table from the snaps installed on a
+machine, so it can be refreshed when the base or the extension moves.
 
 ## What this trusts
 
