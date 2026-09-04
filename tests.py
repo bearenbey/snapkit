@@ -87,7 +87,7 @@ def make_deb(path, package="demo", version="1.2.3", binary="usr/bin/demo",
 
 def upstreams():
     """Reading an upstream: the repository name, and which asset to take."""
-    from snapforge import classify, github, project, update
+    from snapforge import classify, github, project
 
     @check("a download that dies after the connection opened is still a NetworkError")
     def _():
@@ -336,7 +336,6 @@ def architectures():
     @check("a machine this does not know about is still allowed to be itself")
     def _():
         # Only what a person typed: a real port not in the table still runs.
-        import shutil
         was_which, was_machine = arch.shutil.which, arch.platform.machine
         arch.detected.cache_clear()
         arch.shutil.which = lambda name: None if name == "dpkg" else was_which(name)
@@ -553,8 +552,8 @@ def recipes():
         text = recipe.build(name="d", version="1", summary="s", description="b",
                             license_id="", kind=classify.APPIMAGE,
                             url="https://x/d.appimage", command="usr/bin/d")
-        line = next(l.strip() for l in text.splitlines()
-                    if l.strip().startswith("image=$("))
+        line = next(line.strip() for line in text.splitlines()
+                    if line.strip().startswith("image=$("))
         for spelling in ("d.AppImage", "d.appimage", "d.APPIMAGE", "d.AppIMAGE"):
             same(classify.kind_of(spelling), classify.APPIMAGE, spelling)
             with tempfile.TemporaryDirectory() as work:
@@ -592,7 +591,7 @@ def recipes():
 
 def register():
     """The register: one file per snap, the recipe beside it, and migration."""
-    from snapforge import db, github, recipe
+    from snapforge import db
 
     @check("every annotation resolves, on a Python that evaluates them eagerly")
     def _():
@@ -826,7 +825,8 @@ def register():
                               summary="A cat(1) clone with wings"))
             store.add(db.Snap(name="nvim", repo="neovim/neovim",
                               summary="Vim-fork focused on extensibility"))
-            names = lambda text: [s.name for s in store.search(text)]
+            def names(text):
+                return [s.name for s in store.search(text)]
             same(names("bat"), ["bat"], "by name")
             same(names("BTOP"), ["btop"], "case does not matter")
             same(names("monitor"), ["btop"], "by summary")
@@ -1018,7 +1018,7 @@ def reading_payloads():
 
 def projects():
     """Projects that exist already: importing one, and writing one back out."""
-    from snapforge import db, github, project, recipe, update
+    from snapforge import db, project
 
     @check("a relative --dir is recorded as the directory it meant")
     def _():
@@ -1591,7 +1591,7 @@ def tracking():
             same(store.get("thing").upstream, {})
 
             # A name that is not registered, and a name that is missing.
-            for words, wanted in ((("nothing-like-this",), "nothing registered"),
+            for words, _ in ((("nothing-like-this",), "nothing registered"),
                                   ((), "track needs a name")):
                 try:
                     track(*words)
@@ -1736,7 +1736,7 @@ def dashboard():
                                (["3"], "three.AppImage"),
                                (["enter"], "one.tar.gz")):
                 out = {}
-                board.run_job("creating", lambda: out.update(
+                board.run_job("creating", lambda out=out: out.update(
                     got=board._ask_which(Plan()).name))
                 for _ in range(50):
                     if board.picking is not None:
@@ -1782,7 +1782,7 @@ def dashboard():
             same([s.name for s in board.matches], ["btop"], "typing did not search")
             board.handle("backspace")
             same(board.prompt, "monito")
-            for character in list("monito"):
+            for _ in "monito":
                 board.handle("backspace")
             same(board.prompt, "", "backspace did not empty it")
 
@@ -2067,7 +2067,6 @@ def dashboard():
 
     @check("the dashboard tracks, and refuses, the way the command line does")
     def _():
-        from snapforge import update
         from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             here = Path(home)
@@ -2278,7 +2277,7 @@ def dashboard():
         from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             store = db.Database(Path(home) / "snapkit.json")
-            for index, state in enumerate(STATE_STYLE):
+            for index in range(len(STATE_STYLE)):
                 store.add(db.Snap(name=f"s{index}", repo=f"a/b{index}",
                                   version="1.0", kind="deb"))
             board = Dashboard(db=store)
@@ -2447,7 +2446,7 @@ def dashboard():
             for keys, want in ((["y"], True), (["Y"], True), (["n"], False),
                                (["escape"], False), (["enter"], False)):
                 out = {}
-                board.run_job("building", lambda: out.update(
+                board.run_job("building", lambda out=out: out.update(
                     got=board._ask_yes_no("install x.snap?")))
                 for _ in range(50):
                     if board.asking:
@@ -2514,7 +2513,7 @@ def dashboard():
         import contextlib
         import types
         from snapforge import tui
-        from snapforge.tui import Dashboard, DashboardReporter
+        from snapforge.tui import Dashboard
 
         with tempfile.TemporaryDirectory() as home:
             here = Path(home)
@@ -2525,7 +2524,6 @@ def dashboard():
                     f"name: x\nconfinement: {confinement}\n")
 
             board = Dashboard(db=db.Database(here / "snapkit.json"))
-            reporter = DashboardReporter(board, None)
             board.suspended = lambda: contextlib.nullcontext()
 
             ran = []
@@ -2552,6 +2550,52 @@ def updater():
     """Updating: resolving an upstream, and rewriting the project onto it."""
     from snapforge import build as buildlib
     from snapforge import db, project, rewrite, sources, update
+
+    @check("prune names every build but the newest, and superseded files")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            here = Path(home)
+            for name, age in (("demo_1.0_amd64.snap", 3), ("demo_2.0_amd64.snap", 2),
+                              ("demo_3.0_amd64.snap", 1)):
+                path = here / name
+                path.write_bytes(b"x")
+                import os
+                os.utime(path, (time.time() - age, time.time() - age))
+            (here / "demo-2.0.tar.gz").write_bytes(b"x")
+            (here / "demo-3.0.tar.gz").write_bytes(b"x")
+            (here / "other_1.0_amd64.snap").write_bytes(b"x")     # not this snap's
+            snap = db.Snap(name="demo", directory=str(here), style="artifact",
+                           asset="demo-3.0.tar.gz", asset_glob="demo-*.tar.gz")
+            same(sorted(p.name for p in update.prunable(snap)),
+                 ["demo-2.0.tar.gz", "demo_1.0_amd64.snap", "demo_2.0_amd64.snap"])
+            # a recipe-style snap has no files of its own to weigh up
+            recipe_style = db.Snap(name="demo", directory=str(here), style="recipe")
+            same(sorted(p.name for p in update.prunable(recipe_style)),
+                 ["demo_1.0_amd64.snap", "demo_2.0_amd64.snap"])
+            # and one whose directory is gone has nothing to prune
+            same(update.prunable(db.Snap(name="gone", directory=str(here / "no"))), [])
+    @check("prune deletes what it listed, and only when told to")
+    def _():
+        from snapforge import cli
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as home:
+            here = Path(home)
+            store = db.Database(here / "snapkit.json")
+            project_dir = here / "demo"
+            project_dir.mkdir()
+            old, new = project_dir / "demo_1.0_amd64.snap", project_dir / "demo_2.0_amd64.snap"
+            old.write_bytes(b"x")
+            time.sleep(0.01)
+            new.write_bytes(b"x")
+            store.add(db.Snap(name="demo", directory=str(project_dir)))
+            real = sys.stdout
+            sys.stdout = io.StringIO()
+            try:
+                cli.cmd_prune(store, SimpleNamespace(rest=[], yes=True), None)
+            finally:
+                sys.stdout = real
+            assert not old.exists(), "the old build stayed"
+            assert new.exists(), "the newest build went too"
 
     @check("every upstream shape is reachable by the name a record gives it")
     def _():
@@ -2843,7 +2887,7 @@ def updater():
 
     @check("what snapcraft's linters found is read back out of its own log")
     def _():
-        from snapforge import build as buildlib, project
+        from snapforge import build as buildlib
         with tempfile.TemporaryDirectory() as home:
             logs = Path(home)
             (logs / "old.log").write_text(
@@ -3853,8 +3897,7 @@ def dependencies():
 
     @check("a library nothing can name is reported, never invented")
     def _():
-        with tempfile.TemporaryDirectory() as home:
-            root = Path(home)
+        with tempfile.TemporaryDirectory():
             # A binary needing something no table knows about.
             fake = "libnothingknowsthis.so.99"
             asked = {fake, "libc.so.6"}
@@ -3940,11 +3983,22 @@ def dependencies():
             "staging a package for libcuda pins one driver version"
 
 
+GROUPS = (upstreams, architectures, recipes, register, payloads,
+          reading_payloads, projects, checking, dashboard, updater,
+          from_a_file, database, tracking, dependencies, imports)
+
+
 def main():
-    for group in (upstreams, architectures, recipes, register, payloads,
-                  reading_payloads, projects, checking, dashboard, updater,
-                  from_a_file, database, tracking, dependencies, imports):
-        group()
+    """`./tests.py` runs everything; `./tests.py recipes dashboard` runs those."""
+    by_name = {group.__name__: group for group in GROUPS}
+    asked = [word for word in sys.argv[1:] if not word.startswith("--")]
+    unknown = [word for word in asked if word not in by_name]
+    if unknown:
+        print(f"no such test group: {', '.join(unknown)}\n"
+              f"groups: {', '.join(by_name)}")
+        return 2
+    for name in asked or by_name:
+        by_name[name]()
     if "--online" in sys.argv[1:]:
         online()
     for name, why in FAILED:

@@ -44,8 +44,9 @@ def yaml_block(text, field):
     if not found:
         return yaml_field(text, field)
     lines = found.group(1).splitlines()
-    pad = min((len(l) - len(l.lstrip()) for l in lines if l.strip()), default=0)
-    return "\n".join(l[pad:] for l in lines).strip()
+    pad = min((len(line) - len(line.lstrip()) for line in lines if line.strip()),
+              default=0)
+    return "\n".join(line[pad:] for line in lines).strip()
 
 
 def find_repo(directory, text):

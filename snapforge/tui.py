@@ -74,7 +74,13 @@ MODES = ("asking", "tracking", "prompting", "picking", "confirm", "detail",
 
 @dataclass
 class Dashboard:
-    """Everything on screen, and the one thread allowed to change it."""
+    """Everything on screen, and the lock that keeps a frame whole.
+
+    The main thread draws and handles keys; the worker thread does the work.
+    Both hold `lock` while they change more than one thing at once, and a
+    frame is drawn under it too, so a frame never sees half of a change.
+    Nothing waits while holding it.
+    """
 
     db: object
     known: list = field(default_factory=list)     # a Row for every record
@@ -164,6 +170,12 @@ class Dashboard:
         with self.lock:
             self.log.append(Text(text, style=style) if style else Text(text))
 
+    def put(self, target, **fields):
+        """Set several fields at once, so a frame sees all of them or none."""
+        with self.lock:
+            for name, value in fields.items():
+                setattr(target, name, value)
+
     def idle(self):
         """Back to saying what the register holds, with nothing in flight."""
         self.status = f"{len(self.known)} registered"
@@ -209,13 +221,12 @@ class Dashboard:
             found = update.situation(row.snap)
         except Exception as exc:                          # noqa: BLE001
             # One unreadable record must not take the other twenty-four down.
-            row.state, row.note = "error", f"{type(exc).__name__}: {exc}"
+            self.put(row, state="error", note=f"{type(exc).__name__}: {exc}")
             self.say(f"{row.name}: {row.note}", "red")
             return
-        row.state = found.state
-        row.release, row.asset = found.release, found.asset
-        row.latest = found.latest
-        row.note = found.note or found.problem
+        self.put(row, state=found.state, release=found.release,
+                 asset=found.asset, latest=found.latest,
+                 note=found.note or found.problem)
         if found.note:
             self.say(f"{row.name}: {found.note}", "yellow")
         if found.state == "error":
@@ -229,7 +240,7 @@ class Dashboard:
 
         def work():
             for row in rows:
-                row.state, row.note = "checking", ""
+                self.put(row, state="checking", note="")
             done = 0
             self.status = f"checking {len(rows)} upstream" + \
                           ("" if len(rows) == 1 else "s")
@@ -302,9 +313,9 @@ class Dashboard:
 
     def _ask_which(self, made):
         """Put the ranking on screen and wait for a person to pick one."""
-        self.picking, self.pick_cursor = made, 0
         self.picked.clear()
-        self.status = "which file should this be built from?"
+        self.put(self, picking=made, pick_cursor=0,
+                 status="which file should this be built from?")
         try:
             while not self.picked.wait(0.1):
                 if self.cancel.is_set():
@@ -313,7 +324,7 @@ class Dashboard:
                 raise Cancelled()
             return made.candidates[self.pick_cursor]
         finally:
-            self.picking = None
+            self.put(self, picking=None)
 
     def pull_database(self):
         """Offer to write every snap the database has and this does not."""
@@ -372,7 +383,7 @@ class Dashboard:
                 self.say(f"{name} is not tracked against anything now",
                          "yellow")
                 if row:
-                    row.state, row.latest, row.note = "untracked", "", ""
+                    self.put(row, state="untracked", latest="", note="")
                 return
 
             wanted = sources.configure(words[0], sources.parse_pairs(words[1:]))
@@ -393,24 +404,24 @@ class Dashboard:
                      f"upstream has {release.version}", "bold green")
             if row:
                 found = update.situation(snap)
-                row.state, row.latest = found.state, found.latest
-                row.release, row.asset = found.release, found.asset
-                row.note = found.note or found.problem
+                self.put(row, state=found.state, latest=found.latest,
+                         release=found.release, asset=found.asset,
+                         note=found.note or found.problem)
             self.idle()
 
         self.run_job("tracking", work)
 
     def _ask_yes_no(self, question, title="confirm", note=""):
         """Put a question on screen and block the worker until answered."""
-        self.asking, self.asking_title, self.asking_note = question, title, note
         self.answered.clear()
+        self.put(self, asking=question, asking_title=title, asking_note=note)
         try:
             while not self.answered.wait(0.1):
                 if self.cancel.is_set():
                     return False
             return self.answer
         finally:
-            self.asking = ""
+            self.put(self, asking="")
 
     def _install(self, snap, built):
         """Install what was just built, with the terminal handed back."""
@@ -509,14 +520,14 @@ class Dashboard:
             row.state = "done"
             return self._build(row.snap, reporter, row, ask_install=ask_install)
         except (NetworkError, project.ForgeError) as exc:
-            row.state, row.note = "failed", str(exc)
+            self.put(row, state="failed", note=str(exc))
             self.say(f"{row.name}: {exc}", "red")
             return None
         except Cancelled:
             row.state = "behind"
             raise
         finally:
-            row.done_bytes = row.total_bytes = 0
+            self.put(row, done_bytes=0, total_bytes=0)
 
     def build_selected(self):
         """Hand the selected project to snapcraft as it stands."""
@@ -544,7 +555,7 @@ class Dashboard:
             self.say(f"built {built.name}", "bold green")
         except project.ForgeError as exc:
             if row:
-                row.state, row.note = "failed", str(exc)
+                self.put(row, state="failed", note=str(exc))
             self.say(f"{snap.name}: {exc}", "red")
             return None
 
@@ -573,7 +584,8 @@ class Dashboard:
 
     def render(self):
         """One frame of whatever the board currently is."""
-        return self.screen.render()
+        with self.lock:
+            return self.screen.render()
 
     def select(self, name):
         for index, row in enumerate(self.rows):
@@ -587,6 +599,10 @@ class Dashboard:
     # -- keys ----------------------------------------------------------------
 
     def handle(self, key):
+        with self.lock:
+            return self._handle(key)
+
+    def _handle(self, key):
         # Whatever is up has the keyboard: the list only gets what is left.
         mode = self.mode
         if mode:
@@ -799,12 +815,12 @@ class Dashboard:
             yield
         finally:
             with self.lock:
-                if self.closing:
-                    return
-                if live:
-                    live.start()
-                if keyboard:
-                    keyboard.resume()
+                # Not once the main thread has torn the screen down.
+                if not self.closing:
+                    if live:
+                        live.start()
+                    if keyboard:
+                        keyboard.resume()
 
 
 # -- drawing helpers ---------------------------------------------------------
@@ -849,7 +865,7 @@ class DashboardReporter(Reporter):
     def progress(self, done, total):
         self._check_cancelled()
         if self.row:
-            self.row.done_bytes, self.row.total_bytes = done, total
+            self.dashboard.put(self.row, done_bytes=done, total_bytes=total)
         elif total:
             self.dashboard.status = (f"downloading {done / 1e6:.0f}"
                                      f"/{total / 1e6:.0f} MB")

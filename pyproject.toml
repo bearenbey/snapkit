@@ -7,7 +7,7 @@ name = "snapkit"
 version = "0.2.0"
 description = "Make a snap package out of a GitHub repository, and keep it up to date"
 license = { text = "MIT" }
-requires-python = ">=3.10"
+requires-python = ">=3.10.12"
 dependencies = ["rich>=13.0"]
 
 [project.scripts]
@@ -15,3 +15,13 @@ snapkit = "snapforge.cli:entry"
 
 [tool.setuptools]
 packages = ["snapforge"]
+
+[tool.ruff]
+target-version = "py310"
+extend-exclude = ["snap-db", "parts", "stage", "prime"]
+
+[tool.ruff.lint]
+# pyflakes, the syntax and statement checks, and bugbear: what finds bugs.
+select = ["F", "E4", "E7", "E9", "B"]
+# `assert False` is how a test fails on purpose here; strict zip is noise.
+ignore = ["B011", "B905"]

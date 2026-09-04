@@ -100,16 +100,9 @@ def _tar_bytes(blob):
 
 
 def _extract_all(tar, destination):
-    """extractall with the traversal filter, which 3.10 did not always have."""
-    if hasattr(tarfile, "tar_filter"):
-        tar.extractall(destination, filter="tar")
-        return
-    root = Path(destination).resolve()
-    for member in tar.getmembers():
-        target = (root / member.name).resolve()
-        if root != target and root not in target.parents:
-            raise InspectionError(f"{member.name} would escape the payload directory")
-    tar.extractall(destination)
+    """extractall, refusing a member that would land outside `destination`."""
+    # filter= is why the floor is 3.10.12: it is where the keyword arrived.
+    tar.extractall(destination, filter="tar")
 
 
 def _unpack_deb(archive, destination):

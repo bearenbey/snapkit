@@ -22,6 +22,7 @@
 | `snapkit import <dir>` | register packaging that already exists |
 | `snapkit build <name>` | hand the project to snapcraft |
 | `snapkit remove <name>` | forget a snap, and its recipe with it |
+| `snapkit prune [name ...]` | delete superseded builds and files, keeping the newest |
 | `snapkit db` | what the shared recipe database holds |
 | `snapkit db pull [name ...]` | write those projects here, or all of them |
 | `snapkit db publish <dir>` | write the database out of the projects here |
@@ -31,6 +32,12 @@ Removing asks first, in both the dashboard and the terminal. It forgets the
 record and the recipe stored with it; the project directory is left where it
 is, because deleting files you may have edited is a bigger thing than
 forgetting a record and should not be what one keystroke does.
+
+Pruning is the one thing that does delete files, and it lists them and asks
+first (`--yes` skips the question). It takes every `.snap` in a project but
+the newest, and, for a snap built from a file in its own folder, every file
+the folder's glob matches other than the one the recipe names. Nothing
+else in a project is touched.
 
 A repository can be given any way you have it: `owner/name`, the browser URL,
 the clone URL, or a link to a release page.

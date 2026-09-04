@@ -5,7 +5,7 @@ import re
 import textwrap
 
 from . import arch, classify
-from .rewrite import replace_version
+from .rewrite import repoint_lines
 
 BASE = "core24"
 
@@ -282,15 +282,6 @@ def from_record(snap, payload, url, sha="", description="", icon="",
 
 def repoint(yaml_text, old_version, new_version, old_url, new_url, sha=""):
     """Move an existing recipe onto a newer release, in place."""
-    out = []
-    for line in yaml_text.splitlines():
-        if re.match(r"^version:\s", line):
-            line = f"version: '{new_version}'"
-        elif re.match(r"^\s*source:\s", line) and old_url and old_url in line:
-            line = line.replace(old_url, new_url)
-        elif re.match(r"^\s*source-checksum:\s*sha256/", line) and sha:
-            line = re.sub(r"(sha256/).*", lambda m: m.group(1) + sha, line)
-        elif old_version and "http" in line:
-            line = replace_version(line, old_version, new_version)
-        out.append(line)
+    out = repoint_lines(yaml_text.splitlines(), new_url, sha, new_version,
+                        old_url=old_url, old_version=old_version)
     return "\n".join(out) + "\n"

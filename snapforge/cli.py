@@ -30,6 +30,7 @@ package file you already have, and keep it up to date afterwards.
   snapkit track kinds              every kind of upstream, and what it needs
   snapkit build <name>             hand the project to snapcraft
   snapkit remove <name>            forget a snap, and its recipe with it
+  snapkit prune [name ...]         delete superseded builds and files
   snapkit db                       what the shared recipe database holds
   snapkit db pull [name ...]       write those projects here, or all of them
   snapkit db publish <dir>         write the database out of the projects here
@@ -103,7 +104,8 @@ def parse_args(argv):
     parser.add_argument("--dir", dest="directory", help="where to write the project")
     parser.add_argument("--no-build", action="store_true",
                         help="write the project but do not run snapcraft")
-    parser.add_argument("--yes", action="store_true", help="do not ask before removing")
+    parser.add_argument("--yes", action="store_true",
+                        help="do not ask before removing or pruning")
     parser.add_argument("--force", action="store_true",
                         help="on update, redo a project that is already "
                              "current; on track, record an upstream that did "
@@ -190,8 +192,8 @@ def create_from_file(db, args, reporter, text):
     if known and not args.name:
         reporter.detail(f"{path if path.is_dir() else path.parent} is already "
                         f"registered as {known.name} ({known.version})")
-        reporter.detail(f"treating this as an update; `--name` would make a "
-                        f"second snap from it instead")
+        reporter.detail("treating this as an update; `--name` would make a "
+                        "second snap from it instead")
         return update_one(db, args, reporter, known)
 
     made = project.plan_local(path, reporter, name=args.name, asset=args.asset)
@@ -805,6 +807,34 @@ def cmd_install(db, args, reporter):
     return subprocess.run(command).returncode
 
 
+def cmd_prune(db, args, reporter):
+    """Delete the builds and files a project no longer needs."""
+    snaps = [db.get(name) for name in args.rest] if args.rest else db.all()
+    stale = [(snap, update.prunable(snap)) for snap in snaps]
+    stale = [(snap, files) for snap, files in stale if files]
+    if not stale:
+        print("nothing to prune")
+        return 0
+    total = 0
+    for snap, files in stale:
+        for path in files:
+            size = path.stat().st_size
+            total += size
+            print(f"  {snap.name}: {path.name} ({size / 1e6:.0f} MB)")
+    count = sum(len(files) for _, files in stale)
+    if not args.yes:
+        print(f"This deletes {count} file{'s' if count != 1 else ''} "
+              f"({total / 1e6:.0f} MB). Each project keeps its newest build.")
+        if not ask_yes_no("Delete them?"):
+            print("left alone")
+            return 1
+    for _, files in stale:
+        for path in files:
+            path.unlink()
+    print(f"freed {total / 1e6:.0f} MB")
+    return 0
+
+
 def cmd_remove(db, args, reporter):
     if not args.rest:
         die("remove needs a name")
@@ -825,6 +855,7 @@ def cmd_remove(db, args, reporter):
 COMMANDS = {"": cmd_list, "create": cmd_create, "list": cmd_list,
             "show": cmd_show, "check": cmd_check, "update": cmd_update,
             "build": cmd_build, "remove": cmd_remove, "rm": cmd_remove,
+            "prune": cmd_prune,
             "search": cmd_search, "find": cmd_search, "package": cmd_package,
             "import": cmd_import, "adopt": cmd_import,
             "db": cmd_db, "install": cmd_install, "track": cmd_track}
@@ -839,4 +870,4 @@ def entry():
         raise SystemExit(main())
     except KeyboardInterrupt:
         print()
-        raise SystemExit(130)
+        raise SystemExit(130) from None

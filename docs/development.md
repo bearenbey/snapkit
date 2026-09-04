@@ -4,9 +4,14 @@
 
 
 ```text
-./tests.py            everything that needs no network
-./tests.py --online   those, and the ones that talk to GitHub
+./tests.py                    everything that needs no network
+./tests.py recipes dashboard  only those groups, by name
+./tests.py --online           everything, and the ones that talk to GitHub
 ```
+
+CI also runs `ruff check`, with the rule set in `pyproject.toml`: pyflakes,
+the syntax checks, and bugbear. It is there for the dead branch and the
+unused name, which are what a review finds after the fact.
 
 No framework and no dependencies beyond the tool's own, so it runs anywhere
 the tool does. The offline tests build their own `.deb` rather than
@@ -98,7 +103,8 @@ do neither.
 - The register scales; the *projects* do not, and that is the thing to watch.
   A thousand registered snaps is a megabyte. A thousand built snaps is
   however large those snaps are, and Electron apps run to a hundred megabytes
-  each, all sitting in `projects/`. Nothing here prunes them.
+  each, all sitting in `projects/`. `snapkit prune` deletes every build but
+  the newest; nothing runs it for you.
 
 - The 22 projects in `seed.py` name amd64 asset globs, because that is
   what this machine is. The tool is not tied to it; that list is.

@@ -4,6 +4,8 @@ set -eu
 
 export PYTHONPATH="$SNAP/lib:$SNAP/usr/lib/python3/dist-packages"
 export PYTHONDONTWRITEBYTECODE=1
+# After the host's own: dpkg-deb for zstd .debs, on a host without dpkg.
+export PATH="$PATH:$SNAP/usr/bin"
 export LANG="${LANG:-C.UTF-8}"
 export LC_ALL="${LC_ALL:-C.UTF-8}"
 
@@ -13,9 +15,9 @@ if [ -z "$python" ]; then
     exit 1
 fi
 
-# 3.10 is what the source needs; older fails as an odd syntax error.
-if ! "$python" -c 'import sys; sys.exit(sys.version_info < (3, 10))'; then
-    echo "snapkit: needs python 3.10 or newer; $python is $("$python" -V 2>&1)" >&2
+# 3.10.12 is what the source needs: tarfile's extraction filter arrived then.
+if ! "$python" -c 'import sys; sys.exit(sys.version_info < (3, 10, 12))'; then
+    echo "snapkit: needs python 3.10.12 or newer; $python is $("$python" -V 2>&1)" >&2
     exit 1
 fi
 

@@ -410,9 +410,9 @@ def _tar_member(config, path, release, url):
     try:
         with tarfile.open(path) as tar:
             tar.getmember(member)
-    except (tarfile.TarError, KeyError):
+    except (tarfile.TarError, KeyError) as exc:
         raise NetworkError(f"{url} is not a {release.version} tarball: "
-                           f"it does not contain {member}")
+                           f"it does not contain {member}") from exc
     return f"archive contains {member}"
 
 

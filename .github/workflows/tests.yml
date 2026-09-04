@@ -22,8 +22,11 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      # The tool's only dependency. The tests need nothing else.
-      - run: pip install "rich>=13.0"
+      # The tool's only dependency, and the linter. The tests need nothing else.
+      - run: pip install "rich>=13.0" ruff
+
+      # The rule set is in pyproject.toml: what finds bugs, nothing about style.
+      - run: ruff check .
 
       # Offline only: --online talks to GitHub and would be rate limited here.
       - run: ./tests.py

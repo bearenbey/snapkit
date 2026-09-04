@@ -85,6 +85,24 @@ def built_version(snap):
     return stem.rsplit("_", 1)[0] if "_" in stem else stem
 
 
+def prunable(snap):
+    """What a project keeps that its build no longer needs.
+
+    Every .snap but the newest, and for a snap built from a file in its own
+    folder, every file the glob matches other than the one the recipe names.
+    """
+    directory = snap.path
+    if not directory.is_dir():
+        return []
+    made = sorted(directory.glob(f"{snap.name}_*.snap"),
+                  key=lambda p: p.stat().st_mtime)
+    stale = made[:-1]
+    if snap.style == "artifact" and snap.asset_glob and snap.asset:
+        stale += sorted(p for p in directory.glob(snap.asset_glob)
+                        if p.is_file() and p.name != snap.asset)
+    return stale
+
+
 def missing_artifact(snap):
     """True when the file this project's build opens is not there."""
     if snap.style != "artifact" or not snap.asset_glob:

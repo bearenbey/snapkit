@@ -59,21 +59,37 @@ def rewrite_versions(directory, old, new, old_asset="", new_asset=""):
     return changes
 
 
-def repoint_yaml(path, anchor, url, sha, version=""):
-    """Point a snapcraft part at a new source tarball and checksum."""
-    path = Path(path)
-    before = path.read_text(encoding="utf-8", errors="replace").splitlines()
-    after = []
-    for line in before:
-        found = re.match(anchor, line)
-        if found:
+def repoint_lines(lines, url, sha="", version="", anchor="", old_url="",
+                  old_version=""):
+    """A recipe's lines moved onto a new source: its url, checksum and version.
+
+    The source line is found by `anchor`, a regex whose first group is what
+    to keep in front of the url, or by `old_url` appearing in it. Where
+    `old_version` is given, other lines naming a url have it swapped too.
+    """
+    out = []
+    for line in lines:
+        found = re.match(anchor, line) if anchor else None
+        if version and re.match(r"^version:", line):
+            line = f"version: '{version}'"
+        elif found:
             prefix = found.group(1) if found.re.groups else found.group(0)
             line = f"{prefix}{url}"
-        elif re.match(r"^\s*source-checksum:\s*sha256/", line):
+        elif old_url and re.match(r"^\s*source:\s", line) and old_url in line:
+            line = line.replace(old_url, url)
+        elif sha and re.match(r"^\s*source-checksum:\s*sha256/", line):
             line = re.sub(r"(sha256/).*", lambda m: m.group(1) + sha, line)
-        elif version and re.match(r"^version:", line):
-            line = f"version: '{version}'"
-        after.append(line)
+        elif old_version and "http" in line:
+            line = replace_version(line, old_version, version)
+        out.append(line)
+    return out
+
+
+def repoint_yaml(path, anchor, url, sha, version=""):
+    """Point a snapcraft part on disk at a new source tarball and checksum."""
+    path = Path(path)
+    before = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    after = repoint_lines(before, url, sha, version, anchor=anchor)
 
     lines = _changed(before, after)
     if not lines:
