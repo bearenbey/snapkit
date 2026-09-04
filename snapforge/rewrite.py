@@ -67,7 +67,8 @@ def repoint_yaml(path, anchor, url, sha, version=""):
     for line in before:
         found = re.match(anchor, line)
         if found:
-            line = f"{found.group(1)}{url}"
+            prefix = found.group(1) if found.re.groups else found.group(0)
+            line = f"{prefix}{url}"
         elif re.match(r"^\s*source-checksum:\s*sha256/", line):
             line = re.sub(r"(sha256/).*", lambda m: m.group(1) + sha, line)
         elif version and re.match(r"^version:", line):

@@ -42,7 +42,7 @@ def parse_depends(text):
 
 def _one_name(text):
     """One alternative, without its version, architecture or build profile."""
-    name = re.split(r"[\s(\[<]", text.strip(), 1)[0].strip().split(":")[0]
+    name = re.split(r"[\s(\[<]", text.strip(), maxsplit=1)[0].strip().split(":")[0]
     return name if re.match(r"^[a-z0-9][a-z0-9.+-]*$", name) else ""
 
 
@@ -81,7 +81,7 @@ def bundled_libraries(root):
     return found
 
 
-def wanted(root, command, gui=False):
+def wanted(root, command):
     """Every soname the program reaches for, following what it ships itself."""
     root = Path(root)
     start = root / command if command else None
@@ -113,7 +113,7 @@ def resolve(root="", command="", gui=False, control=None):
     unchecked = set()
     here = supplied(gui)
 
-    asked, inside = wanted(root, command, gui) if root else (set(), {})
+    asked, inside = wanted(root, command) if root else (set(), {})
     for soname in sorted(asked):
         if soname in here:
             continue

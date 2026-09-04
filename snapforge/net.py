@@ -1,6 +1,7 @@
 """HTTP, downloads and checksums."""
 
 import hashlib
+import http.client
 import platform
 import threading
 import time
@@ -12,6 +13,10 @@ META_TIMEOUT = 30       # seconds for one metadata request
 DOWNLOAD_TIMEOUT = 60   # seconds of no progress at all on a download
 CHECK_TIMEOUT = 15      # seconds for a whole check, however many requests
 CHUNK = 1 << 18
+
+# What a body can raise once the connection is open: a stall, a reset, a
+# short read. None of them is a URLError, so _open never sees them.
+_READ_ERRORS = (OSError, http.client.HTTPException)
 
 # urllib says it is Python, and some CDNs serve that differently.
 USER_AGENT = f"Mozilla/5.0 (X11; Linux {platform.machine()}) snapkit/1"
@@ -83,6 +88,8 @@ def get_text(url, timeout=META_TIMEOUT):
             return response.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as exc:
         raise NetworkError(f"{url}: HTTP {exc.code}") from exc
+    except _READ_ERRORS as exc:
+        raise NetworkError(f"{url}: {exc}") from exc
 
 
 def head_location(url, timeout=META_TIMEOUT):
@@ -94,6 +101,8 @@ def head_location(url, timeout=META_TIMEOUT):
         if 300 <= exc.code < 400:
             return exc.headers.get("Location", "")
         raise NetworkError(f"{url}: HTTP {exc.code}") from exc
+    except _READ_ERRORS as exc:
+        raise NetworkError(f"{url}: {exc}") from exc
 
 
 def sha256_file(path):
@@ -130,6 +139,9 @@ def download(url, dest, sha="", on_progress=None):
     except urllib.error.HTTPError as exc:
         part.unlink(missing_ok=True)
         raise NetworkError(f"{url}: HTTP {exc.code}") from exc
+    except _READ_ERRORS as exc:
+        part.unlink(missing_ok=True)
+        raise NetworkError(f"{url}: {exc}") from exc
     except BaseException:
         part.unlink(missing_ok=True)
         raise

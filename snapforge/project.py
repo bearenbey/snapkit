@@ -12,6 +12,7 @@ from . import build as buildlib
 from . import arch, classify, depends, github, inspect, local, net, recipe
 from . import sources
 from .db import Snap, now
+from .net import NetworkError
 
 
 class ForgeError(Exception):
@@ -358,7 +359,8 @@ def _record(plan_, payload, directory=None):
         summary=recipe.summarise(payload.summary or origin.description, plan_.name),
         description=origin.description, license=origin.license,
         command=payload.command, plugs=recipe.plugs_for(payload.traits),
-        directory=str(directory) if directory else "", created=now())
+        directory=str(Path(directory).expanduser().resolve()) if directory else "",
+        created=now())
     origin.track(snap, chosen, version)
     return snap
 

@@ -66,6 +66,8 @@ def edited(text, key, lower=False):
 ATTENTION = {"behind": 0, "failed": 1, "error": 2, "untracked": 3}
 
 # The modal states, in the order they take the keyboard from one another.
+DANGEROUS = "it is not signed, so this installs with --dangerous."
+
 MODES = ("asking", "tracking", "prompting", "picking", "confirm", "detail",
          "helping", "reading_log", "filtering")
 
@@ -97,6 +99,9 @@ class Dashboard:
     order: str = "register"    # or "attention": what needs doing, first
     helping: bool = False      # the key list, full screen
     quit: bool = False
+    closing: bool = False      # the screen is being torn down: do not restart it
+    asking_title: str = ""     # what the yes/no across the top is about
+    asking_note: str = ""      # and the one thing worth saying under it
     live = None               # rich's Live, once run_dashboard has one
     # Scroll, height and frame live on self.screen: drawing, not register.
 
@@ -262,18 +267,16 @@ class Dashboard:
             if len(made.candidates) > 1:
                 made.chosen = self._ask_which(made)
                 reporter.detail(f"building from {made.chosen.name}")
-            snap = project.create(made, reporter)
             try:
-                self.db.add(snap)
+                self.db.claim(made.name, made.origin.repo)
             except NameTaken as exc:
-                # The project is written; a free name is one keystroke away.
-                free = self.db.free_name(snap.name)
+                # Renamed before it is written, or it lands on the other one.
+                free = self.db.free_name(made.name)
                 self.say(str(exc), "red")
                 self.say(f"registering it as {free} instead", "yellow")
-                snap.name = free
-                snap.directory = ""
-                project.write(snap, reporter)
-                self.db.add(snap)
+                made.name = free
+            snap = project.create(made, reporter)
+            self.db.add(snap)
             self.reload()
             self.select(snap.name)
             self.say(f"registered {snap.name} {snap.version}", "bold green")
@@ -327,7 +330,8 @@ class Dashboard:
 
             self.say(f"the database has {len(new)} not registered here: "
                      f"{', '.join(new[:8])}" + (" ..." if len(new) > 8 else ""))
-            if not self._ask_yes_no(f"write {len(new)} projects from the database?"):
+            if not self._ask_yes_no(f"write {len(new)} projects from the database?",
+                                    title="database"):
                 self.say("left the database alone", "dim")
                 return
 
@@ -396,9 +400,9 @@ class Dashboard:
 
         self.run_job("tracking", work)
 
-    def _ask_yes_no(self, question):
+    def _ask_yes_no(self, question, title="confirm", note=""):
         """Put a question on screen and block the worker until answered."""
-        self.asking = question
+        self.asking, self.asking_title, self.asking_note = question, title, note
         self.answered.clear()
         try:
             while not self.answered.wait(0.1):
@@ -463,7 +467,8 @@ class Dashboard:
 
         def work():
             many = "" if len(behind) == 1 else "s"
-            if not self._ask_yes_no(f"update {len(behind)} snap{many}?"):
+            if not self._ask_yes_no(f"update {len(behind)} snap{many}?",
+                                    title="update"):
                 self.say("left them alone", "dim")
                 return
             for row in behind:
@@ -484,7 +489,8 @@ class Dashboard:
             # One question for the run, rather than one for every snap in it.
             if built:
                 many = "" if len(built) == 1 else "s"
-                if self._ask_yes_no(f"install {len(built)} built snap{many}?"):
+                if self._ask_yes_no(f"install {len(built)} built snap{many}?",
+                                    title="install", note=DANGEROUS):
                     for snap, made in built:
                         self._install(snap, made)
                 else:
@@ -545,7 +551,8 @@ class Dashboard:
         # Offered, never assumed: this is the one thing here that needs root.
         if not ask_install:
             return built
-        if self._ask_yes_no(f"install {built.name}?"):
+        if self._ask_yes_no(f"install {built.name}?", title="install",
+                            note=DANGEROUS):
             self._install(snap, built)
         else:
             self.say(f"built {built.name}, not installed", "dim")
@@ -739,19 +746,28 @@ class Dashboard:
         self.matches, self.match_cursor = [], 0
 
     def _choosing(self, key):
-        total = len(self.picking.candidates)
+        picking = self.picking
+        if picking is None:
+            return
+        total = len(picking.candidates)
         if key in ("j", "down"):
             self.pick_cursor = min(self.pick_cursor + 1, total - 1)
         elif key in ("k", "up"):
             self.pick_cursor = max(self.pick_cursor - 1, 0)
         elif key.isdigit() and 1 <= int(key) <= total:
             self.pick_cursor = int(key) - 1
-            self.picked.set()
+            self._picked()
         elif key == "enter":
-            self.picked.set()
+            self._picked()
         elif key in ("escape", "q"):
             self.pick_cursor = -1
-            self.picked.set()
+            self._picked()
+
+    def _picked(self):
+        # Cleared here, on the thread that draws it, or a frame could catch
+        # the worker clearing it between asking the mode and reading the list.
+        self.picking = None
+        self.picked.set()
 
     def _answering(self, key):
         """y or n for the question the worker is blocked on."""
@@ -782,10 +798,13 @@ class Dashboard:
         try:
             yield
         finally:
-            if live:
-                live.start()
-            if keyboard:
-                keyboard.resume()
+            with self.lock:
+                if self.closing:
+                    return
+                if live:
+                    live.start()
+                if keyboard:
+                    keyboard.resume()
 
 
 # -- drawing helpers ---------------------------------------------------------
@@ -863,13 +882,17 @@ def run_dashboard(db):
         with Live(dashboard.render(), screen=True, refresh_per_second=REFRESH,
                   redirect_stdout=False, redirect_stderr=False) as live:
             dashboard.live = live
-            while not dashboard.quit:
-                for key in keyboard.keys(1 / REFRESH):
-                    if key:
-                        dashboard.handle(key)
-                    if dashboard.quit:
-                        break
-                live.update(dashboard.render())
+            try:
+                while not dashboard.quit:
+                    for key in keyboard.keys(1 / REFRESH):
+                        if key:
+                            dashboard.handle(key)
+                        if dashboard.quit:
+                            break
+                    live.update(dashboard.render())
+            finally:
+                with dashboard.lock:
+                    dashboard.closing = True
 
     if dashboard.worker and dashboard.worker.is_alive():
         dashboard.cancel.set()

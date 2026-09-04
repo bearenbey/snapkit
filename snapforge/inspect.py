@@ -99,6 +99,19 @@ def _tar_bytes(blob):
     return tarfile.open(fileobj=io.BytesIO(blob), mode="r:*")
 
 
+def _extract_all(tar, destination):
+    """extractall with the traversal filter, which 3.10 did not always have."""
+    if hasattr(tarfile, "tar_filter"):
+        tar.extractall(destination, filter="tar")
+        return
+    root = Path(destination).resolve()
+    for member in tar.getmembers():
+        target = (root / member.name).resolve()
+        if root != target and root not in target.parents:
+            raise InspectionError(f"{member.name} would escape the payload directory")
+    tar.extractall(destination)
+
+
 def _unpack_deb(archive, destination):
     name, blob = _deb_member(archive, "data.tar")
     if not name:
@@ -108,10 +121,17 @@ def _unpack_deb(archive, destination):
         if not shutil.which("dpkg-deb"):
             raise InspectionError(
                 f"{archive.name} is zstd-compressed and dpkg-deb is not installed")
-        subprocess.run(["dpkg-deb", "-x", str(archive), str(destination)], check=True)
+        done = subprocess.run(["dpkg-deb", "-x", str(archive), str(destination)],
+                              capture_output=True, text=True)
+        if done.returncode != 0:
+            raise InspectionError(
+                f"{archive.name} would not unpack: {done.stderr.strip()[:200]}")
         return
-    with _tar_bytes(blob) as tar:
-        tar.extractall(destination, filter="tar")
+    try:
+        with _tar_bytes(blob) as tar:
+            _extract_all(tar, destination)
+    except tarfile.TarError as exc:
+        raise InspectionError(f"{archive.name}: {exc}") from exc
 
 
 def _unpack_archive(archive, destination):
@@ -130,7 +150,7 @@ def _unpack_archive(archive, destination):
         return
     try:
         with tarfile.open(archive, mode="r:*") as tar:
-            tar.extractall(destination, filter="tar")
+            _extract_all(tar, destination)
     except tarfile.TarError as exc:
         raise InspectionError(f"{archive.name}: {exc}") from exc
 
@@ -158,27 +178,43 @@ def _unpack_appimage(archive, destination):
 
 # -- reading what came out ----------------------------------------------------
 
+def _control_text(archive, blob):
+    """The control file out of control.tar, or None if nothing can read it."""
+    try:
+        with _tar_bytes(blob) as tar:
+            for name in ("./control", "control"):
+                try:
+                    member = tar.extractfile(name)
+                except KeyError:
+                    continue
+                if member is not None:
+                    return member.read().decode("utf-8", "replace")
+            return None
+    except tarfile.TarError:
+        pass
+    # Usually a zstd control.tar on a Python without a reader for it.
+    if not shutil.which("dpkg-deb"):
+        return None
+    done = subprocess.run(["dpkg-deb", "-f", str(archive)],
+                          capture_output=True, text=True)
+    return done.stdout if done.returncode == 0 else None
+
 def control_fields(archive):
     """The .deb control stanza: Version, Description, Homepage and the rest."""
     name, blob = _deb_member(archive, "control.tar")
     if not name:
         return {}
-    fields = {}
-    with _tar_bytes(blob) as tar:
-        try:
-            member = tar.extractfile("./control") or tar.extractfile("control")
-        except KeyError:
-            return {}
-        if member is None:
-            return {}
-        key = None
-        for line in member.read().decode("utf-8", "replace").splitlines():
-            if line[:1] in (" ", "\t") and key:
-                fields[key] += "\n" + line.strip()
-            elif ":" in line:
-                key, _, value = line.partition(":")
-                key = key.strip()
-                fields[key] = value.strip()
+    text = _control_text(archive, blob)
+    if text is None:
+        return {}
+    fields, key = {}, None
+    for line in text.splitlines():
+        if line[:1] in (" ", "\t") and key:
+            fields[key] += "\n" + line.strip()
+        elif ":" in line:
+            key, _, value = line.partition(":")
+            key = key.strip()
+            fields[key] = value.strip()
     return fields
 
 

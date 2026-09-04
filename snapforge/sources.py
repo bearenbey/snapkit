@@ -121,7 +121,8 @@ def _local(config, want, directory):
         pattern = config.get("glob") or "a package"
         raise NetworkError(f"no {pattern} in {directory} -- put one there, or "
                            f"`snapkit create` it from wherever it is")
-    return _release(config, found.version, found.name, found.path.as_uri(),
+    return _release(config, found.version or "0", found.name,
+                    found.path.resolve().as_uri(),
                     path=str(found.path))
 
 
@@ -377,14 +378,14 @@ def manifest_sha(url, asset, required=True):
 BAD_SIGNATURE = ("BADSIG", "REVKEYSIG", "EXPKEYSIG")
 
 
-def _gpg(config, path, release):
+def _gpg(config, path, release, url):
     """Check a detached signature published next to the download."""
     if not shutil.which("gpg"):
         return "gpg: not installed, signature not checked"
     suffix = config.get("suffix", ".sig")
     signature = Path(str(path) + suffix)
     try:
-        download(release.url + suffix, signature)
+        download(url + suffix, signature)
     except NetworkError:
         return "gpg: upstream published no signature for this release"
     try:
@@ -403,14 +404,14 @@ def _gpg(config, path, release):
     return "gpg: not verified (release key not in your keyring) -- continuing"
 
 
-def _tar_member(config, path, release):
+def _tar_member(config, path, release, url):
     """Check that a file that must be in this tarball is in it."""
     member = _fill(config["member"], version=release.version, tag=release.tag)
     try:
         with tarfile.open(path) as tar:
             tar.getmember(member)
     except (tarfile.TarError, KeyError):
-        raise NetworkError(f"{release.url} is not a {release.version} tarball: "
+        raise NetworkError(f"{url} is not a {release.version} tarball: "
                            f"it does not contain {member}")
     return f"archive contains {member}"
 
@@ -418,12 +419,14 @@ def _tar_member(config, path, release):
 VERIFIERS = {"gpg": _gpg, "tar-member": _tar_member}
 
 
-def verify(config, path, release):
+def verify(config, path, release, url=""):
     """Check a download before its checksum is trusted."""
     if not config:
         return ""
+    # A GitHub release has no url of its own; only its chosen asset does.
+    url = url or getattr(release, "url", "")
     verifier = VERIFIERS.get(config.get("kind", ""))
     if verifier is None:
         raise NetworkError(f"no such verifier: {config.get('kind') or '(none)'} "
                            f"(try: {', '.join(sorted(VERIFIERS))})")
-    return verifier(config, path, release)
+    return verifier(config, path, release, url)

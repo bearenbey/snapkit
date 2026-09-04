@@ -5,6 +5,7 @@ import re
 import select
 import sys
 import termios
+import time
 import tty
 
 # Both forms: application mode sends ESC O A, normal mode ESC [ A.
@@ -17,6 +18,7 @@ SEQUENCES = {
 }
 
 _SEQUENCE = re.compile(r"[\[O][0-9;]*[A-Za-z~]")
+_PARTIAL = re.compile(r"[\[O][0-9;]*")
 
 
 class Keyboard:
@@ -47,6 +49,7 @@ class Keyboard:
     def keys(self, timeout=0.1):
         """Whatever was typed since last asked, as a list of key names."""
         if self.saved is None:
+            time.sleep(timeout)     # the terminal is somebody else's just now
             return []
         ready, _, _ = select.select([self.fd], [], [], timeout)
         if not ready:
@@ -82,8 +85,12 @@ class Keyboard:
             if rest[0] in "[O":
                 match = _SEQUENCE.match(rest)
                 if not match:
-                    self.pending = data[index:]     # incomplete; wait for more
-                    break
+                    if _PARTIAL.fullmatch(rest):
+                        self.pending = data[index:]     # incomplete; wait for more
+                        break
+                    found.append("escape")          # not a sequence we know
+                    index += 1
+                    continue
                 name = SEQUENCES.get(match.group(0), "")
                 if name:
                     found.append(name)

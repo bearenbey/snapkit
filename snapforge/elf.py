@@ -25,11 +25,11 @@ class _Reader:
     def __init__(self, blob):
         if blob[:4] != MAGIC:
             raise NotAnELF("not an ELF file")
+        if len(blob) < 6 or blob[4] not in (1, 2) or blob[5] not in (1, 2):
+            raise NotAnELF("ELF header says neither 32/64-bit nor an endianness")
         self.blob = blob
         self.wide = blob[4] == 2
         self.little = blob[5] == 1
-        if blob[4] not in (1, 2) or blob[5] not in (1, 2):
-            raise NotAnELF("ELF header says neither 32/64-bit nor an endianness")
 
     def at(self, form, offset):
         """One struct field, in this file's byte order."""

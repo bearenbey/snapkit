@@ -117,7 +117,8 @@ def parse_args(argv):
                         help="let snapcraft build on this host rather than in "
                              "a container")
     parser.add_argument("-h", "--help", action="help", help="this")
-    return parser.parse_args(argv)
+    # Intermixed: `db pull --dir x btop` puts an option between positionals.
+    return parser.parse_intermixed_args(argv)
 
 
 def main(argv=None):
@@ -210,12 +211,14 @@ def _show_runners_up(reporter, candidates, asset, where):
 
 def _finish_create(db, args, reporter, made, text):
     """Register what a plan produced, and build it unless told not to."""
-    snap = project.create(made, reporter, directory=args.directory)
+    # Before the project is written: it would land on the one already there.
     try:
-        db.add(snap)
+        db.claim(made.name, made.origin.repo)
     except NameTaken as exc:
         die(f"{exc}\n           try: snapkit create {text} "
-            f"--name {db.free_name(snap.name)}")
+            f"--name {db.free_name(made.name)}")
+    snap = project.create(made, reporter, directory=args.directory)
+    db.add(snap)
     reporter.result(f"registered {snap.name} {snap.version}")
     if snap.upstream.get("kind") == "local":
         reporter.detail(f"tracked against {snap.path}: drop a newer "
@@ -275,7 +278,10 @@ def _show_choices(here, found):
 def _read_choice(found):
     """One answer to that menu, as the text `create` should act on."""
     while True:
-        answer = input("> ").strip()
+        try:
+            answer = input("> ").strip()
+        except EOFError:
+            raise SystemExit(0) from None
         low = answer.lower()
         if low in ("q", "quit", ""):
             raise SystemExit(0)
@@ -287,7 +293,10 @@ def _read_choice(found):
         if not again:
             # Anything else is the answer: typing a repository in means it.
             return answer
-        typed = input(f"{again}> ").strip()
+        try:
+            typed = input(f"{again}> ").strip()
+        except EOFError:
+            raise SystemExit(0) from None
         if typed:
             return typed
 
@@ -383,8 +392,7 @@ def track_locally(snap, args, reporter):
         print(f"  Watching the folder means: drop a newer {glob} in, and "
               f"`snapkit check`\n  reports it. Nothing is claimed about where "
               f"the file came from.")
-        if input(f"  Track {snap.name} against its folder? [y/N] ").strip().lower() \
-                not in ("y", "yes"):
+        if not ask_yes_no(f"  Track {snap.name} against its folder?"):
             return False
 
     snap.style = "artifact"
@@ -805,7 +813,7 @@ def cmd_remove(db, args, reporter):
         print(f"This forgets {snap.name} ({snap.repo}) and the snapcraft.yaml "
               f"stored with it.")
         print(f"The project directory {snap.path} is left alone.")
-        if input("Remove it? [y/N] ").strip().lower() not in ("y", "yes"):
+        if not ask_yes_no("Remove it?"):
             print("left alone")
             return 1
     db.remove(snap.name)

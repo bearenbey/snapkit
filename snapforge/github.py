@@ -1,6 +1,8 @@
 """A repository URL, and what that repository publishes."""
 
+import html
 import re
+import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
@@ -102,7 +104,7 @@ def parse_repo(text):
     if found:
         return f"{found.group(1)}/{found.group(2)}"
     found = _REPO.match(text)
-    if found:
+    if found and found.group(1).lower() not in ("github.com", "www.github.com"):
         return f"{found.group(1)}/{found.group(2)}"
     raise ValueError(f"not a github repository: {text}")
 
@@ -211,15 +213,13 @@ def version_of(tag):
 
 
 def _quote(text):
-    return text.replace("#", "%23").replace(" ", "%20")
+    return urllib.parse.quote(text, safe="/")
 
 
 def _unquote(text):
-    return re.sub(r"%([0-9A-Fa-f]{2})", lambda m: chr(int(m.group(1), 16)), text)
+    # A tag is percent-encoded UTF-8, so decoding a byte at a time mangles it.
+    return urllib.parse.unquote(text)
 
 
 def _unescape(text):
-    for entity, char in (("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"),
-                         ("&quot;", '"'), ("&#39;", "'"), ("&nbsp;", " ")):
-        text = text.replace(entity, char)
-    return text
+    return html.unescape(text)

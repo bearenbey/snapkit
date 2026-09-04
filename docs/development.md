@@ -65,13 +65,27 @@ Several exist because of bugs that were in here:
   reading one character of an arrow key pulled the rest into Python's buffer
   where `select` could not see it; the sequence read as a lone Escape, and
   Escape quit, so every arrow key closed the dashboard
+- `summary:` was written into the recipe bare, and GitHub's own description
+  of Helium is "Helium: a browser", which YAML reads as a map inside a map
+- an update of a recipe with no `http` source found `""` in every line, and
+  `replace("", url)` puts the url between every character of it
+- `create` wrote the project before asking the register whether the name was
+  free, so a second `bat` landed on the first one's directory before it was
+  refused; both front ends ask first now
+- a .deb's own `Version:` is what the record held, and the tag's version is
+  what check compared against, so `1.2.3-1` against `v1.2.3` was an update
+  for ever; where both sides have a tag, the tag decides
+- the connect was guarded and the read was not, so a download that stalled
+  after the connection opened was a bare traceback
+- `extractfile` raises for a name the tar does not have, so the fallback to a
+  control file stored without `./` never ran and the .deb read as versionless
 
 ## Building this
 
 
 ```console
 ./build.py
-sudo snap install --dangerous --classic snapkit_0.1.0_amd64.snap
+sudo snap install --dangerous --classic snapkit_0.2.0_amd64.snap
 ```
 
 It is a classic snap because building a snap means running snapcraft and

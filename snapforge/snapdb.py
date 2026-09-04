@@ -4,6 +4,8 @@ import fnmatch
 import hashlib
 import json
 import os
+import re
+import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -15,6 +17,7 @@ FOLDER = "snap-db"
 RAW = "https://raw.githubusercontent.com/{repo}/{branch}/{folder}"
 
 INDEX = "index.json"
+SNAP_NAME = re.compile(r"[a-z0-9][a-z0-9-]*")
 SCHEMA = 1
 
 # What a pulled project cannot tell you about itself: where its release is.
@@ -330,7 +333,8 @@ def within(into, relative):
 def _fetch_one(url, name, relative, about, target):
     """One file of a project, checked against the hash the index published."""
     try:
-        net.download(f"{url}/{name}/{relative}", target, about.get("sha256", ""))
+        net.download(f"{url}/{name}/{urllib.parse.quote(relative)}", target,
+                     about.get("sha256", ""))
     except (net.NetworkError, OSError) as exc:
         raise DatabaseError(f"{name}: could not fetch {relative}: {exc}") from exc
     if about.get("exec"):
@@ -339,6 +343,9 @@ def _fetch_one(url, name, relative, about, target):
 
 def fetch(name, into, found=None, url=None, reporter=None):
     """Download one snap's project files. Returns the directory written."""
+    if not SNAP_NAME.fullmatch(name):
+        raise DatabaseError(f"{name!r} is not a snap name -- refusing to write "
+                            f"a project directory called that")
     url = url or base_url()
     record = entry(name, found, url)
     # Before anything is written: half a project on disk helps nobody.

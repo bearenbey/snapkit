@@ -137,8 +137,9 @@ class Screen:
 
         # Off the one list of modes the keys are dispatched through.
         whole = FULL_SCREEN.get(self.board.mode)
-        if whole:
-            return whole(self)
+        drawn = whole(self) if whole else None
+        if drawn is not None:
+            return drawn
 
         body = Layout(name="body")
         if width >= SPLIT_AT and self.board.rows:
@@ -223,10 +224,10 @@ class Screen:
                      padding=(0, 1))
 
     def _asking_header(self):
-        return self._question(
-            "install", ACCENT,
-            (self.board.asking, "bold"),
-            ("  it is not signed, so this installs with --dangerous.  ", "dim"))
+        parts = [(self.board.asking, "bold")]
+        if self.board.asking_note:
+            parts.append((f"  {self.board.asking_note}  ", "dim"))
+        return self._question(self.board.asking_title or "confirm", ACCENT, *parts)
 
     def _confirm_header(self):
         return self._question(
@@ -502,7 +503,10 @@ class Screen:
         table.add_column("FILE", width=46, overflow="ellipsis")
         table.add_column("KIND", width=10)
         table.add_column("WHY", overflow="ellipsis")
-        for index, candidate in enumerate(self.board.picking.candidates):
+        picking = self.board.picking
+        if picking is None:
+            return None     # taken down between the mode and this frame
+        for index, candidate in enumerate(picking.candidates):
             here = index == self.board.pick_cursor
             table.add_row(Text("▸" if here else " ", style="bold " + ACCENT),
                           str(index + 1), candidate.name,
@@ -511,7 +515,7 @@ class Screen:
         hint = _keys((("↑↓", "choose"), ("1-9", "pick"), ("enter", "build it"),
                       ("esc", "give up")))
         return Panel(Group(table, Text(""), hint),
-                     title=f"{self.board.picking.title} -- which file?",
+                     title=f"{picking.title} -- which file?",
                      box=box.ROUNDED, border_style=ACCENT, padding=(0, 1))
 
     def _details(self):

@@ -120,6 +120,7 @@ class Snap:
         # The single-file register kept the recipe inline under its old name.
         if "snapcraft_yaml" in data and "recipe_text" not in data:
             taken["recipe_text"] = data["snapcraft_yaml"]
+        taken.setdefault("name", "")
         return cls(**taken)
 
     def to_dict(self):
@@ -208,9 +209,11 @@ class Database:
             snap = Snap.from_dict(data)
             snap.store_root = self.root
             snap.record_file = str(record)
-            if snap.name:
-                self.snaps[snap.name] = snap
-                self._resync(snap)
+            if not snap.name:
+                self.problems.append((record, "a record with no name"))
+                continue
+            self.snaps[snap.name] = snap
+            self._resync(snap)
         return self
 
     def _resync(self, snap):
@@ -281,6 +284,16 @@ class Database:
         self.snaps[snap.name] = snap
         self._write(snap)
         return snap
+
+    def claim(self, name, repo=""):
+        """Refuse a name that a snap made from somewhere else already holds."""
+        existing = self.snaps.get(name)
+        if existing is None:
+            return
+        if repo and existing.repo and existing.repo.lower() == repo.lower():
+            return
+        raise NameTaken(name, existing.repo or existing.directory or "a file",
+                        repo or "a file")
 
     def free_name(self, wanted):
         """`wanted`, or the first name like it that nothing else holds."""

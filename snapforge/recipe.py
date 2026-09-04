@@ -1,5 +1,6 @@
 """Writing the snapcraft.yaml."""
 
+import json
 import re
 import textwrap
 
@@ -19,6 +20,9 @@ PLUGS = {
 MAX_NAME = 40
 
 
+_YAML_WORDS = frozenset(("true", "false", "yes", "no", "on", "off", "null", "~"))
+
+
 def snap_name(text):
     """A snap name out of a repository name."""
     name = (text or "").strip().lower()
@@ -32,8 +36,16 @@ def snap_name(text):
         raise ValueError(f"no usable snap name in {text!r}")
     if name[0].isdigit():
         # A name must start with a letter, and this is cheaper than a build.
-        name = "s-" + name
-    return name[:MAX_NAME]
+        name = ("s-" + name)[:MAX_NAME].strip("-")
+    return name
+
+
+def _scalar(text):
+    """A one-line value, quoted only when YAML would read it as something else."""
+    plain = re.fullmatch(r"[A-Za-z0-9_(][^#:\"\\\[\]{}&*!|>%@`]*", text)
+    if plain and not text.endswith(" ") and text.lower() not in _YAML_WORDS:
+        return text
+    return json.dumps(text, ensure_ascii=False)
 
 
 def summarise(text, fallback):
@@ -184,7 +196,7 @@ def build(*, name, version, summary, description, license_id, kind, url,
            f"name: {name}",
            f"base: {base}",
            f"version: '{version}'",
-           f"summary: {summary}",
+           f"summary: {_scalar(summary)}",
            "description: |",
            _block(description),
            f"grade: {grade}",
@@ -192,7 +204,7 @@ def build(*, name, version, summary, description, license_id, kind, url,
     if license_id:
         out.append(f"license: {license_id}")
     if title:
-        out.append(f"title: {title}")
+        out.append(f"title: {_scalar(title)}")
     if repo_url:
         # A repack is exactly when somebody wants to see where it came from.
         out += [f"website: {repo_url}",
@@ -274,7 +286,7 @@ def repoint(yaml_text, old_version, new_version, old_url, new_url, sha=""):
     for line in yaml_text.splitlines():
         if re.match(r"^version:\s", line):
             line = f"version: '{new_version}'"
-        elif re.match(r"^\s*source:\s", line) and old_url in line:
+        elif re.match(r"^\s*source:\s", line) and old_url and old_url in line:
             line = line.replace(old_url, new_url)
         elif re.match(r"^\s*source-checksum:\s*sha256/", line) and sha:
             line = re.sub(r"(sha256/).*", lambda m: m.group(1) + sha, line)

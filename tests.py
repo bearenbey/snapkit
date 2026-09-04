@@ -41,7 +41,8 @@ def subprocess_result(returncode=0):
 
 # -- a .deb, made here so the reader can be tested without the network --------
 
-def make_deb(path, package="demo", version="1.2.3", binary="usr/bin/demo"):
+def make_deb(path, package="demo", version="1.2.3", binary="usr/bin/demo",
+             control_name="./control"):
     """A minimal but real .deb: an ar archive of three members."""
     def tar_gz(add):
         buffer = io.BytesIO()
@@ -53,7 +54,7 @@ def make_deb(path, package="demo", version="1.2.3", binary="usr/bin/demo"):
         text = (f"Package: {package}\nVersion: {version}\n"
                 f"Architecture: amd64\nHomepage: https://example.invalid\n"
                 f"Description: a demonstration\n so much to demonstrate\n").encode()
-        info = tarfile.TarInfo("./control")
+        info = tarfile.TarInfo(control_name)
         info.size = len(text)
         tar.addfile(info, io.BytesIO(text))
 
@@ -88,6 +89,39 @@ def upstreams():
     """Reading an upstream: the repository name, and which asset to take."""
     from snapforge import classify, github, project, update
 
+    @check("a download that dies after the connection opened is still a NetworkError")
+    def _():
+        # Only the connect was guarded: a stall mid-body was a bare TimeoutError.
+        from snapforge import net
+        import contextlib
+        import http.client
+
+        def failing(exc):
+            @contextlib.contextmanager
+            def _open(opener, url, **kw):
+                class Response:
+                    headers = {}
+                    def read(self, *a):
+                        raise exc
+                yield Response()
+            return _open
+
+        real = net._open
+        try:
+            with tempfile.TemporaryDirectory() as here:
+                for exc in (TimeoutError("stalled"), ConnectionResetError(),
+                            http.client.IncompleteRead(b"")):
+                    net._open = failing(exc)
+                    for call in (lambda: net.get_text("https://h/x"),
+                                 lambda: net.download("https://h/x", Path(here) / "x")):
+                        try:
+                            call()
+                            assert False, f"{exc!r} was not raised"
+                        except net.NetworkError:
+                            pass
+                    assert not (Path(here) / "x.part").exists(), "a .part was left"
+        finally:
+            net._open = real
     @check("github.parse_repo takes a url in any of its shapes")
     def _():
         for text in ("imputnet/helium-linux",
@@ -97,7 +131,8 @@ def upstreams():
                      "github.com/imputnet/helium-linux/releases/tag/0.1",
                      "https://github.com/imputnet/helium-linux.git?tab=readme"):
             same(github.parse_repo(text), "imputnet/helium-linux", text)
-        for bad in ("", "not a url", "https://gitlab.com/a/b"):
+        for bad in ("", "not a url", "https://gitlab.com/a/b",
+                    "https://github.com/torvalds"):
             try:
                 github.parse_repo(bad)
                 assert False, f"{bad!r} should not parse"
@@ -126,6 +161,15 @@ def upstreams():
                           ("1.13.1", "1.13.1"), ("v0.25.2-beta", "0.25.2-beta"),
                           ("release-2.1", "2.1"), ("app@1.2.3", "1.2.3")):
             same(github.version_of(tag), want, tag)
+
+    @check("a tag written in something other than ascii survives the round trip")
+    def _():
+        # A byte at a time turned the utf-8 in v1.0-ä into mojibake.
+        same(github._unquote("v1.0-%C3%A4"), "v1.0-\u00e4")
+        same(github._unquote("v1.0%20final"), "v1.0 final")
+        # A description carries more entities than the six that were listed.
+        same(github._unescape("Tom&#x27;s tool &amp; more &#8212; nice"),
+             "Tom\u0027s tool & more \u2014 nice")
     @check("classify keeps x86_64 and drops everything else")
     def _():
         # Splitting on separators turned x86_64 into x86, so 64-bit read as 32.
@@ -426,8 +470,30 @@ def recipes():
     def _():
         for text, want in (("helium-linux", "helium"), ("FreeTube", "freetube"),
                            ("my_cool_app", "my-cool-app"), ("signal-desktop", "signal"),
-                           ("draw.io-desktop", "draw-io"), ("2fa", "s-2fa")):
+                           ("draw.io-desktop", "draw-io"), ("2fa", "s-2fa"),
+                           # the s- prefix pushed a hyphen onto the end
+                           ("1" * 37 + "-abc", "s-" + "1" * 37)):
             same(recipe.snap_name(text), want, text)
+    @check("a summary YAML would read as something else is quoted")
+    def _():
+        # GitHub's own description is written in: "Helium: a browser" broke it.
+        for summary, want in (("a demo", "summary: a demo"),
+                              ("Helium: a browser", 'summary: "Helium: a browser"'),
+                              ("**Fast** tool", 'summary: "**Fast** tool"'),
+                              ("[WIP] thing", 'summary: "[WIP] thing"'),
+                              ("hello # world", 'summary: "hello # world"'),
+                              ("it's fine", "summary: it's fine"),
+                              ("yes", 'summary: "yes"')):
+            text = recipe.build(name="d", version="1", summary=summary,
+                                description="b", license_id="", kind="archive",
+                                url="u", command="bin/d", traits={"terminal"})
+            assert want in text, f"{summary!r}: {text.splitlines()[5]}"
+    @check("a recipe with no url to repoint is left alone, not shredded")
+    def _():
+        # "" is in every string, so every source: line was rewritten around it.
+        text = "name: d\nversion: '1.0'\nparts:\n  d:\n    source: .\n"
+        after = recipe.repoint(text, "1.0", "2.0", "", "https://h/new.deb")
+        assert "    source: .\n" in after, after
     @check("recipe.build emits what snapcraft needs")
     def _():
         text = recipe.build(name="demo", version="1.0", summary="a demo",
@@ -636,6 +702,11 @@ def register():
             same(fresh.names(), ["s0", "s1", "s3", "s4"], "the good ones were lost")
             same(len(fresh.problems), 1, "the bad one was not reported")
             same(fresh.problems[0][0].name, "s2.json")
+            # and one that parses but names no snap lands beside it
+            (root / "snaps" / "s3.json").write_text('{"repo": "a/b"}')
+            fresh = db.Database(root)
+            same(len(fresh.problems), 2, "the nameless one was not reported")
+            assert "s3" not in fresh.snaps
     @check("a record does not grow without bound as it is rebuilt")
     def _():
         snap = db.Snap(name="x")
@@ -730,6 +801,21 @@ def register():
             same(db.Database(path).get("bat").version, "2.0")
             same(store.free_name("bat"), "bat-2")
             same(store.free_name("nothing"), "nothing")
+            # and create asks first, so the project on disk is never written over
+            store.claim("bat", "sharkdp/bat")          # itself again: fine
+            store.claim("nothing")                      # nobody holds it: fine
+            for repo in ("someone/bat", ""):            # another repo, or a file
+                try:
+                    store.claim("bat", repo)
+                    assert False, f"{repo!r} was allowed to take bat"
+                except db.NameTaken:
+                    pass
+            store.add(db.Snap(name="imported", repo="", version="1.0"))
+            try:
+                store.claim("imported", "someone/imported")
+                assert False, "an import with no repo was replaced"
+            except db.NameTaken:
+                pass
     @check("search finds a snap by name, by repository, by summary, by url")
     def _():
         with tempfile.TemporaryDirectory() as home:
@@ -780,6 +866,27 @@ def payloads():
             same(payload.desktop, "usr/share/applications/demo.desktop")
             assert "gui" in payload.traits, payload.traits
             assert payload.summary.startswith("a demonstration"), payload.summary
+    @check("a control file stored without ./ is still read")
+    def _():
+        # extractfile raises for a missing name, so the fallback never ran.
+        with tempfile.TemporaryDirectory() as work:
+            work = Path(work)
+            deb = make_deb(work / "demo_1.2.3_amd64.deb", control_name="control")
+            same(ins.control_fields(deb).get("Version"), "1.2.3")
+    @check("a .deb whose data.tar is broken is refused, not a traceback")
+    def _():
+        with tempfile.TemporaryDirectory() as work:
+            work = Path(work)
+            deb = make_deb(work / "demo_1.2.3_amd64.deb")
+            raw = deb.read_bytes()
+            at = raw.index(b"data.tar.gz")
+            body = at + 60           # past the ar header, into the gzip stream
+            deb.write_bytes(raw[:body] + b"\0" * 16 + raw[body + 16:])
+            try:
+                ins.look(deb, "deb", work / "out", wanted="demo")
+                assert False, "a corrupt archive was read"
+            except ins.InspectionError:
+                pass
     @check("Terminal=true is a command-line program, not a window")
     def _():
         with tempfile.TemporaryDirectory() as work:
@@ -913,6 +1020,20 @@ def projects():
     """Projects that exist already: importing one, and writing one back out."""
     from snapforge import db, github, project, recipe, update
 
+    @check("a relative --dir is recorded as the directory it meant")
+    def _():
+        # "myproj" was stored as written, and read from every later cwd.
+        import os
+        from types import SimpleNamespace
+        origin = project.File(path=Path("/nowhere/tool-1.0.tar.gz"), version="1.0")
+        chosen = SimpleNamespace(kind="archive", name="tool-1.0.tar.gz")
+        payload = SimpleNamespace(version="1.0", summary="", command="bin/tool",
+                                  traits={"terminal"})
+        plan_ = SimpleNamespace(origin=origin, chosen=chosen, name="tool")
+        snap = project._record(plan_, payload, "myproj")
+        same(Path(snap.directory), (Path.cwd() / "myproj").resolve())
+        home = project._record(plan_, payload, "~/myproj")
+        same(Path(home.directory), Path(os.path.expanduser("~/myproj")).resolve())
     @check("a project deleted from disk comes back from the register, icon and all")
     def _():
         # The icon is kept beside the recipe, or the restored one names nothing.
@@ -1125,6 +1246,54 @@ def checking():
             assert asset is not None, "a genuinely behind snap was missed"
         finally:
             project.github.release = real
+    @check("a .deb's own Version: differing from its tag is not an update")
+    def _():
+        # release.version comes from the tag, snap.version from the control file.
+        from snapforge import sources
+        class Release:
+            version, tag = "1.2.3", "v1.2.3"
+        snap = db.Snap(name="demo", repo="a/b", kind="deb",
+                       version="1.2.3-1", tag="v1.2.3")
+        assert update._settled(snap, Release(), False), "reported behind"
+        snap.tag = "v1.2.2"
+        assert not update._settled(snap, Release(), False), "a new tag was missed"
+        # a folder has no tag on either side, so the version is what there is
+        found = sources.Release(version="1.2.3", asset="a", url="u", tag="")
+        no_tag = db.Snap(name="demo", kind="deb", version="1.2.3", tag="")
+        assert update._settled(no_tag, found, False)
+        no_tag.version = "1.2.2"
+        assert not update._settled(no_tag, found, False)
+    @check("a file with no version reads as 0 at check time, as it did at create")
+    def _():
+        # create wrote "0"; check read ""; every check said update, and the
+        # update then wrote version: '' into the recipe.
+        from snapforge import sources
+        with tempfile.TemporaryDirectory() as here:
+            here = Path(here)
+            (here / "tool-linux-x86_64.tar.gz").write_bytes(b"x")
+            found = sources.resolve({"kind": "local", "glob": "*.tar.gz"},
+                                    directory=here)
+            same(found.version, "0")
+    @check("a verifier is given the download's url, not asked the release for one")
+    def _():
+        # A GitHub release has no url of its own, and the tar-member check
+        # read one off it anyway.
+        from snapforge import github, sources
+        with tempfile.TemporaryDirectory() as here:
+            path = Path(here) / "a.tar.gz"
+            with tarfile.open(path, "w:gz") as tar:
+                info = tarfile.TarInfo("app-1.0/configure")
+                tar.addfile(info, io.BytesIO(b""))
+            release = github.Release(repo="a/b", tag="v1.0", version="1.0")
+            said = sources.verify({"kind": "tar-member", "member": "app-{version}/configure"},
+                                  path, release, "https://h/a.tar.gz")
+            assert "configure" in said, said
+            try:
+                sources.verify({"kind": "tar-member", "member": "nope"},
+                               path, release, "https://h/a.tar.gz")
+                assert False, "a missing member passed"
+            except sources.NetworkError as exc:
+                assert "https://h/a.tar.gz" in str(exc), exc
     @check("a snap with nothing to match against is not checked at all")
     def _():
         # A guessed upstream stays inert: Signal's .deb is not on GitHub at all.
@@ -1430,6 +1599,40 @@ def tracking():
                 except SystemExit:
                     pass
 
+    @check("an option between positionals is read, not an unrecognized argument")
+    def _():
+        # `db pull --dir x btop` stopped at btop with argparse.parse_args.
+        from snapforge import cli
+        for argv, want in ((["db", "pull", "--dir", "x", "btop"],
+                            ("db", ["pull", "btop"])),
+                           (["update", "foo", "--force", "bar"],
+                            ("update", ["foo", "bar"])),
+                           (["create", "--name", "foo", "o/r"], ("create", ["o/r"])),
+                           (["create", "o/r", "--name", "foo"], ("create", ["o/r"])),
+                           ([], ("", []))):
+            args = cli.parse_args(argv)
+            same((args.command, args.rest), want, argv)
+    @check("create with a name already held stops before the project is written")
+    def _():
+        # The project was written first, on top of the one the name belonged to.
+        from types import SimpleNamespace
+        from snapforge import cli, db, project
+        with tempfile.TemporaryDirectory() as home:
+            store = db.Database(Path(home) / "snapkit.json")
+            store.add(db.Snap(name="bat", repo="sharkdp/bat", version="1.0"))
+            made = SimpleNamespace(name="bat", origin=SimpleNamespace(repo="someone/bat"))
+            written = []
+            real = project.create
+            project.create = lambda *a, **k: written.append(a)
+            try:
+                cli._finish_create(store, SimpleNamespace(directory=None), None,
+                                   made, "someone/bat")
+                assert False, "it went ahead"
+            except SystemExit:
+                pass
+            finally:
+                project.create = real
+            same(written, [], "the project was written anyway")
     @check("every command is in the usage text, so none is reachable but unlisted")
     def _():
         import re as regex
@@ -1443,6 +1646,17 @@ def tracking():
             assert name in listed, f"`snapkit {name}` runs and the usage text omits it"
         for name in cli.ALIASES:
             assert name in cli.COMMANDS, f"{name} is listed as an alias of nothing"
+
+    @check("remove off a pipe leaves the snap alone rather than raising")
+    def _():
+        import builtins
+        with tempfile.TemporaryDirectory() as home:
+            store = db.Database(Path(home))
+            store.add(db.Snap(name="demo", repo="a/b", version="1.0"))
+            args = cli.parse_args(["remove", "demo"])
+            with patched(builtins, input=_raise(EOFError())):
+                same(cli.cmd_remove(store, args, Quiet()), 1)
+            assert "demo" in store, "an unanswered question removed it anyway"
 
     @check("track kinds prints every kind, so none is reachable but unlisted")
     def _():
@@ -1665,6 +1879,13 @@ def dashboard():
         reader.pending = ""
         reader._parse("\x1b")
         same(reader.pending, "\x1b", "Escape was not held back")
+
+        # a sequence nothing here knows (F1 on the console) must not keep
+        # every key after it in the buffer for ever
+        reader.pending = ""
+        reader._parse("\x1b[[A")
+        same(reader._parse("q"), ["q"], "a key after an unknown sequence was lost")
+        same(reader.pending, "", "an unknown sequence was held for ever")
     @check("only q quits")
     def _():
         from snapforge.tui import Dashboard
@@ -2079,6 +2300,62 @@ def dashboard():
             console.print(board.render())
             board.reading_log, board.filtering, board.needle = False, True, "s1"
             console.print(board.render())
+    @check("the picker is taken down by the thread that draws it")
+    def _():
+        # The worker cleared it between the mode check and the draw, so a frame
+        # read .candidates off None and the dashboard died.
+        from rich.console import Console
+        from snapforge.tui import Dashboard
+        with tempfile.TemporaryDirectory() as home:
+            board = Dashboard(db=db.Database(Path(home) / "snapkit.json"))
+            board.picking = type("Plan", (), {
+                "title": "x", "candidates": [type("C", (), {
+                    "name": "a", "kind": "deb", "why": "w"})()]})()
+            board.pick_cursor = 0
+            board.handle("enter")
+            same(board.picking, None, "the picker stayed up after a choice")
+            assert board.picked.is_set(), "the worker was not told"
+            # and a frame that finds it gone draws the list, not a traceback
+            console = Console(file=io.StringIO(), width=100, height=30)
+            console.print(board.render())
+    @check("a yes/no says what it is about, not always 'install'")
+    def _():
+        from rich.console import Console
+        from snapforge.tui import Dashboard, DANGEROUS
+        with tempfile.TemporaryDirectory() as home:
+            board = Dashboard(db=db.Database(Path(home) / "snapkit.json"))
+            for title, note in (("update", ""), ("install", DANGEROUS)):
+                board.asking, board.asking_title, board.asking_note = "go?", title, note
+                buffer = io.StringIO()
+                Console(file=buffer, width=100, height=30).print(board.render())
+                drawn = buffer.getvalue()
+                assert title in drawn, f"{title} missing"
+                same("--dangerous" in drawn, bool(note), f"the note for {title}")
+    @check("a paused keyboard still paces the loop instead of spinning it")
+    def _():
+        from snapforge.keys import Keyboard
+        reader = Keyboard.__new__(Keyboard)
+        reader.saved, reader.pending = None, ""
+        started = time.monotonic()
+        same(reader.keys(0.05), [])
+        assert time.monotonic() - started >= 0.04, "it returned at once"
+    @check("a worker giving the terminal back after quit does not take it again")
+    def _():
+        # Ctrl-C at the sudo prompt: the main thread had left the screen, and
+        # the worker's cleanup re-entered it with nothing left to undo that.
+        from snapforge.tui import Dashboard
+        with tempfile.TemporaryDirectory() as home:
+            board = Dashboard(db=db.Database(Path(home) / "snapkit.json"))
+            calls = []
+            board.live = type("Live", (), {"stop": lambda s: calls.append("stop"),
+                                           "start": lambda s: calls.append("start")})()
+            with board.suspended():
+                board.closing = True
+            same(calls, ["stop"], "the screen was restarted after teardown")
+            board.closing, calls[:] = False, []
+            with board.suspended():
+                pass
+            same(calls, ["stop", "start"])
     @check("the screen fits the terminal it is given")
     def _():
         # A fixed column set squeezed REPOSITORY to nothing at eighty columns.
@@ -2735,6 +3012,7 @@ def updater():
 def from_a_file():
     """Packaging a file on disk, and keeping it in step with its folder."""
     from snapforge import classify, db, github, local, project, sources, update
+    from snapforge.net import NetworkError
 
     @check("a zip entry cannot chmod its way out of where it is unpacked")
     def _():
@@ -2920,6 +3198,15 @@ def from_a_file():
             found, candidates = project._looking_back("wez/wezterm", empty, Quiet())
         same(found.tag, real, "did not reach the release with a build on it")
         same([c.name for c in candidates], ["wezterm-1.Ubuntu22.04.deb"])
+
+    @check("a tag feed that cannot be read leaves the release as it was")
+    def _():
+        # NetworkError was never imported here, so this raised NameError.
+        empty = github.Release(repo="a/b", tag="v1", version="1")
+        with patched(project.github,
+                     recent_tags=_raise(NetworkError("HTTP 404"))):
+            found, candidates = project._looking_back("a/b", empty, Quiet())
+        same((found, candidates), (empty, []))
 
     @check("a package's name survives the hyphens in it")
     def _():
@@ -3167,6 +3454,18 @@ def database():
             path.write_text(body)
         return directory
 
+    @check("an index key that is not a snap name writes nothing")
+    def _():
+        # The key became a directory name, and "../x" is a fine key.
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home)
+            found = {"snaps": {"../escape": {"files": {}}}}
+            try:
+                snapdb.fetch("../escape", root / "here", found, url="file:///x")
+                assert False, "it was written"
+            except snapdb.DatabaseError:
+                pass
+            assert not (root / "escape").exists()
     @check("a build's leavings stay out of the database")
     def _():
         with tempfile.TemporaryDirectory() as home:
@@ -3489,6 +3788,19 @@ def dependencies():
                 assert False, "junk was read as an ELF"
             except elf.NotAnELF:
                 pass
+
+    @check("a file with the magic and nothing after it is refused, not read")
+    def _():
+        # A truncated .so in a payload was an IndexError out of bundled_libraries.
+        with tempfile.TemporaryDirectory() as home:
+            stub = Path(home) / "libtruncated.so"
+            stub.write_bytes(b"\x7fELF")
+            try:
+                elf.read(stub)
+                assert False, "four bytes were read as an ELF"
+            except elf.NotAnELF:
+                pass
+            same(depends.bundled_libraries(home), {})
 
     @check("a Depends: field is read the way dpkg reads it")
     def _():

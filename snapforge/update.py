@@ -164,10 +164,12 @@ def _settled(snap, release, force):
     if missing_artifact(snap):
         # Current, but the file its build opens is gone, so fetch it back.
         return False
-    if release.version != snap.version:
-        return False
-    # Only when both have one: an imported project has a version and no tag.
-    return not (snap.tag and release.tag and release.tag != snap.tag)
+    # A .deb's own Version: can differ from the tag it was released under,
+    # so where both sides have a tag, the tag decides. An imported project
+    # has a version and no tag, and a folder has neither, so they compare versions.
+    if snap.tag and release.tag:
+        return release.tag == snap.tag
+    return release.version == snap.version
 
 
 def _asset_for(snap, release):
@@ -249,11 +251,14 @@ def _update_recipe(snap, release, asset, reporter):
         if not sha or snap.verify:
             target = Path(scratch) / asset.name
             sha = _fetch(asset.url, target, asset.sha, reporter) or sha
-            _verified(snap, target, release, reporter)
+            _verified(snap, target, release, asset.url, reporter)
 
     if snap.source_anchor:
         # Anchored: a recipe can name more than one source.
         yaml_path = snap.path / "snap" / "snapcraft.yaml"
+        if not yaml_path.is_file():
+            raise ForgeError(f"no recipe at {yaml_path} -- {snap.name} is anchored "
+                             f"to a line in it, so there has to be one")
         changes = rewrite.repoint_yaml(
             yaml_path, snap.source_anchor, asset.url, sha,
             release.version if snap.write_version else "")
@@ -262,6 +267,9 @@ def _update_recipe(snap, release, asset, reporter):
         return
 
     old_url = _source_url(snap.snapcraft_yaml)
+    if not old_url:
+        raise ForgeError(f"{snap.name}'s recipe has no source: url to repoint -- "
+                         f"give the record a source_anchor that names the line")
     snap.snapcraft_yaml = recipe.repoint(
         snap.snapcraft_yaml, snap.version, release.version, old_url, asset.url, sha)
 
@@ -287,7 +295,7 @@ def _update_artifact(snap, release, asset, reporter, was):
         else:
             _fetch(asset.url, fetched, asset.sha, reporter)
         try:
-            _verified(snap, fetched, release, reporter)
+            _verified(snap, fetched, release, asset.url, reporter)
         except BaseException:
             # An interrupt must not leave a file that was never checked.
             fetched.unlink(missing_ok=True)
@@ -311,11 +319,11 @@ def _reread_recipe(snap):
         snap.snapcraft_yaml = yaml_path.read_text(encoding="utf-8")
 
 
-def _verified(snap, path, release, reporter):
+def _verified(snap, path, release, url, reporter):
     """Run the record's check over a download, and say what it found."""
     if not snap.verify:
         return ""
-    found = sources.verify(snap.verify, path, release)
+    found = sources.verify(snap.verify, path, release, url)
     if found:
         reporter.detail(found)
     return found
