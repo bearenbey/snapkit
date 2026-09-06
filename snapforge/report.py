@@ -47,9 +47,9 @@ class PlainReporter(Reporter):
         self.stream = stream or sys.stdout
         self._bar_open = False
 
-    def _print(self, text=""):
+    def _print(self, text="", stream=None):
         self._end_bar()
-        print(text, file=self.stream, flush=True)
+        print(text, file=stream or self.stream, flush=True)
 
     def step(self, text):
         self._print(f"{colour(36, '==>', self.stream)} {text}")
@@ -58,9 +58,7 @@ class PlainReporter(Reporter):
         self._print(f"    {text}")
 
     def warn(self, text):
-        self._end_bar()
-        print(f"{colour(33, 'warning:', sys.stderr)} {text}",
-              file=sys.stderr, flush=True)
+        self._print(f"{colour(33, 'warning:', sys.stderr)} {text}", sys.stderr)
 
     def result(self, text):
         self._print(f"{colour(32, '==>', self.stream)} {text}")

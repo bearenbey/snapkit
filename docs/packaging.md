@@ -149,8 +149,8 @@ rather than guessed:
   build that brings its own Qt is not asked to stage one.
 - **A `.deb` is asked as well.** Its `Depends:` is the packager's own answer
   and covers things the binary never names, such as a plugin opened later.
-- **What the platform already has is subtracted.** `core24` supplies 287
-  libraries and the gnome extension another 1376. Staging those again is
+- **What the platform already has is subtracted.** `core24` supplies 291
+  libraries and the gnome extension another 1401. Staging those again is
   wasted space at best and a fight with the platform snap at worst, which is
   why no recipe here both uses the extension and stages GTK.
 - **noble renamed a hundred packages.** `libasound2` is `libasound2t64` on

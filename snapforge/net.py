@@ -81,15 +81,21 @@ def _open(opener, url, method="GET", timeout=META_TIMEOUT, retries=1):
     raise NetworkError(f"{url}: {last}")
 
 
-def get_text(url, timeout=META_TIMEOUT):
-    """The body of a GET, following redirects, decoded as text."""
+@contextmanager
+def _guarded(url):
+    """Everything a request can raise, as a NetworkError that names the url."""
     try:
-        with _open(_follow, url, timeout=timeout) as response:
-            return response.read().decode("utf-8", "replace")
+        yield
     except urllib.error.HTTPError as exc:
         raise NetworkError(f"{url}: HTTP {exc.code}") from exc
     except _READ_ERRORS as exc:
         raise NetworkError(f"{url}: {exc}") from exc
+
+
+def get_text(url, timeout=META_TIMEOUT):
+    """The body of a GET, following redirects, decoded as text."""
+    with _guarded(url), _open(_follow, url, timeout=timeout) as response:
+        return response.read().decode("utf-8", "replace")
 
 
 def head_location(url, timeout=META_TIMEOUT):
@@ -121,7 +127,8 @@ def download(url, dest, sha="", on_progress=None):
     done = 0
 
     try:
-        with _open(_follow, url, timeout=DOWNLOAD_TIMEOUT, retries=2) as response:
+        with _guarded(url), \
+                _open(_follow, url, timeout=DOWNLOAD_TIMEOUT, retries=2) as response:
             total = int(response.headers.get("Content-Length") or 0)
             if on_progress:
                 on_progress(0, total)
@@ -136,13 +143,8 @@ def download(url, dest, sha="", on_progress=None):
                     done += len(block)
                     if on_progress:
                         on_progress(done, total)
-    except urllib.error.HTTPError as exc:
-        part.unlink(missing_ok=True)
-        raise NetworkError(f"{url}: HTTP {exc.code}") from exc
-    except _READ_ERRORS as exc:
-        part.unlink(missing_ok=True)
-        raise NetworkError(f"{url}: {exc}") from exc
     except BaseException:
+        # Whatever stopped it, a half-written file must not be left behind.
         part.unlink(missing_ok=True)
         raise
 

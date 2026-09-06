@@ -5,11 +5,11 @@
 
 A folder is the honest answer when a file was handed to you, but it is the
 wrong one when the version really is published somewhere, just not as a
-GitHub release. Eight of the projects packaged here are like that. Signal,
+GitHub release. Nine of the projects packaged here are like that. Signal,
 Sublime Text and Unity Hub publish into apt repositories of their own. Emacs
 and ffmpeg publish a directory listing of every release there has ever been.
-Discord answers a download endpoint with a redirect and puts the version in
-the path it redirects to. mpv and RetroArch do use GitHub, but attach no
+Discord and Mozilla, for Firefox ESR, answer a download endpoint with a
+redirect and put the version in the path it redirects to. mpv and RetroArch do use GitHub, but attach no
 source tarball, so what there is to fetch is the archive GitHub rolls from a
 tag.
 
@@ -28,14 +28,15 @@ The kinds, and what each one needs:
 
 | kind | how it finds the version | needs |
 | --- | --- | --- |
-| `apt` | the newest amd64 stanza in a `Packages` index, ordered the way dpkg orders versions | `base`, `package`, and `index` if it is not the Debian default path |
+| `apt` | the newest stanza for this architecture in a `Packages` index, ordered the way dpkg orders versions | `base`, `package`, and `index` if it is not the Debian default path |
 | `index` | a regex with one group, over a listing of every release | `url`, `pattern`, `asset` |
 | `redirect` | a HEAD request, and a regex over where it redirects to | `url`, `pattern`, `asset`, `download` |
 | `tag-archive` | the newest tag on a GitHub repository | `repo`, `asset`, `download`, and `prefix` if the tag has one |
 | `local` | the newest matching file in the project folder | nothing, though `glob` narrows it |
 
 `asset` and `download` are templates: `{version}`, `{tag}` and `{asset}` are
-filled in once the version is known. `glob` matches every version of the file
+filled in once the version is known, and `{arch}` anywhere a path spells the
+architecture. `glob` matches every version of the file
 so the superseded one is cleaned up, and `local` renames it on the way in, for
 the upstreams whose filename changes every release.
 

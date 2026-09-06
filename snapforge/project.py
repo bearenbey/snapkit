@@ -1,16 +1,16 @@
 """From a repository or a file to a project, and from that to a .snap."""
 
-import shutil
 import contextlib
+import shutil
 import subprocess
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import (arch, classify, depends, github, inspect, local, net, recipe,
+               sources)
 from . import build as buildlib
-from . import arch, classify, depends, github, inspect, local, net, recipe
-from . import sources
 from .db import Snap, now
 from .net import NetworkError
 
@@ -31,10 +31,6 @@ class Plan:
     @property
     def title(self):
         return self.origin.title
-
-    @property
-    def rejected(self):
-        return self.origin.rejected
 
 
 @dataclass
@@ -64,10 +60,6 @@ class Release:
     @property
     def version(self):
         return self.release.version
-
-    @property
-    def rejected(self):
-        return classify.rejected(self.release.assets)
 
     def obtain(self, chosen, scratch, reporter):
         """Fetch the asset, and say what arrived."""
@@ -99,7 +91,6 @@ class File:
     url = ""
     description = ""
     license = ""
-    rejected = ()
 
     @property
     def title(self):
@@ -310,7 +301,7 @@ def _open_payload(archive, plan_, reporter, destination):
 
 def _is_source(plan_, payload):
     """Why a source release cannot be packaged the way a built one is."""
-    where = getattr(plan_.origin, "repo", "") or plan_.chosen.name
+    where = plan_.origin.repo or plan_.chosen.name
     return (
         f"{plan_.chosen.name} is source, not a build: nothing in it is "
         f"compiled, and it builds with {payload.builds_with}.\n"
@@ -477,6 +468,13 @@ def package(snap, reporter, build_it=True, extra=()):
     return build(snap, reporter, extra)
 
 
+def _terminal(reporter):
+    """The terminal, handed over for a subprocess unless the reporter keeps it."""
+    # A front end taking the output does not need the terminal as well.
+    return contextlib.nullcontext() if reporter.captures_output \
+        else reporter.suspended()
+
+
 def run_reported(command, reporter, directory, shell=False):
     """Run a command, streamed to the reporter or given the terminal."""
     if reporter.captures_output:
@@ -505,48 +503,9 @@ def build(snap, reporter, extra=()):
         clean_stale_parts(directory, reporter, extra)
 
     if snap.pack:
-        # pack.py is imported, not run, so it needs nothing on the path.
-        reporter.step(f"{snap.pack} ({directory})")
-        # A front end taking the output does not need the terminal as well.
-        holding = contextlib.nullcontext() if reporter.captures_output \
-            else reporter.suspended()
-        with holding:
-            try:
-                buildlib.run_pack(snap.name, directory, snap.pack, reporter,
-                                  extra)
-            except buildlib.BuildError as exc:
-                raise ForgeError(str(exc)) from exc
-            except subprocess.CalledProcessError as exc:
-                command = " ".join(str(c) for c in exc.cmd) \
-                    if isinstance(exc.cmd, list) else exc.cmd
-                raise ForgeError(f"{command} exited with status "
-                                 f"{exc.returncode}") from exc
+        _run_pack(snap, directory, reporter, extra)
     else:
-        if snap.build_with:
-            command, shell = snap.build_with, True
-            reporter.step(f"{snap.build_with} ({directory})")
-        else:
-            if not (directory / "snap" / "snapcraft.yaml").is_file():
-                raise ForgeError(f"no snap/snapcraft.yaml at {directory} -- "
-                                 f"write it out first")
-            try:
-                buildlib.snapcraft_preflight("--destructive-mode" in extra,
-                                             reporter)
-            except buildlib.BuildError as exc:
-                raise ForgeError(str(exc)) from exc
-            command, shell = ["snapcraft", "pack", *extra], False
-            reporter.step(f"snapcraft pack ({directory})")
-
-        done = run_reported(command, reporter, directory, shell)
-        if done.returncode != 0 and not shell:
-            # A wedged container kills every later build before it starts.
-            stale = buildlib.stale_instance()
-            if stale and buildlib.drop_instance(stale):
-                reporter.warn(f"removed the wedged build container {stale}, "
-                              f"and building again")
-                done = run_reported(command, reporter, directory, shell)
-        if done.returncode != 0:
-            raise ForgeError(f"the build exited with status {done.returncode}")
+        _run_command(snap, directory, reporter, extra)
 
     made = _newest(p for p in directory.glob("*.snap") if p.name not in before)
     # A rebuild of the same version overwrites rather than adds.
@@ -575,6 +534,50 @@ def _advice(kind, detail):
     if kind == "library":
         return "missing" if "missing dependency" in detail else "unused"
     return kind if kind in LINT_ADVICE else ""
+
+
+def _run_pack(snap, directory, reporter, extra):
+    """Hand the project to its own pack.py, which is imported and called."""
+    # Imported, not run, so it needs nothing on the path.
+    reporter.step(f"{snap.pack} ({directory})")
+    with _terminal(reporter):
+        try:
+            buildlib.run_pack(snap.name, directory, snap.pack, reporter, extra)
+        except buildlib.BuildError as exc:
+            raise ForgeError(str(exc)) from exc
+        except subprocess.CalledProcessError as exc:
+            command = " ".join(str(c) for c in exc.cmd) \
+                if isinstance(exc.cmd, list) else exc.cmd
+            raise ForgeError(f"{command} exited with status "
+                             f"{exc.returncode}") from exc
+
+
+def _run_command(snap, directory, reporter, extra):
+    """Run the project's own build command, or snapcraft, once or twice."""
+    if snap.build_with:
+        command, shell = snap.build_with, True
+        reporter.step(f"{snap.build_with} ({directory})")
+    else:
+        if not (directory / "snap" / "snapcraft.yaml").is_file():
+            raise ForgeError(f"no snap/snapcraft.yaml at {directory} -- "
+                             f"write it out first")
+        try:
+            buildlib.snapcraft_preflight("--destructive-mode" in extra, reporter)
+        except buildlib.BuildError as exc:
+            raise ForgeError(str(exc)) from exc
+        command, shell = ["snapcraft", "pack", *extra], False
+        reporter.step(f"snapcraft pack ({directory})")
+
+    done = run_reported(command, reporter, directory, shell)
+    if done.returncode != 0 and not shell:
+        # A wedged container kills every later build before it starts.
+        stale = buildlib.stale_instance()
+        if stale and buildlib.drop_instance(stale):
+            reporter.warn(f"removed the wedged build container {stale}, "
+                          f"and building again")
+            done = run_reported(command, reporter, directory, shell)
+    if done.returncode != 0:
+        raise ForgeError(f"the build exited with status {done.returncode}")
 
 
 def _say_lint(reporter):

@@ -152,8 +152,7 @@ def resolve(root="", command="", gui=False, control=None):
 
 def _looks_supplied(package, lowered):
     """A last look for a package whose library the platform turns out to have."""
-    stem = package[: -len("t64")] if package.endswith("t64") else package
-    found = re.match(r"^(.+?)-?(\d+)$", stem)
+    found = re.match(r"^(.+?)-?(\d+)$", package.removesuffix("t64"))
     if not found:
         return False
     # Wrong here is one package too many; wrong the other way does not build.
@@ -178,5 +177,4 @@ def _is_library(package):
 
 def _family(package):
     """A name without its soname number, so libmpv1 and libmpv2 meet."""
-    stem = package[: -len("t64")] if package.endswith("t64") else package
-    return re.sub(r"-?\d+(?:\.\d+)*$", "", stem)
+    return re.sub(r"-?\d+(?:\.\d+)*$", "", package.removesuffix("t64"))

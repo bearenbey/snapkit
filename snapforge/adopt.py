@@ -155,6 +155,7 @@ def read(directory, repo=None):
     artifact, kind = find_artifact(directory, text)
     source = source_in(text)
     version = yaml_field(text, "version") or version_from(source, artifact)
+    has_pack = (directory / "pack.py").is_file()
 
     # An inferred repository is recorded but left inert.
     confirmed = bool(repo)
@@ -177,9 +178,9 @@ def read(directory, repo=None):
         base=yaml_field(text, "base") or "core24",
         command=_first_command(text),
         # pack.py takes a Build; build.py is older and run as a program.
-        pack="pack.py" if (directory / "pack.py").is_file() else "",
+        pack="pack.py" if has_pack else "",
         build_with=("./build.py" if (directory / "build.py").is_file()
-                    and not (directory / "pack.py").is_file() else ""),
+                    and not has_pack else ""),
         directory=str(directory),
         recipe_text=text if is_snapcraft else "",
         created=now(),

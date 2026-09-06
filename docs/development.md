@@ -19,8 +19,9 @@ downloading one, so the archive reader is checked against bytes the test file
 made and knows the shape of.
 
 One function per subject: upstreams, architectures, recipes, register,
-payloads, projects, checking, dashboard, updater, from_a_file, database,
-tracking. A failure names the area before it names the case.
+payloads, reading_payloads, projects, checking, dashboard, updater,
+from_a_file, database, tracking, dependencies, imports. A failure names the
+area before it names the case.
 
 Several exist because of bugs that were in here:
 
@@ -106,7 +107,7 @@ do neither.
   each, all sitting in `projects/`. `snapkit prune` deletes every build but
   the newest; nothing runs it for you.
 
-- The 22 projects in `seed.py` name amd64 asset globs, because that is
+- The 23 projects in `seed.py` name amd64 asset globs, because that is
   what this machine is. The tool is not tied to it; that list is.
 - `grade: devel` on the generated recipes' sibling, because this tool is new.
 - A snap built from someone else's release is not published or endorsed by

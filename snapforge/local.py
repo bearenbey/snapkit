@@ -91,9 +91,10 @@ def find(directory, pattern=None):
     directory = Path(directory)
     here = (sorted(p for p in directory.glob(pattern) if p.is_file())
             if pattern else classify.packages(directory))
+    # Nothing rejection() lets through is a shape describe() cannot name.
     found = [describe(path) for path in here
              if not classify.rejection(path.name)]
-    return sorted((f for f in found if f), key=lambda f: (-f.score, f.name))
+    return sorted(found, key=lambda f: (-f.score, f.name))
 
 
 def newest(directory, pattern=None):
@@ -113,5 +114,4 @@ def looks_like_path(text):
         return False
     if text.startswith(("http://", "https://", "git@")):
         return False
-    expanded = Path(text).expanduser()
-    return expanded.exists()
+    return Path(text).expanduser().exists()

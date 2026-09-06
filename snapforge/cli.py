@@ -71,7 +71,7 @@ def can_ask(args):
 
 def ask_yes_no(question, default=False):
     """A yes/no on the terminal, with no as the default."""
-    suffix = "[y/N]" if not default else "[Y/n]"
+    suffix = "[Y/n]" if default else "[y/N]"
     try:
         answer = input(f"{question} {suffix} ").strip().lower()
     except EOFError:
@@ -151,9 +151,7 @@ def main(argv=None):
     try:
         return handler(db, args, reporter)
     except (project.ForgeError, NetworkError, github.NotFound,
-            snapdb.DatabaseError, DatabaseError) as exc:
-        die(str(exc))
-    except ValueError as exc:
+            snapdb.DatabaseError, DatabaseError, ValueError) as exc:
         die(str(exc))
     except KeyError as exc:
         die(exc.args[0])
@@ -809,8 +807,7 @@ def cmd_install(db, args, reporter):
 
 def cmd_prune(db, args, reporter):
     """Delete the builds and files a project no longer needs."""
-    snaps = [db.get(name) for name in args.rest] if args.rest else db.all()
-    stale = [(snap, update.prunable(snap)) for snap in snaps]
+    stale = [(snap, update.prunable(snap)) for snap in targets_of(db, args)]
     stale = [(snap, files) for snap, files in stale if files]
     if not stale:
         print("nothing to prune")

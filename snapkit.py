@@ -6,11 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from snapforge.cli import main
+from snapforge.cli import entry
 
 if __name__ == "__main__":
-    try:
-        raise SystemExit(main())
-    except KeyboardInterrupt:
-        print()
-        raise SystemExit(130) from None
+    entry()

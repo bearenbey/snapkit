@@ -37,7 +37,7 @@ what it tracks now, so changing one word is one word rather than all of them:
 ```text
 ╭─────────────────────────────────── track ────────────────────────────────────╮
 │ ▸ sublime-text  apt base=https://download.sublimetext.com package=sublime-te…│
-│   apt base= package=                       the newest amd64 stanza in an apt…│
+│   apt base= package=                       the newest stanza for this archi…│
 │   index url= pattern= asset=               the newest version named in a lis…│
 │   redirect url= pattern= asset= download=  the version in the URL a download…│
 │   tag-archive repo= asset= download=       a GitHub tag, for a project that …│

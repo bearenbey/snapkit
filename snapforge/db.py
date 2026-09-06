@@ -13,15 +13,6 @@ from .github import parse_repo
 # How many builds of one snap to keep the detail of.
 HISTORY_KEPT = 20
 
-# The field order, so a hand edit and a rewrite do not diff the whole file.
-ORDER = ("name", "repo", "url", "upstream", "kind", "style", "version", "tag",
-         "asset", "asset_pattern", "local_asset", "asset_glob", "source_anchor",
-         "write_version", "checksums", "verify", "summary", "description", "license",
-         "confinement", "grade", "base", "command", "pack", "build_with",
-         "icon", "plugs", "directory", "created", "updated", "builds",
-         "history")
-
-
 def home():
     """Where the register and the generated projects live."""
     for name in ("SNAPKIT_HOME", "SNAP_USER_COMMON"):
@@ -39,20 +30,24 @@ def default_path():
 
 @dataclass
 class Snap:
-    """One registered snap."""
+    """One registered snap.
+
+    The fields are in the order the record is written, so a hand edit and a
+    rewrite do not diff the whole file.
+    """
 
     name: str
     repo: str = ""                  # owner/name on GitHub
     url: str = ""                   # the repository page
+    # A non-GitHub upstream; empty means `repo` above. See sources.py.
+    upstream: dict = field(default_factory=dict)
     kind: str = ""                  # deb | archive | appimage
+    # recipe: snapcraft fetches the source. artifact: the file sits here.
+    style: str = ""
     version: str = ""
     tag: str = ""
     asset: str = ""                 # the file this was built from
     asset_pattern: str = ""         # how to find that file next release
-    # A non-GitHub upstream; empty means `repo` above. See sources.py.
-    upstream: dict = field(default_factory=dict)
-    # recipe: snapcraft fetches the source. artifact: the file sits here.
-    style: str = ""
     local_asset: str = ""           # artifact: what the build opens it as
     asset_glob: str = ""            # artifact: matches every version's file
     # Which source: line to repoint, so another part's is left alone.
@@ -78,8 +73,8 @@ class Snap:
     directory: str = ""
     created: str = ""
     updated: str = ""
-    history: list = field(default_factory=list)   # the last few, in full
     builds: int = 0                              # how many there have been
+    history: list = field(default_factory=list)   # the last few, in full
 
     # None is "not read yet"; an imported project genuinely has no recipe.
     recipe_text: str | None = None
@@ -126,12 +121,9 @@ class Snap:
     def to_dict(self):
         """The record as it is written down -- the recipe is not part of it."""
         raw = asdict(self)
-        raw.pop("recipe_text", None)
-        raw.pop("store_root", None)
-        raw.pop("record_file", None)
-        ordered = {key: raw[key] for key in ORDER if key in raw}
-        ordered.update({k: v for k, v in raw.items() if k not in ordered})
-        return ordered
+        for kept_out in ("recipe_text", "store_root", "record_file"):
+            raw.pop(kept_out, None)
+        return raw
 
     def record_build(self, version, at=None):
         """Note that this version was built, most recent last."""

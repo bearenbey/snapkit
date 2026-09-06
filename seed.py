@@ -189,7 +189,7 @@ def projects(wanted=()):
     return found
 
 
-def describe(name, config, repo):
+def describe(config, repo):
     if repo:
         return f"{repo}  {config.get('style', 'recipe')}"
     if config.get("upstream"):
@@ -216,7 +216,7 @@ def main(argv):
         repo = GITHUB.get(name)
 
         if dry:
-            print(f"  {directory.name:<{width}}  {describe(name, config, repo)}")
+            print(f"  {directory.name:<{width}}  {describe(config, repo)}")
             continue
 
         try:
@@ -238,7 +238,7 @@ def main(argv):
             snap.builds, snap.history = existing.builds, existing.history
             snap.created = existing.created
         db.add(snap, replace=True)
-        print(f"  {directory.name:<{width}}  {describe(name, config, repo)}")
+        print(f"  {directory.name:<{width}}  {describe(config, repo)}")
 
     if not dry:
         print()

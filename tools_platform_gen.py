@@ -40,13 +40,27 @@ libslang2 libsoup2.4-1 libtag1v5 libunwind8 libzip4
 """.split())
 
 
+DPKG_INFO = Path("/var/lib/dpkg/info")
+
+
+def dpkg_lists(pattern="*.list"):
+    """(package, the basenames it installs) for every dpkg file list here."""
+    for listing in DPKG_INFO.glob(pattern):
+        package = listing.name.removesuffix(".list").split(":")[0]
+        try:
+            text = listing.read_text(errors="replace")
+        except OSError:
+            continue
+        yield package, [line.rsplit("/", 1)[-1] for line in text.splitlines()]
+
+
 def renamed_t64():
     """Packages noble renamed for 64-bit time_t, read off this host's dpkg."""
     found = set(ALSO_T64)
-    for listing in Path("/var/lib/dpkg/info").glob("*t64*.list"):
-        name = listing.name[: -len(".list")].split(":")[0]
+    for listing in DPKG_INFO.glob("*t64*.list"):
+        name = listing.name.removesuffix(".list").split(":")[0]
         if name.endswith("t64"):
-            found.add(name[: -len("t64")])
+            found.add(name.removesuffix("t64"))
     return found
 
 
@@ -81,14 +95,8 @@ libvulkan_intel.so libnvoptix.so.1
 def owners():
     """soname -> the package that ships it, off this host's dpkg lists."""
     found = {}
-    for listing in Path("/var/lib/dpkg/info").glob("*.list"):
-        package = listing.name[: -len(".list")].split(":")[0]
-        try:
-            text = listing.read_text(errors="replace")
-        except OSError:
-            continue
-        for line in text.splitlines():
-            name = line.rsplit("/", 1)[-1]
+    for package, names in dpkg_lists():
+        for name in names:
             if SONAME.match(name):
                 found.setdefault(name, package)
     return found
@@ -127,15 +135,11 @@ def package_table(base):
     """soname -> package, only where something other than a guess says so."""
     owned = owners()
     table = dict(KNOWN)
-    # A name a working recipe stages is a name noble really has.
+    # A name a working recipe stages is a name noble really has, and where
+    # dpkg confirms the convention, the name follows from the soname.
     proven = proven_packages()
     for soname, package in owned.items():
-        if package in proven:
-            table.setdefault(soname, package)
-    # Where dpkg confirms the convention, the name follows from the soname.
-    for soname, package in owned.items():
-        stem = package[: -len("t64")] if package.endswith("t64") else package
-        if stem in conventions(soname):
+        if package in proven or package.removesuffix("t64") in conventions(soname):
             table.setdefault(soname, package)
     return {s: p for s, p in sorted(table.items())
             if s not in base and s not in FROM_THE_HOST}
@@ -144,13 +148,7 @@ def package_table(base):
 def supplied_packages(base, gnome):
     """Packages whose every library the platform already has, so staging is moot."""
     by_package = {}
-    for listing in Path("/var/lib/dpkg/info").glob("*.list"):
-        package = listing.name[: -len(".list")].split(":")[0]
-        try:
-            text = listing.read_text(errors="replace")
-        except OSError:
-            continue
-        names = {line.rsplit("/", 1)[-1] for line in text.splitlines()}
+    for package, names in dpkg_lists():
         libs = {n for n in names if SONAME.match(n)}
         if libs:
             by_package.setdefault(package, set()).update(libs)
@@ -158,7 +156,7 @@ def supplied_packages(base, gnome):
     in_gnome = {p for p, libs in by_package.items() if libs <= (base | gnome)}
     # Both spellings, because a record may name either side of the rename.
     for found in (in_base, in_gnome):
-        found |= {p[: -len("t64")] for p in list(found) if p.endswith("t64")}
+        found |= {p.removesuffix("t64") for p in list(found) if p.endswith("t64")}
     return in_base, in_gnome - in_base
 
 

@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
 """Tests."""
 
+import contextlib
 import io
 import json
+import os
+import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
 import threading
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from snapforge.report import Reporter                          # noqa: E402
 
 PASSED, FAILED = [], []
 
@@ -37,6 +44,89 @@ def subprocess_result(returncode=0):
     """What a patched subprocess.run hands back."""
     return type("Result", (), {"returncode": returncode, "stdout": "",
                                "stderr": ""})()
+
+
+# A reporter that says nothing, for the tests that only want the result.
+Quiet = Reporter
+
+
+class Capture(Reporter):
+    """A reporter that keeps a subprocess's output, line by line."""
+
+    captures_output = True
+
+    def __init__(self):
+        self.lines = []
+
+    def output(self, line):
+        self.lines.append(line)
+
+
+def _raise(exception):
+    """A stand-in that raises what it was given, however it is called."""
+    def raiser(*_args, **_kwargs):
+        raise exception
+    return raiser
+
+
+@contextlib.contextmanager
+def patched(module, **names):
+    """Swap module attributes for the length of a with-block."""
+    was = {name: getattr(module, name) for name in names}
+    for name, value in names.items():
+        setattr(module, name, value)
+    try:
+        yield
+    finally:
+        for name, value in was.items():
+            setattr(module, name, value)
+
+
+@contextlib.contextmanager
+def env(name, value):
+    """One environment variable set for the length of a with-block."""
+    was = os.environ.get(name)
+    os.environ[name] = value
+    try:
+        yield
+    finally:
+        if was is None:
+            os.environ.pop(name, None)
+        else:
+            os.environ[name] = was
+
+
+@contextlib.contextmanager
+def raises(exception, message=""):
+    """A block that has to raise this; the failure says what did not."""
+    try:
+        yield
+    except exception:
+        return
+    raise AssertionError(message or f"{exception} was not raised")
+
+
+def wait_for(condition, tries=100, pause=0.02):
+    """Poll for a worker thread's doing, for up to tries * pause seconds."""
+    for _ in range(tries):
+        if condition():
+            return True
+        time.sleep(pause)
+    return False
+
+
+def update_state(snap):
+    from snapforge import update
+    return update.situation(snap).state
+
+
+def _catch(board, plan, exception):
+    """True if asking which asset raises `exception` -- for the escape case."""
+    try:
+        board._ask_which(plan())
+        return False
+    except exception:
+        return True
 
 
 # -- a .deb, made here so the reader can be tested without the network --------
@@ -93,7 +183,6 @@ def upstreams():
     def _():
         # Only the connect was guarded: a stall mid-body was a bare TimeoutError.
         from snapforge import net
-        import contextlib
         import http.client
 
         def failing(exc):
@@ -106,22 +195,15 @@ def upstreams():
                 yield Response()
             return _open
 
-        real = net._open
-        try:
-            with tempfile.TemporaryDirectory() as here:
-                for exc in (TimeoutError("stalled"), ConnectionResetError(),
-                            http.client.IncompleteRead(b"")):
-                    net._open = failing(exc)
+        with tempfile.TemporaryDirectory() as here:
+            for exc in (TimeoutError("stalled"), ConnectionResetError(),
+                        http.client.IncompleteRead(b"")):
+                with patched(net, _open=failing(exc)):
                     for call in (lambda: net.get_text("https://h/x"),
                                  lambda: net.download("https://h/x", Path(here) / "x")):
-                        try:
+                        with raises(net.NetworkError, f"{exc!r} was not raised"):
                             call()
-                            assert False, f"{exc!r} was not raised"
-                        except net.NetworkError:
-                            pass
-                    assert not (Path(here) / "x.part").exists(), "a .part was left"
-        finally:
-            net._open = real
+                assert not (Path(here) / "x.part").exists(), "a .part was left"
     @check("github.parse_repo takes a url in any of its shapes")
     def _():
         for text in ("imputnet/helium-linux",
@@ -133,11 +215,8 @@ def upstreams():
             same(github.parse_repo(text), "imputnet/helium-linux", text)
         for bad in ("", "not a url", "https://gitlab.com/a/b",
                     "https://github.com/torvalds"):
-            try:
+            with raises(ValueError, f"{bad!r} should not parse"):
                 github.parse_repo(bad)
-                assert False, f"{bad!r} should not parse"
-            except ValueError:
-                pass
     @check("release notes in the tag feed are not mistaken for tags")
     def _():
         # The escaped release notes in the feed carry tag links of their own.
@@ -276,27 +355,12 @@ def upstreams():
 
 def architectures():
     """Which architecture this is, and which of a release's files is for it."""
-    import os
     from snapforge import arch, classify, recipe, sources
     from snapforge.net import NetworkError
 
-    class as_arch:
+    def as_arch(name):
         """Run a block as though this machine were another architecture."""
-
-        def __init__(self, name):
-            self.name = name
-
-        def __enter__(self):
-            self.was = os.environ.get(arch.OVERRIDE)
-            os.environ[arch.OVERRIDE] = self.name
-            return self
-
-        def __exit__(self, *_):
-            if self.was is None:
-                os.environ.pop(arch.OVERRIDE, None)
-            else:
-                os.environ[arch.OVERRIDE] = self.was
-            return False
+        return env(arch.OVERRIDE, name)
 
     @check("this machine's architecture is the one snapd would name")
     def _():
@@ -336,15 +400,15 @@ def architectures():
     @check("a machine this does not know about is still allowed to be itself")
     def _():
         # Only what a person typed: a real port not in the table still runs.
-        was_which, was_machine = arch.shutil.which, arch.platform.machine
+        real_which = arch.shutil.which
         arch.detected.cache_clear()
-        arch.shutil.which = lambda name: None if name == "dpkg" else was_which(name)
-        arch.platform.machine = lambda: "sparc64"
         try:
-            same(arch.detected(), "sparc64")
-            same(arch.known("sparc64"), False, "it should not be in the table")
+            with patched(arch.shutil, which=lambda name: None if name == "dpkg"
+                         else real_which(name)), \
+                    patched(arch.platform, machine=lambda: "sparc64"):
+                same(arch.detected(), "sparc64")
+                same(arch.known("sparc64"), False, "it should not be in the table")
         finally:
-            arch.shutil.which, arch.platform.machine = was_which, was_machine
             arch.detected.cache_clear()
 
     @check("an asset is ours or somebody else's depending on the host")
@@ -548,7 +612,6 @@ def recipes():
     @check("the AppImage recipe finds the file whatever its extension looks like")
     def _():
         # neovim ships .appimage; a glob for *.AppImage alone failed at chmod.
-        import subprocess
         text = recipe.build(name="d", version="1", summary="s", description="b",
                             license_id="", kind=classify.APPIMAGE,
                             url="https://x/d.appimage", command="usr/bin/d")
@@ -746,7 +809,6 @@ def register():
             same(db.Database(root).names(), ["bat", "btop"])
     @check("a thousand snaps stay quick to read and cheap to change")
     def _():
-        import time as _time
         with tempfile.TemporaryDirectory() as home:
             root = Path(home)
             store = db.Database(root)
@@ -757,17 +819,17 @@ def register():
                                   recipe_text=recipe))
             same(len(store), 1000)
 
-            start = _time.perf_counter()
+            start = time.perf_counter()
             reopened = db.Database(root)
-            load = _time.perf_counter() - start
+            load = time.perf_counter() - start
             same(len(reopened), 1000, "not all of them came back")
 
             # Best of a few: one sample of a millisecond of disk is noise.
             writes = []
             for _ in range(5):
-                start = _time.perf_counter()
+                start = time.perf_counter()
                 reopened.add(reopened.get("pkg0500"))
-                writes.append(_time.perf_counter() - start)
+                writes.append(time.perf_counter() - start)
             write = min(writes)
 
             # The shape, not the numbers: one snap is not the whole register.
@@ -804,17 +866,11 @@ def register():
             store.claim("bat", "sharkdp/bat")          # itself again: fine
             store.claim("nothing")                      # nobody holds it: fine
             for repo in ("someone/bat", ""):            # another repo, or a file
-                try:
+                with raises(db.NameTaken, f"{repo!r} was allowed to take bat"):
                     store.claim("bat", repo)
-                    assert False, f"{repo!r} was allowed to take bat"
-                except db.NameTaken:
-                    pass
             store.add(db.Snap(name="imported", repo="", version="1.0"))
-            try:
+            with raises(db.NameTaken, "an import with no repo was replaced"):
                 store.claim("imported", "someone/imported")
-                assert False, "an import with no repo was replaced"
-            except db.NameTaken:
-                pass
     @check("search finds a snap by name, by repository, by summary, by url")
     def _():
         with tempfile.TemporaryDirectory() as home:
@@ -843,11 +899,8 @@ def register():
         with tempfile.TemporaryDirectory() as home:
             path = Path(home) / "snapkit.json"
             path.write_text("{not json")
-            try:
+            with raises(db.DatabaseError, "should have raised"):
                 db.Database(path)
-                assert False, "should have raised"
-            except db.DatabaseError:
-                pass
 
 
 def payloads():
@@ -882,11 +935,8 @@ def payloads():
             at = raw.index(b"data.tar.gz")
             body = at + 60           # past the ar header, into the gzip stream
             deb.write_bytes(raw[:body] + b"\0" * 16 + raw[body + 16:])
-            try:
+            with raises(ins.InspectionError, "a corrupt archive was read"):
                 ins.look(deb, "deb", work / "out", wanted="demo")
-                assert False, "a corrupt archive was read"
-            except ins.InspectionError:
-                pass
     @check("Terminal=true is a command-line program, not a window")
     def _():
         with tempfile.TemporaryDirectory() as work:
@@ -904,11 +954,8 @@ def payloads():
         with tempfile.TemporaryDirectory() as work:
             fake = Path(work) / "x.deb"
             fake.write_bytes(b"this is not an ar archive at all")
-            try:
+            with raises(ins.InspectionError, "should have raised"):
                 ins.look(fake, "deb", Path(work) / "out")
-                assert False, "should have raised"
-            except ins.InspectionError:
-                pass
 
 
 def reading_payloads():
@@ -1023,8 +1070,6 @@ def projects():
     @check("a relative --dir is recorded as the directory it meant")
     def _():
         # "myproj" was stored as written, and read from every later cwd.
-        import os
-        from types import SimpleNamespace
         origin = project.File(path=Path("/nowhere/tool-1.0.tar.gz"), version="1.0")
         chosen = SimpleNamespace(kind="archive", name="tool-1.0.tar.gz")
         payload = SimpleNamespace(version="1.0", summary="", command="bin/tool",
@@ -1037,42 +1082,32 @@ def projects():
     @check("a project deleted from disk comes back from the register, icon and all")
     def _():
         # The icon is kept beside the recipe, or the restored one names nothing.
-        with tempfile.TemporaryDirectory() as home:
-            import os
-            was = os.environ.get("SNAPKIT_HOME")
-            os.environ["SNAPKIT_HOME"] = home
-            try:
-                store = db.Database()
-                icon_source = Path(home) / "source.png"
-                icon_source.write_bytes(b"\x89PNG\r\n\x1a\n fake")
-                snap = db.Snap(name="demo", repo="a/b", version="1.0",
-                               icon="snap/gui/demo.png",
-                               recipe_text="name: demo\nicon: snap/gui/demo.png\n")
-                store.add(snap)
-                snap.keep_icon(icon_source)
-                reporter = __import__("snapforge.report", fromlist=["x"]).Reporter()
-                project.write(snap, reporter)
-                assert (snap.path / "snap/gui/demo.png").is_file()
+        with tempfile.TemporaryDirectory() as home, env("SNAPKIT_HOME", home):
+            store = db.Database()
+            icon_source = Path(home) / "source.png"
+            icon_source.write_bytes(b"\x89PNG\r\n\x1a\n fake")
+            snap = db.Snap(name="demo", repo="a/b", version="1.0",
+                           icon="snap/gui/demo.png",
+                           recipe_text="name: demo\nicon: snap/gui/demo.png\n")
+            store.add(snap)
+            snap.keep_icon(icon_source)
+            reporter = Reporter()
+            project.write(snap, reporter)
+            assert (snap.path / "snap/gui/demo.png").is_file()
 
-                import shutil as sh
-                sh.rmtree(snap.path)
-                assert not snap.path.exists(), "the project is still there"
+            shutil.rmtree(snap.path)
+            assert not snap.path.exists(), "the project is still there"
 
-                project.package(snap, reporter, build_it=False)
-                same((snap.path / "snap/snapcraft.yaml").read_text(),
-                     snap.snapcraft_yaml, "the recipe did not come back")
-                assert (snap.path / "snap/gui/demo.png").is_file(), \
-                    "the icon did not come back"
-                # and removing the snap takes the kept icon with it
-                kept = snap.kept_icon
-                assert kept and kept.is_file()
-                store.remove("demo")
-                assert not kept.exists(), "the kept icon outlived the record"
-            finally:
-                if was is None:
-                    os.environ.pop("SNAPKIT_HOME", None)
-                else:
-                    os.environ["SNAPKIT_HOME"] = was
+            project.package(snap, reporter, build_it=False)
+            same((snap.path / "snap/snapcraft.yaml").read_text(),
+                 snap.snapcraft_yaml, "the recipe did not come back")
+            assert (snap.path / "snap/gui/demo.png").is_file(), \
+                "the icon did not come back"
+            # and removing the snap takes the kept icon with it
+            kept = snap.kept_icon
+            assert kept and kept.is_file()
+            store.remove("demo")
+            assert not kept.exists(), "the kept icon outlived the record"
     @check("an existing project can be read into a record")
     def _():
         from snapforge import adopt
@@ -1105,11 +1140,8 @@ def projects():
             assert snap.asset_pattern, "a confirmed repo did not enable updates"
 
             # a project with no recipe at all is not a project
-            try:
+            with raises(adopt.NotAProject, "should have raised"):
                 adopt.read(Path(work))
-                assert False, "should have raised"
-            except adopt.NotAProject:
-                pass
     @check("a record whose project moved on is put back in line on load")
     def _():
         # The record's version is a cache, and it was left a release behind.
@@ -1135,7 +1167,6 @@ def projects():
                  "resyncing is not idempotent")
 
             # a project that is gone keeps the last version it was known on
-            import shutil
             shutil.rmtree(directory)
             gone = db.Database(work / "register")
             same(gone.get("demo").version, "1.1.0",
@@ -1143,7 +1174,6 @@ def projects():
             same(gone.resynced, [])
     @check("a record put right on load says so, rather than changing quietly")
     def _():
-        import contextlib
         from snapforge import cli
         with tempfile.TemporaryDirectory() as work:
             work = Path(work)
@@ -1176,7 +1206,6 @@ def projects():
     @check("importing does not damage the project it imports")
     def _():
         # write() used to overwrite a README and add an empty recipe.
-        from snapforge.report import Reporter
         with tempfile.TemporaryDirectory() as work:
             directory = Path(work) / "hand-made"
             (directory / "overlay/meta").mkdir(parents=True)
@@ -1191,7 +1220,6 @@ def projects():
                 "an empty snapcraft.yaml was written into it"
     @check("packaging does not undo an edit made since the import")
     def _():
-        from snapforge.report import Reporter
         with tempfile.TemporaryDirectory() as work:
             directory = Path(work) / "demo"
             (directory / "snap").mkdir(parents=True)
@@ -1231,9 +1259,7 @@ def checking():
             version, tag = "1.4.7", "v1.4.7"
             assets = [Asset("demo-1.4.7-x86_64-linux.tar.gz")]
 
-        real = project.github.release
-        project.github.release = lambda repo, tag=None: Release()
-        try:
+        with patched(project.github, release=lambda repo, tag=None: Release()):
             no_tag = db.Snap(name="demo", repo="a/b", kind="archive",
                              version="1.4.7", tag="",
                              asset_pattern=r"^demo\-.*\.tar\.gz$")
@@ -1244,8 +1270,6 @@ def checking():
                              asset_pattern=r"^demo\-.*\.tar\.gz$")
             release, asset, note = update.check(behind)
             assert asset is not None, "a genuinely behind snap was missed"
-        finally:
-            project.github.release = real
     @check("a .deb's own Version: differing from its tag is not an update")
     def _():
         # release.version comes from the tag, snap.version from the control file.
@@ -1299,11 +1323,8 @@ def checking():
         # A guessed upstream stays inert: Signal's .deb is not on GitHub at all.
         snap = db.Snap(name="signal-desktop", repo="signalapp/Signal-Desktop",
                        kind="deb", version="8.24.1", asset_pattern="")
-        try:
+        with raises(update.NotTracked, "it went upstream anyway"):
             update.check(snap)
-            assert False, "it went upstream anyway"
-        except update.NotTracked:
-            pass
     @check("a check that cannot run comes back as an answer, not an exception")
     def _():
         # Three callers phrased the same finding, and two had already drifted.
@@ -1367,14 +1388,10 @@ def checking():
         snap = db.Snap(name="demo", repo="a/b", kind="archive", version="1.0",
                        tag="v1.0", asset="demo-1.0-x86_64-linux.tbz",
                        asset_pattern=r"^demo\-[0-9][0-9A-Za-z.+~_-]*\-x86_64\-linux\.tbz$")
-        real = project.github.release
-        project.github.release = lambda repo, tag=None: Release()
-        try:
+        with patched(project.github, release=lambda repo, tag=None: Release()):
             release, asset, note = update.check(snap)
             same(asset.name, "demo-2.0-x86_64-linux.tar.gz")
             assert "no longer publishes" in note, note
-        finally:
-            project.github.release = real
 
 
 def tracking():
@@ -1481,11 +1498,8 @@ def tracking():
         wanted = sources.configure("apt", {"base": "https://x/apt",
                                            "package": "thing"})
         with patched(update, resolve=_raise(NetworkError("HTTP 404"))):
-            try:
+            with raises(NetworkError, "it should have refused"):
                 update.retrack(snap, wanted)
-                assert False, "it should have refused"
-            except NetworkError:
-                pass
             same(snap.upstream, was, "the new upstream was kept anyway")
             # Forced, it is written down and the caller is told of no release.
             same(update.retrack(snap, wanted, force=True), None)
@@ -1511,11 +1525,8 @@ def tracking():
             wanted = sources.configure("apt", {"base": "https://x/apt",
                                                "package": "thing"})
             with patched(update, resolve=_raise(NetworkError("HTTP 404"))):
-                try:
+                with raises(SystemExit, "it should have refused"):
                     cli.settle(store, Args(), Quiet(), snap, wanted)
-                    assert False, "it should have refused"
-                except SystemExit:
-                    pass
                 same(db.Database(Path(home)).get("demo").upstream,
                      {"kind": "local", "glob": "was_*.deb"},
                      "the refusal did not reach the record")
@@ -1593,11 +1604,8 @@ def tracking():
             # A name that is not registered, and a name that is missing.
             for words, _ in ((("nothing-like-this",), "nothing registered"),
                                   ((), "track needs a name")):
-                try:
+                with raises(SystemExit, f"{words} should have exited"):
                     track(*words)
-                    assert False, f"{words} should have exited"
-                except SystemExit:
-                    pass
 
     @check("an option between positionals is read, not an unrecognized argument")
     def _():
@@ -1615,23 +1623,16 @@ def tracking():
     @check("create with a name already held stops before the project is written")
     def _():
         # The project was written first, on top of the one the name belonged to.
-        from types import SimpleNamespace
         from snapforge import cli, db, project
         with tempfile.TemporaryDirectory() as home:
             store = db.Database(Path(home) / "snapkit.json")
             store.add(db.Snap(name="bat", repo="sharkdp/bat", version="1.0"))
             made = SimpleNamespace(name="bat", origin=SimpleNamespace(repo="someone/bat"))
             written = []
-            real = project.create
-            project.create = lambda *a, **k: written.append(a)
-            try:
+            with patched(project, create=lambda *a, **k: written.append(a)), \
+                    raises(SystemExit, "it went ahead"):
                 cli._finish_create(store, SimpleNamespace(directory=None), None,
                                    made, "someone/bat")
-                assert False, "it went ahead"
-            except SystemExit:
-                pass
-            finally:
-                project.create = real
             same(written, [], "the project was written anyway")
     @check("every command is in the usage text, so none is reachable but unlisted")
     def _():
@@ -1660,7 +1661,6 @@ def tracking():
 
     @check("track kinds prints every kind, so none is reachable but unlisted")
     def _():
-        import contextlib
         buffer = io.StringIO()
         with contextlib.redirect_stdout(buffer):
             same(cli.cmd_track(None, cli.parse_args(["track", "kinds"]), Quiet()), 0)
@@ -1685,26 +1685,14 @@ def tracking():
                     f"{shape.kind}: {key} is templated but not a setting"
 
 
-def _raise(exception):
-    """A stand-in that raises what it was given, however it is called."""
-    def raiser(*_args, **_kwargs):
-        raise exception
-    return raiser
-
-
-def update_state(snap):
-    from snapforge import update
-    return update.situation(snap).state
-
-
 def dashboard():
     """The dashboard: the keys, the one worker thread, and the drawing."""
     from snapforge import db
+    from snapforge.tui import Dashboard
 
     @check("every header the find-or-add box can draw actually draws")
     def _():
         # screen.py used local.looks_like_path() and never imported it.
-        from snapforge.tui import Dashboard
 
         with tempfile.TemporaryDirectory() as home:
             board = Dashboard(db=db.Database(Path(home) / "snapkit.json"))
@@ -1738,18 +1726,12 @@ def dashboard():
                 out = {}
                 board.run_job("creating", lambda out=out: out.update(
                     got=board._ask_which(Plan()).name))
-                for _ in range(50):
-                    if board.picking is not None:
-                        break
-                    time.sleep(0.02)
+                wait_for(lambda: board.picking is not None, 50, 0.02)
                 assert board.picking is not None, "the picker never appeared"
                 assert not out, "it chose without being asked"
                 for key in keys:
                     board.handle(key)
-                for _ in range(100):
-                    if out:
-                        break
-                    time.sleep(0.02)
+                wait_for(lambda out=out: out, 100, 0.02)
                 same(out.get("got"), want, f"keys {keys}")
                 assert board.picking is None, "the picker stayed up"
 
@@ -1757,19 +1739,12 @@ def dashboard():
             out = {}
             board.run_job("creating", lambda: out.update(
                 raised=_catch(board, Plan, Cancelled)))
-            for _ in range(50):
-                if board.picking is not None:
-                    break
-                time.sleep(0.02)
+            wait_for(lambda: board.picking is not None, 50, 0.02)
             board.handle("escape")
-            for _ in range(100):
-                if out:
-                    break
-                time.sleep(0.02)
+            wait_for(lambda: out, 100, 0.02)
             same(out.get("raised"), True, "escape did not cancel")
     @check("the find-or-add box searches as you type and picks what it finds")
     def _():
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             store = db.Database(Path(home) / "snapkit.json")
             store.add(db.Snap(name="btop", repo="aristocratos/btop",
@@ -1796,9 +1771,7 @@ def dashboard():
     @check("the header is tall enough to show what it is showing")
     def _():
         # Fixed at three rows, the matches were drawn into nothing.
-        import io as _io
         from rich.console import Console
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             store = db.Database(Path(home) / "snapkit.json")
             for index in range(4):
@@ -1809,7 +1782,7 @@ def dashboard():
                 board.handle(character)
             assert len(board.matches) == 4, board.matches
             assert board.screen._header_height() >= 4 + 4, board.screen._header_height()
-            buffer = _io.StringIO()
+            buffer = io.StringIO()
             Console(file=buffer, width=100, height=30).print(board.render())
             drawn = buffer.getvalue()
             for index in range(4):
@@ -1818,20 +1791,15 @@ def dashboard():
     @check("the dashboard actually starts its work")
     def _():
         # Every action set `busy` then hit a guard refusing anything busy.
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             board = Dashboard(db=db.Database(Path(home) / "snapkit.json"))
             ran = threading.Event()
             assert board.run_job("testing", ran.set) is True, "job refused"
             assert ran.wait(5), "the job never ran"
-            for _ in range(50):
-                if not board.busy:
-                    break
-                time.sleep(0.05)
+            wait_for(lambda: not board.busy, 50, 0.05)
             same(board.busy, "", "busy was not cleared")
     @check("the dashboard refuses a second job while one is running")
     def _():
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             board = Dashboard(db=db.Database(Path(home) / "snapkit.json"))
             release = threading.Event()
@@ -1840,17 +1808,13 @@ def dashboard():
             release.set()
     @check("a job that raises says so and does not wedge the dashboard")
     def _():
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             board = Dashboard(db=db.Database(Path(home) / "snapkit.json"))
 
             def boom():
                 raise RuntimeError("deliberate")
             board.run_job("boom", boom)
-            for _ in range(50):
-                if not board.busy:
-                    break
-                time.sleep(0.05)
+            wait_for(lambda: not board.busy, 50, 0.05)
             same(board.busy, "", "busy stuck after a failure")
             assert "deliberate" in str(list(board.log)[-1]), list(board.log)
     @check("an arrow key is an arrow key, not an Escape")
@@ -1888,7 +1852,6 @@ def dashboard():
         same(reader.pending, "", "an unknown sequence was held for ever")
     @check("only q quits")
     def _():
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             store = db.Database(Path(home) / "snapkit.json")
             store.add(db.Snap(name="demo", repo="a/b"))
@@ -1902,7 +1865,6 @@ def dashboard():
     @check("every key the legend advertises reaches what it advertises")
     def _():
         from snapforge import screen
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             store = db.Database(Path(home) / "snapkit.json")
             for index in range(5):
@@ -1952,7 +1914,6 @@ def dashboard():
 
     @check("the list scrolls, and the cursor stays inside it")
     def _():
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             store = db.Database(Path(home) / "snapkit.json")
             for index in range(20):
@@ -1992,7 +1953,6 @@ def dashboard():
     @check("the dashboard checks the same things the command line does")
     def _():
         # Same finding, but through the recheck that held the bad pre-check.
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             here = Path(home)
             project_dir = here / "demo-snap"
@@ -2014,7 +1974,6 @@ def dashboard():
 
     @check("t opens the track box seeded with what the snap tracks now")
     def _():
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             store = db.Database(Path(home))
             store.add(db.Snap(name="demo", version="1.0",
@@ -2035,7 +1994,6 @@ def dashboard():
     @check("an emptied track box is never mind, not stop tracking")
     def _():
         # Backing out of `t` with a cleared line threw the upstream away.
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             store = db.Database(Path(home))
             was = {"kind": "local", "glob": "demo_*.deb"}
@@ -2067,7 +2025,6 @@ def dashboard():
 
     @check("the dashboard tracks, and refuses, the way the command line does")
     def _():
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             here = Path(home)
             project_dir = here / "demo-snap"
@@ -2132,12 +2089,11 @@ def dashboard():
 
     @check("a check that runs long is a timeout, not a wait")
     def _():
-        import time as _time
         from snapforge import net, update
 
         # Nothing left on the clock: the request is refused before a socket.
         with net.deadline(0.05):
-            _time.sleep(0.06)
+            time.sleep(0.06)
             try:
                 net.get_text("https://example.invalid/never-asked")
                 assert False, "should have given up"
@@ -2162,24 +2118,18 @@ def dashboard():
         same(net._left(30, "u"), 30, "the deadline outlived its block")
 
         # And a snap whose upstream will not answer reads as unreachable.
-        was = update.check
-
         def slow(snap, force=False):
-            _time.sleep(0.2)
+            time.sleep(0.2)
             raise net.NetworkError("https://nowhere.invalid/: timed out")
 
-        update.check = slow
-        try:
+        with patched(update, check=slow):
             found = update.situation(db.Snap(name="demo", repo="a/b"),
                                      timeout=0.05)
             same(found.state, "error", "a timeout is not an up-to-date")
             assert "timed out" in found.problem, found.problem
-        finally:
-            update.check = was
 
     @check("a filter narrows the eye, not the register")
     def _():
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             store = db.Database(Path(home) / "snapkit.json")
             for name, repo in (("btop", "aristocratos/btop"),
@@ -2208,7 +2158,6 @@ def dashboard():
 
     @check("ordering by attention puts what needs doing at the top")
     def _():
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             store = db.Database(Path(home) / "snapkit.json")
             for name in ("aaa", "bbb", "ccc"):
@@ -2227,7 +2176,6 @@ def dashboard():
 
     @check("the log scrolls back, and stops at both ends")
     def _():
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             store = db.Database(Path(home) / "snapkit.json")
             store.add(db.Snap(name="demo", repo="a/b"))
@@ -2258,7 +2206,6 @@ def dashboard():
 
     @check("delete asks before it forgets")
     def _():
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             store = db.Database(Path(home) / "snapkit.json")
             store.add(db.Snap(name="demo", repo="a/b"))
@@ -2274,7 +2221,6 @@ def dashboard():
     def _():
         from rich.console import Console
         from snapforge.screen import STATE_STYLE
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             store = db.Database(Path(home) / "snapkit.json")
             for index in range(len(STATE_STYLE)):
@@ -2304,7 +2250,6 @@ def dashboard():
         # The worker cleared it between the mode check and the draw, so a frame
         # read .candidates off None and the dashboard died.
         from rich.console import Console
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             board = Dashboard(db=db.Database(Path(home) / "snapkit.json"))
             board.picking = type("Plan", (), {
@@ -2342,7 +2287,6 @@ def dashboard():
     def _():
         # Ctrl-C at the sudo prompt: the main thread had left the screen, and
         # the worker's cleanup re-entered it with nothing left to undo that.
-        from snapforge.tui import Dashboard
         with tempfile.TemporaryDirectory() as home:
             board = Dashboard(db=db.Database(Path(home) / "snapkit.json"))
             calls = []
@@ -2360,7 +2304,6 @@ def dashboard():
         # A fixed column set squeezed REPOSITORY to nothing at eighty columns.
         from rich.console import Console
         from snapforge.screen import KEYS, _keys
-        from snapforge.tui import Dashboard
 
         class FakeLive:          # render() reads the width off the console
             def __init__(self, console): self.console = console
@@ -2438,7 +2381,6 @@ def dashboard():
 
     @check("the install question blocks the worker until a key answers it")
     def _():
-        from snapforge.tui import Dashboard
 
         with tempfile.TemporaryDirectory() as home:
             board = Dashboard(db=db.Database(Path(home) / "snapkit.json"))
@@ -2448,33 +2390,23 @@ def dashboard():
                 out = {}
                 board.run_job("building", lambda out=out: out.update(
                     got=board._ask_yes_no("install x.snap?")))
-                for _ in range(50):
-                    if board.asking:
-                        break
-                    time.sleep(0.02)
+                wait_for(lambda: board.asking, 50, 0.02)
                 same(board.asking, "install x.snap?")
                 for key in keys:
                     board.handle(key)
-                for _ in range(50):
-                    if "got" in out:
-                        break
-                    time.sleep(0.02)
+                wait_for(lambda out=out: "got" in out, 50, 0.02)
                 same(out.get("got"), want, f"{keys} answered wrongly")
                 same(board.asking, "")
 
     @check("nothing else answers the install question by accident")
     def _():
-        from snapforge.tui import Dashboard
 
         with tempfile.TemporaryDirectory() as home:
             board = Dashboard(db=db.Database(Path(home) / "snapkit.json"))
             out = {}
             board.run_job("building", lambda: out.update(
                 got=board._ask_yes_no("install x.snap?")))
-            for _ in range(50):
-                if board.asking:
-                    break
-                time.sleep(0.02)
+            wait_for(lambda: board.asking, 50, 0.02)
 
             # An arrow key used to read as a move, and a move is not an answer.
             for key in ("j", "k", "down", "up", "r", "b", "3"):
@@ -2482,38 +2414,26 @@ def dashboard():
             time.sleep(0.15)
             same("got" in out, False, "an unrelated key answered it")
             board.handle("n")
-            for _ in range(50):
-                if "got" in out:
-                    break
-                time.sleep(0.02)
+            wait_for(lambda: "got" in out, 50, 0.02)
             same(out.get("got"), False)
 
     @check("cancelling while the question is up counts as no, and does not hang")
     def _():
-        from snapforge.tui import Dashboard
 
         with tempfile.TemporaryDirectory() as home:
             board = Dashboard(db=db.Database(Path(home) / "snapkit.json"))
             out = {}
             board.run_job("building", lambda: out.update(
                 got=board._ask_yes_no("install x.snap?")))
-            for _ in range(50):
-                if board.asking:
-                    break
-                time.sleep(0.02)
+            wait_for(lambda: board.asking, 50, 0.02)
             board.cancel.set()
-            for _ in range(100):
-                if "got" in out:
-                    break
-                time.sleep(0.02)
+            wait_for(lambda: "got" in out, 100, 0.02)
             same(out.get("got"), False, "cancelling did not answer it")
 
     @check("installing asks for root once, and only classic snaps get --classic")
     def _():
-        import contextlib
         import types
         from snapforge import tui
-        from snapforge.tui import Dashboard
 
         with tempfile.TemporaryDirectory() as home:
             here = Path(home)
@@ -2527,11 +2447,9 @@ def dashboard():
             board.suspended = lambda: contextlib.nullcontext()
 
             ran = []
-            was = tui.subprocess
-            tui.subprocess = types.SimpleNamespace(
-                run=lambda argv, **kw: ran.append(argv)
-                or types.SimpleNamespace(returncode=0))
-            try:
+            with patched(tui, subprocess=types.SimpleNamespace(
+                    run=lambda argv, **kw: ran.append(argv)
+                    or types.SimpleNamespace(returncode=0))):
                 board._install(types.SimpleNamespace(name="x", path=str(strict)),
                                here / "x_1_amd64.snap")
                 same(ran[-1], ["sudo", "snap", "install", "--dangerous",
@@ -2540,8 +2458,6 @@ def dashboard():
                 board._install(types.SimpleNamespace(name="x", path=str(classic)),
                                here / "x_1_amd64.snap")
                 assert "--classic" in ran[-1], ran[-1]
-            finally:
-                tui.subprocess = was
 
 
 # -- the updater, ported from the tool this replaced --------------------------
@@ -2559,7 +2475,6 @@ def updater():
                               ("demo_3.0_amd64.snap", 1)):
                 path = here / name
                 path.write_bytes(b"x")
-                import os
                 os.utime(path, (time.time() - age, time.time() - age))
             (here / "demo-2.0.tar.gz").write_bytes(b"x")
             (here / "demo-3.0.tar.gz").write_bytes(b"x")
@@ -2577,7 +2492,6 @@ def updater():
     @check("prune deletes what it listed, and only when told to")
     def _():
         from snapforge import cli
-        from types import SimpleNamespace
         with tempfile.TemporaryDirectory() as home:
             here = Path(home)
             store = db.Database(here / "snapkit.json")
@@ -2588,12 +2502,8 @@ def updater():
             time.sleep(0.01)
             new.write_bytes(b"x")
             store.add(db.Snap(name="demo", directory=str(project_dir)))
-            real = sys.stdout
-            sys.stdout = io.StringIO()
-            try:
+            with contextlib.redirect_stdout(io.StringIO()):
                 cli.cmd_prune(store, SimpleNamespace(rest=[], yes=True), None)
-            finally:
-                sys.stdout = real
             assert not old.exists(), "the old build stayed"
             assert new.exists(), "the newest build went too"
 
@@ -2602,11 +2512,8 @@ def updater():
         same(sorted(sources.SHAPES),
              ["apt", "index", "local", "redirect", "tag-archive"])
         for bad in ("", "github", "ftp"):
-            try:
+            with raises(sources.NetworkError, f"{bad!r} should not resolve"):
                 sources.resolve({"kind": bad})
-                assert False, f"{bad!r} should not resolve"
-            except sources.NetworkError:
-                pass
 
     @check("an apt index answers with the newest amd64 stanza and its checksum")
     def _():
@@ -2621,7 +2528,9 @@ def updater():
                  "Filename: pool/d/demo_1.11b_amd64.deb\nSHA256: dd\n\n"
                  "Package: demo\nArchitecture: amd64\nVersion: 1.11\n"
                  "Filename: pool/d/demo_1.11_amd64.deb\nSHA256: ee\n")
-        with patched(sources, get_text=lambda url, **k: index):
+        # An apt index is read by versions.apt_stanza, through its own import.
+        from snapforge import versions
+        with patched(versions, get_text=lambda url, **k: index):
             found = sources.resolve({"kind": "apt", "base": "http://x",
                                      "package": "demo", "index": "http://x/P"})
         # The release, not the beta, and not the arm64 build of either.
@@ -2629,7 +2538,6 @@ def updater():
         same(found.sha, "ee")
         same(found.url, "http://x/pool/d/demo_1.11_amd64.deb")
 
-        from snapforge import versions
         assert versions.deb_compare("1.11~beta.1", "1.11") < 0, "~ sorts first"
         assert versions.version_key("1.11~beta.1") > versions.version_key("1.11"), \
             "and sort -V is the ordering that would get this wrong"
@@ -2637,8 +2545,6 @@ def updater():
     @check("deb_compare answers what dpkg answers, wherever dpkg can be asked")
     def _():
         # deb_compare saves a fork per comparison, while it still agrees.
-        import shutil
-        import subprocess
         from snapforge import versions
         if not shutil.which("dpkg"):
             return                 # nothing to compare against on this host
@@ -2849,7 +2755,6 @@ def updater():
 
     @check("a pack.py is left where it was, whatever it does to the cwd")
     def _():
-        import os
         with tempfile.TemporaryDirectory() as home:
             here = Path(home)
             (here / "pack.py").write_text(
@@ -2902,7 +2807,6 @@ def updater():
                 ":: 2026-09-03 22:00:00.000 - library: b.so: unused library "
                 "'usr/lib/b.so'. (https://x)\n"
                 ":: 2026-09-03 22:00:00.000 Creating snap package...\n")
-            import os
             os.utime(newest, (2 ** 31, 2 ** 31))
             found = buildlib.lint_findings(logs)
 
@@ -2927,9 +2831,7 @@ def updater():
         with tempfile.TemporaryDirectory() as home:
             logs = Path(home) / "log"
             logs.mkdir()
-            was = buildlib.SNAPCRAFT_LOGS
-            buildlib.SNAPCRAFT_LOGS = logs
-            try:
+            with patched(buildlib, SNAPCRAFT_LOGS=logs):
                 same(buildlib.stale_instance(), "", "no logs, nothing to find")
 
                 (logs / "old.log").write_text("nothing wrong here\n")
@@ -2940,12 +2842,9 @@ def updater():
                     "Failed to add disk to instance 'snapcraft-demo-amd64-1234'.\n"
                     "* Command standard error output: b'Error: The device already exists'\n")
                 same(buildlib.stale_instance(), "snapcraft-demo-amd64-1234")
-            finally:
-                buildlib.SNAPCRAFT_LOGS = was
 
     @check("a part is cleaned when the file under it is newer than the snap")
     def _():
-        import os
         with tempfile.TemporaryDirectory() as home:
             here = Path(home)
             (here / "snap").mkdir()
@@ -2980,16 +2879,6 @@ def updater():
 
     @check("a build's own output is handed to the reporter line by line")
     def _():
-        from snapforge.report import Reporter
-
-        class Capture(Reporter):
-            captures_output = True
-
-            def __init__(self):
-                self.lines = []
-
-            def output(self, line):
-                self.lines.append(line)
 
         # stderr folded into stdout: interleaved is the order it happened in.
         seen = Capture()
@@ -3013,16 +2902,6 @@ def updater():
 
     @check("a progress bar redrawing itself is one line, not hundreds")
     def _():
-        from snapforge.report import Reporter
-
-        class Capture(Reporter):
-            captures_output = True
-
-            def __init__(self):
-                self.lines = []
-
-            def output(self, line):
-                self.lines.append(line)
 
         # Read as text, universal newlines split every \r redraw into a line.
         seen = Capture()
@@ -3032,7 +2911,6 @@ def updater():
     @check("cancelling a build kills it rather than waiting for it")
     def _():
         import time
-        from snapforge.report import Reporter
 
         class Stop(Exception):
             pass
@@ -3045,11 +2923,8 @@ def updater():
 
         # Not KeyboardInterrupt: Popen.__exit__ special-cases it and gives up.
         started = time.time()
-        try:
+        with raises(Stop, "should have raised"):
             buildlib.stream(["bash", "-c", "echo go; sleep 30"], Stopper())
-            assert False, "should have raised"
-        except Stop:
-            pass
         assert time.time() - started < 5, "the child was waited on, not killed"
 
 
@@ -3324,11 +3199,8 @@ def from_a_file():
             except sources.NetworkError as exc:
                 assert home in str(exc), str(exc)
         # A record naming no directory must not resolve against the cwd.
-        try:
+        with raises(sources.NetworkError, "should have raised"):
             sources.resolve({"kind": "local", "glob": "*.deb"})
-            assert False, "should have raised"
-        except sources.NetworkError:
-            pass
 
     @check("a newer file in the folder reads as an update, and then packages it")
     def _():
@@ -3399,43 +3271,6 @@ def from_a_file():
                 assert "no package in" in str(exc), str(exc)
 
 
-class Quiet:
-    """A reporter that says nothing, for the tests that only want the result."""
-
-    def step(self, text): pass
-    def detail(self, text): pass
-    def warn(self, text): pass
-    def result(self, text): pass
-    def progress(self, done, total): pass
-
-
-class patched:
-    """Swap module attributes for the length of a with-block."""
-
-    def __init__(self, module, **names):
-        self.module = module
-        self.names = {k: v for k, v in names.items() if not k.startswith("_")}
-        self.was = {}
-
-    def __enter__(self):
-        # apt_stanza reads through versions.get_text, imported into that module.
-        from snapforge import versions
-        self.versions_was = versions.get_text
-        if "get_text" in self.names:
-            versions.get_text = self.names["get_text"]
-        for name, value in self.names.items():
-            self.was[name] = getattr(self.module, name)
-            setattr(self.module, name, value)
-        return self
-
-    def __exit__(self, *_):
-        from snapforge import versions
-        versions.get_text = self.versions_was
-        for name, value in self.was.items():
-            setattr(self.module, name, value)
-        return False
-
-
 # -- online -------------------------------------------------------------------
 
 def online():
@@ -3461,20 +3296,8 @@ def online():
 
     @check("a repository that does not exist is an error, not a crash")
     def _():
-        try:
+        with raises((github.NotFound, github.NetworkError), "should have raised"):
             github.release("this-owner-does-not/exist-at-all-xyzzy")
-            assert False, "should have raised"
-        except (github.NotFound, github.NetworkError):
-            pass
-
-
-def _catch(board, plan, exception):
-    """True if asking which asset raises `exception` -- for the escape case."""
-    try:
-        board._ask_which(plan())
-        return False
-    except exception:
-        return True
 
 
 def database():
@@ -3504,11 +3327,8 @@ def database():
         with tempfile.TemporaryDirectory() as home:
             root = Path(home)
             found = {"snaps": {"../escape": {"files": {}}}}
-            try:
+            with raises(snapdb.DatabaseError, "it was written"):
                 snapdb.fetch("../escape", root / "here", found, url="file:///x")
-                assert False, "it was written"
-            except snapdb.DatabaseError:
-                pass
             assert not (root / "escape").exists()
     @check("a build's leavings stay out of the database")
     def _():
@@ -3827,11 +3647,8 @@ def dependencies():
         with tempfile.TemporaryDirectory() as home:
             junk = Path(home) / "junk"
             junk.write_bytes(b"not an elf at all")
-            try:
+            with raises(elf.NotAnELF, "junk was read as an ELF"):
                 elf.read(junk)
-                assert False, "junk was read as an ELF"
-            except elf.NotAnELF:
-                pass
 
     @check("a file with the magic and nothing after it is refused, not read")
     def _():
@@ -3839,11 +3656,8 @@ def dependencies():
         with tempfile.TemporaryDirectory() as home:
             stub = Path(home) / "libtruncated.so"
             stub.write_bytes(b"\x7fELF")
-            try:
+            with raises(elf.NotAnELF, "four bytes were read as an ELF"):
                 elf.read(stub)
-                assert False, "four bytes were read as an ELF"
-            except elf.NotAnELF:
-                pass
             same(depends.bundled_libraries(home), {})
 
     @check("a Depends: field is read the way dpkg reads it")

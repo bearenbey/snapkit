@@ -53,8 +53,7 @@ class Payload:
     version: str = ""                  # what the payload says it is
     summary: str = ""
     description: str = ""
-    libraries: list = field(default_factory=list)   # unresolved NEEDED
-    traits: set = field(default_factory=set)       # gui, electron, gtk, qt
+    traits: set = field(default_factory=set)       # gui, terminal, electron, gtk, qt
     builds_with: str = ""              # set when this is source, not a build
 
 
@@ -192,6 +191,7 @@ def _control_text(archive, blob):
                           capture_output=True, text=True)
     return done.stdout if done.returncode == 0 else None
 
+
 def control_fields(archive):
     """The .deb control stanza: Version, Description, Homepage and the rest."""
     name, blob = _deb_member(archive, "control.tar")
@@ -240,7 +240,7 @@ def _is_program(path):
     """A compiled binary, or a script that says what runs it."""
     with open(path, "rb") as handle:
         head = handle.read(4)
-    return head[:4] == b"\x7fELF" or head[:2] == b"#!"
+    return head[:4] == elf.MAGIC or head[:2] == b"#!"
 
 
 def build_system(root):
@@ -253,10 +253,8 @@ def build_system(root):
 
 def anything_compiled(root):
     """Whether the tree holds a compiled program or library at all."""
-    for path in Path(root).rglob("*"):
-        if path.is_file() and not path.is_symlink() and elf.is_elf(path):
-            return True
-    return False
+    return any(path.is_file() and not path.is_symlink() and elf.is_elf(path)
+               for path in Path(root).rglob("*"))
 
 
 def source_only(root):
@@ -297,15 +295,19 @@ def find_desktop(root, wanted=""):
     return entries[0]
 
 
-def desktop_icon(root, desktop):
-    """The icon a .desktop entry asks for by name, which is the authority."""
+def _desktop_text(root, desktop):
+    """A .desktop entry's text, or "" when there is none or it cannot be read."""
     if not desktop:
         return ""
     try:
-        text = (root / desktop).read_text(encoding="utf-8", errors="replace")
+        return (root / desktop).read_text(encoding="utf-8", errors="replace")
     except OSError:
         return ""
-    found = re.search(r"(?mi)^Icon\s*=\s*(.+?)\s*$", text)
+
+
+def desktop_icon(root, desktop):
+    """The icon a .desktop entry asks for by name, which is the authority."""
+    found = re.search(r"(?mi)^Icon\s*=\s*(.+?)\s*$", _desktop_text(root, desktop))
     if not found:
         return ""
     # Strip only a real suffix: Path.stem makes net.lutris.Lutris net.lutris.
@@ -356,13 +358,8 @@ SIGNS = (
 
 def is_terminal_app(root, desktop):
     """Whether the desktop entry asks to be run in a terminal."""
-    if not desktop:
-        return False
-    try:
-        text = (root / desktop).read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return False
-    return bool(re.search(r"(?mi)^Terminal\s*=\s*true\s*$", text))
+    return bool(re.search(r"(?mi)^Terminal\s*=\s*true\s*$",
+                          _desktop_text(root, desktop)))
 
 
 def traits_of(root, desktop):
@@ -461,6 +458,4 @@ def look(archive, kind, destination, wanted=""):
         # Whatever turned up executable in there, it is not the application.
         payload.command = ""
     payload.traits = traits_of(root, payload.desktop)
-    if payload.command:
-        payload.libraries = missing_libraries(root / payload.command, root)
     return payload

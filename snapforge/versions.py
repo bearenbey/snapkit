@@ -1,5 +1,6 @@
 """Version ordering, apt Packages indexes, and reading a packaged version."""
 
+import functools
 import re
 
 from . import arch
@@ -110,38 +111,21 @@ def deb_compare(a, b):
     return 0
 
 
-def deb_key(version):
-    """`deb_compare` as a sort key, for max() and sorted()."""
-    return _DebVersion(version)
-
-
-class _DebVersion:
-    __slots__ = ("version",)
-
-    def __init__(self, version):
-        self.version = version
-
-    def __lt__(self, other):
-        return deb_compare(self.version, other.version) < 0
-
-    def __eq__(self, other):
-        return deb_compare(self.version, other.version) == 0
+# `deb_compare` as a sort key, for max() and sorted().
+deb_key = functools.cmp_to_key(deb_compare)
 
 
 def yaml_version(path):
     """The `version:` field of a snapcraft.yaml or meta/snap.yaml."""
-    for line in _lines(path):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as handle:
+            lines = handle.read().splitlines()
+    except FileNotFoundError:
+        return ""
+    for line in lines:
         if line.startswith("version:"):
             return line.split(":", 1)[1].strip().strip("'\"")
     return ""
-
-
-def _lines(path):
-    try:
-        with open(path, encoding="utf-8", errors="replace") as handle:
-            return handle.read().splitlines()
-    except FileNotFoundError:
-        return []
 
 
 def apt_stanza(index_url, package, want="", want_arch=""):

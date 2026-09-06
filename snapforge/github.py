@@ -53,10 +53,6 @@ class Asset:
     path: str = ""
 
     @property
-    def lower(self):
-        return self.name.lower()
-
-    @property
     def filename(self):
         """What this file is called once it is in a project directory."""
         return self.local or self.name
@@ -69,20 +65,12 @@ class Release:
     version: str
     assets: list = field(default_factory=list)
 
-    @property
-    def page(self):
-        return f"https://github.com/{self.repo}/releases/tag/{self.tag}"
-
 
 @dataclass
 class Repository:
     repo: str                 # owner/name
     description: str = ""
     license: str = ""
-
-    @property
-    def name(self):
-        return self.repo.split("/")[1]
 
     @property
     def url(self):
@@ -165,19 +153,16 @@ def recent_tags(repo, limit=30):
         feed = get_text(f"https://github.com/{repo}/releases.atom")
     except NetworkError as exc:
         raise NotFound(f"{repo}: no releases feed ({exc})") from exc
-    seen, tags = set(), []
     # Only the entries' own links: the escaped release notes carry them too.
-    for match in re.findall(r'href="[^"]*?/releases/tag/([^"]+)"', feed):
-        tag = _unquote(match)
-        if tag not in seen:
-            seen.add(tag)
-            tags.append(tag)
-    return tags[:limit]
+    tags = [_unquote(match) for match in
+            re.findall(r'href="[^"]*?/releases/tag/([^"]+)"', feed)]
+    return list(dict.fromkeys(tags))[:limit]
 
 
 def assets(repo, tag):
     """Everything attached to one release."""
-    url = f"https://github.com/{repo}/releases/expanded_assets/{_quote(tag)}"
+    url = (f"https://github.com/{repo}/releases/expanded_assets/"
+           f"{urllib.parse.quote(tag, safe='/')}")
     try:
         page = get_text(url)
     except NetworkError as exc:
@@ -210,10 +195,6 @@ def version_of(tag):
     if found:
         version = found.group(1)
     return version or tag
-
-
-def _quote(text):
-    return urllib.parse.quote(text, safe="/")
 
 
 def _unquote(text):

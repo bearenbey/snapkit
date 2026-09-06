@@ -102,7 +102,7 @@ def other(name):
     """Matches every architecture that is not the one being built for."""
     mine = set(spellings(name))
     words = [word for arch, spelled in SPELLINGS.items() if arch != name
-             for word in spelled if word not in mine]
+             for word in spelled]
     return _alternation([w for w in words + list(NEVER) if w not in mine])
 
 

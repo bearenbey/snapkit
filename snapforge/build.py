@@ -1,4 +1,4 @@
-"""Assembling a snap tree by hand, for the projects snapcraft cannot build."""
+"""The Build a project's pack.py is handed, and running the pack.py itself."""
 
 import importlib.util
 import os
@@ -8,7 +8,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .arch import host as host_arch
 from .inspect import missing_libraries
 from .net import download, sha256_file
 from .report import PlainReporter
@@ -94,7 +93,6 @@ class Build:
         self.app = app
         self.directory = Path(directory).resolve()
         os.chdir(self.directory)
-        self.prime = self.directory / "prime"
         # Through here, so a dashboard run never writes over its own screen.
         self.reporter = reporter or PlainReporter()
         # Added to any snapcraft this build runs, --destructive-mode included.
@@ -188,7 +186,7 @@ class Build:
         # A caller that asked for the output wants it back, not reported.
         wants_output = any(k in kwargs for k in
                            ("capture_output", "stdout", "stderr", "input"))
-        if wants_output or not getattr(self.reporter, "captures_output", False):
+        if wants_output or not self.reporter.captures_output:
             return subprocess.run(argv, **kwargs)
 
         check = kwargs.pop("check")
@@ -220,53 +218,16 @@ class Build:
     def sha256(self, path):
         return sha256_file(Path(path))
 
-    # -- the prime tree ------------------------------------------------------
-
-    def fresh_prime(self, *subdirectories):
-        """An empty prime/, with these directories in it."""
-        if self.prime.exists():
-            shutil.rmtree(self.prime)
-        self.prime.mkdir()
-        for name in subdirectories:
-            (self.prime / name).mkdir(parents=True, exist_ok=True)
-        return self.prime
+    # -- files ---------------------------------------------------------------
 
     def copy(self, source, destination, executable=False):
-        """Copy one file into the prime tree, making its parent if needed."""
+        """Copy one file, making its parent if needed."""
         source, destination = Path(source), Path(destination)
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
         if executable:
             destination.chmod(destination.stat().st_mode | 0o111)
         return destination
-
-    def copy_overlay(self, *relative):
-        """Copy overlay/<path> into prime/<path>."""
-        for name in relative:
-            self.copy(self.directory / "overlay" / name, self.prime / name)
-
-    def configure_hook(self):
-        """Write the stub configure hook snapd runs when one is declared."""
-        hook = self.prime / "meta" / "hooks" / "configure"
-        hook.parent.mkdir(parents=True, exist_ok=True)
-        hook.write_text("#!/bin/true\n")
-        # +x on top of the umask, as `printf > file` then chmod +x would give.
-        self.make_executable(hook)
-
-    def gnome_helpers(self, gnome=None):
-        """Copy the desktop and font helpers out of the gnome platform snap."""
-        gnome = gnome or self.gnome_platform()
-        chain = self.prime / "snap" / "command-chain"
-        chain.mkdir(parents=True, exist_ok=True)
-        for name in ("desktop-launch", "hooks-configure-fonts"):
-            self.copy(gnome / "command-chain" / name, chain / name, executable=True)
-
-    def make_executable(self, *paths):
-        for path in paths:
-            for one in ([path] if Path(path).is_file() else sorted(Path(path).glob("*"))):
-                one = Path(one)
-                if one.is_file():
-                    one.chmod(one.stat().st_mode | 0o111)
 
     def missing_libraries(self, binary, root=None):
         """Whatever ldd cannot resolve for a binary, empty when it can."""
@@ -280,19 +241,6 @@ class Build:
                       + "\n".join(f"           {name}" for name in missing)
                       + (f"\n         {hint}" if hint else ""))
         return missing
-
-    # -- output --------------------------------------------------------------
-
-    def pack(self, name=None, arch=None):
-        filename = name or (f"{self.app}_{self.version}_"
-                            f"{arch or host_arch()}.snap")
-        self.say(f"packing version {self.version}")
-        self.run("snap", "pack", self.prime, f"--filename={filename}", ".")
-        built = self.directory / filename
-        if not built.is_file():
-            die(f"snap pack finished but {filename} was not produced")
-        self.note(f"{filename}  ({built.stat().st_size / 1e6:.0f} MB)")
-        return built
 
 
 # -- finding and running a project's pack.py ----------------------------------
@@ -350,12 +298,19 @@ LINT_HEADING = "Lint warnings:"
 LINT_LINE = re.compile(r"^- (\w+): (.+?)\s*(?:\(http\S+\))?$")
 
 
+def _newest_log(logs=None):
+    """snapcraft's most recent log, or None when there is none to read."""
+    try:
+        return max(Path(logs or SNAPCRAFT_LOGS).glob("*.log"),
+                   key=lambda p: p.stat().st_mtime)
+    except (OSError, ValueError):
+        return None
+
+
 def lint_findings(logs=None):
     """What snapcraft's own linters said about the snap it has just packed."""
-    try:
-        newest = max(Path(logs or SNAPCRAFT_LOGS).glob("*.log"),
-                     key=lambda p: p.stat().st_mtime)
-    except (OSError, ValueError):
+    newest = _newest_log(logs)
+    if newest is None:
         return []
     found, reading = [], False
     for line in newest.read_text(errors="replace").splitlines():
@@ -377,9 +332,8 @@ def lint_findings(logs=None):
 
 def stale_instance():
     """The container a wedged run left behind, read from snapcraft's log."""
-    try:
-        newest = max(SNAPCRAFT_LOGS.glob("*.log"), key=lambda p: p.stat().st_mtime)
-    except (OSError, ValueError):
+    newest = _newest_log()
+    if newest is None:
         return ""
     text = newest.read_text(errors="replace")
     if STALE_INSTANCE not in text:

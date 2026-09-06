@@ -302,51 +302,29 @@ class Screen:
         first, last = self._window()
         table = Table(expand=True, box=None, pad_edge=False,
                       header_style="dim " + EDGE)
-        table.add_column(" ", width=2)      # the state rail, and the cursor
-        table.add_column("NAME", width=18, no_wrap=True)
-        table.add_column("BUILT", width=15, no_wrap=True)
-        table.add_column("UPSTREAM", width=15, no_wrap=True)
-        table.add_column("STATUS", width=22, no_wrap=True)
-
-        # Optional columns go in while there is room; squeezed is worse.
-        room = width - 2 - (2 + 18 + 15 + 15 + 22) - 2 * 5
-        extra = []
-        if not compact:
-            for heading, size in (("KIND", 9), ("AGE", 5), ("REPOSITORY", 24)):
-                if room >= size + 2:
-                    extra.append(heading)
-                    room -= size + 2
-                    if heading == "REPOSITORY":
-                        table.add_column(heading, overflow="ellipsis")
-                    else:
-                        table.add_column(heading, width=size, no_wrap=True,
-                                         justify="right" if heading == "AGE" else "left")
+        extra = _columns(table, width, compact)
 
         for index in range(first, last):
             row = self.board.rows[index]
             here = index == self.board.cursor
-            cells = [
-                _rail(row, here),
-                Text(row.name, style="bold" if here else ""),
-                Text(row.snap.version or "-", style="" if here else "dim"),
-                _upstream_cell(row),
-                self._status_cell(row),
-            ]
-            for heading in extra:
-                if heading == "KIND":
-                    cells.append(_kind_badge(row.snap.kind))
-                elif heading == "AGE":
-                    cells.append(Text(_ago(row.snap.updated), style="dim"))
-                else:
-                    cells.append(Text(
-                        row.note or row.snap.repo or "(no upstream recorded)",
-                        style="" if row.note else "dim"))
+            cells = [_rail(row, here),
+                     Text(row.name, style="bold" if here else ""),
+                     Text(row.snap.version or "-", style="" if here else "dim"),
+                     _upstream_cell(row),
+                     self._status_cell(row)]
+            cells += [_extra_cell(heading, row) for heading in extra]
             table.add_row(*cells, style=CURSOR_ROW if here else "")
 
         if not self.board.rows:
             empty = [Text(""), Text("nothing here yet -- press n", style="dim")]
             table.add_row(*(empty + [Text("")] * (len(table.columns) - 2)))
 
+        return Panel(table, title=self._list_title(first, last),
+                     title_align="left", box=box.ROUNDED, border_style=EDGE,
+                     padding=(0, 1))
+
+    def _list_title(self, first, last):
+        """What the list panel is headed: the window, the filter, the order."""
         title = "registered"
         if len(self.board.rows) > last - first:
             title = f"registered  {first + 1}-{last} of {len(self.board.rows)}"
@@ -360,9 +338,7 @@ class Screen:
             title += "   /"
         if self.board.order == "attention":
             title += "   by attention"
-        return Panel(table, title=title, title_align="left",
-                     box=box.ROUNDED, border_style=EDGE,
-                     padding=(0, 1))
+        return title
 
     def _status_cell(self, row):
         """What this snap is doing, as one cell."""
@@ -624,6 +600,42 @@ def _highlight(text, needle, base):
     return out
 
 
+# The columns every width gets, as rich is told them; the rail comes first.
+COLUMNS = (("NAME", 18), ("BUILT", 15), ("UPSTREAM", 15), ("STATUS", 22))
+# And the ones that go in while there is room; squeezed is worse than absent.
+OPTIONAL = (("KIND", 9), ("AGE", 5), ("REPOSITORY", 24))
+
+
+def _columns(table, width, compact):
+    """Add the columns this width has room for; the optional ones, by name."""
+    table.add_column(" ", width=2)      # the state rail, and the cursor
+    for heading, size in COLUMNS:
+        table.add_column(heading, width=size, no_wrap=True)
+    room = (width - 2 - (2 + sum(size for _, size in COLUMNS))
+            - 2 * (1 + len(COLUMNS)))
+    extra = []
+    for heading, size in () if compact else OPTIONAL:
+        if room >= size + 2:
+            extra.append(heading)
+            room -= size + 2
+            if heading == "REPOSITORY":
+                table.add_column(heading, overflow="ellipsis")
+            else:
+                table.add_column(heading, width=size, no_wrap=True,
+                                 justify="right" if heading == "AGE" else "left")
+    return extra
+
+
+def _extra_cell(heading, row):
+    """One of the optional columns, for one row."""
+    if heading == "KIND":
+        return _kind_badge(row.snap.kind)
+    if heading == "AGE":
+        return Text(_ago(row.snap.updated), style="dim")
+    return Text(row.note or row.snap.repo or "(no upstream recorded)",
+                style="" if row.note else "dim")
+
+
 def _kind_badge(kind):
     return Text(kind or "-", style=KIND_STYLE.get(kind, "dim"))
 
@@ -673,7 +685,7 @@ def _lineage(snap):
 
 def _ago(stamp):
     """How long ago, in as few characters as it takes."""
-    when = _parse(stamp)
+    when = _moment(stamp)
     if when is None:
         return ""
     seconds = max(0, (datetime.now(timezone.utc) - when).total_seconds())
@@ -687,13 +699,14 @@ def _ago(stamp):
 
 def _when(stamp):
     """The date, with how long ago it was after it."""
-    when = _parse(stamp)
+    when = _moment(stamp)
     if when is None:
         return stamp or ""
     return f"{when.date()}  ({_ago(stamp)} ago)"
 
 
-def _parse(stamp):
+def _moment(stamp):
+    """An ISO timestamp as an aware datetime, or None when it is not one."""
     if not stamp:
         return None
     try:

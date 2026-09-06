@@ -149,10 +149,10 @@ class DatabaseError(Exception):
     """The database could not be read, or does not hold what was asked for."""
 
 
-def base_url(repo=REPO, branch=BRANCH, folder=FOLDER):
+def base_url():
     """Where the database is read from, or SNAPKIT_DB_URL when it is set."""
     return os.environ.get("SNAPKIT_DB_URL") or RAW.format(
-        repo=repo, branch=branch, folder=folder)
+        repo=REPO, branch=BRANCH, folder=FOLDER)
 
 
 # -- what belongs in the database ---------------------------------------------
@@ -256,9 +256,7 @@ def publish(snaps, into, reporter=None):
             continue
         kept, skipped = project_files(directory)
         unmet = unmet_sources(directory, kept,
-                              (getattr(snap, "asset", ""),
-                               getattr(snap, "local_asset", ""),
-                               getattr(snap, "asset_glob", "")))
+                              (snap.asset, snap.local_asset, snap.asset_glob))
         target = into / snap.name
         for relative in kept:
             destination = target / relative
@@ -266,10 +264,11 @@ def publish(snaps, into, reporter=None):
             destination.write_bytes((directory / relative).read_bytes())
         entries[snap.name] = {
             "name": snap.name,
+            # write_version stays when false: a pulled record must say so too.
             "record": {field: getattr(snap, field) for field in RECORD
-                       if getattr(snap, field, None) not in (None, "", {}, [])},
+                       if getattr(snap, field) not in (None, "", {}, [])},
             "version": snap.version,
-            "summary": getattr(snap, "summary", "") or "",
+            "summary": snap.summary or "",
             "upstream": snap.repo or (snap.upstream or {}).get("kind", ""),
             "files": file_map(directory, kept),
             "pack": snap.pack or "",

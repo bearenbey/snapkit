@@ -22,6 +22,9 @@ FOREIGN = (".rpm", ".exe", ".msi", ".dmg", ".pkg", ".apk", ".ipa", ".snap",
 ARCHIVES = (".tar.gz", ".tgz", ".tar.xz", ".txz", ".tar.bz2", ".tbz",
             ".tbz2", ".tar.zst", ".tar", ".zip")
 
+# Longest first, so .tar.gz is taken off before .gz could be looked for.
+PACKAGE_SUFFIXES = sorted(ARCHIVES + (".deb", ".appimage"), key=len, reverse=True)
+
 # Which architecture is ours is a host question, so arch.py builds these.
 
 
@@ -33,6 +36,7 @@ def wanted_arch():
 def other_arch():
     """Matches every architecture that is not the one being built for."""
     return arch.other(arch.host())
+
 
 # A Windows build does not always say so: mpv ships -w64-mingw32.zip.
 OTHER_OS = re.compile(
@@ -62,15 +66,6 @@ class Candidate:
 def _tokens(name):
     """The name split on every separator, so tokens can be matched as words."""
     return [t for t in re.split(r"[^A-Za-z0-9]+", name.lower()) if t]
-
-
-def _has(name, words):
-    """Whichever of `words` appears in the name as a word, or ""."""
-    tokens = set(_tokens(name))
-    for word in words:
-        if word in tokens:
-            return word
-    return ""
 
 
 def _match(name, pattern):
@@ -125,7 +120,7 @@ def score(name):
     """How good a candidate an asset is, and one line saying why."""
     kind = kind_of(name)
     if not kind:
-        return 0, kind, ""
+        return 0, "", ""
     points = {DEB: 100, ARCHIVE: 80, APPIMAGE: 60}[kind]
     reasons = {DEB: "a Debian package: carries its own desktop entry and icon",
                ARCHIVE: "a prebuilt archive",
@@ -164,7 +159,7 @@ def score(name):
 
 def strip_suffix(name):
     """A filename with whatever package extension it carries taken off."""
-    for suffix in sorted(ARCHIVES + (".deb", ".appimage"), key=len, reverse=True):
+    for suffix in PACKAGE_SUFFIXES:
         if name.lower().endswith(suffix):
             return name[:-len(suffix)]
     return name
@@ -182,10 +177,11 @@ def distro_release(name):
     found = DISTRO.search(name)
     if not found:
         return 0.0
+    # Major and minor only: 22.04.3 reads as 22.04, and a bare 10 as 10.0.
+    parts = found.group(2).split(".") + ["0"]
     try:
-        return float(found.group(2).split(".", 2)[0]
-                     + "." + (found.group(2).split(".") + ["0"])[1])
-    except (ValueError, IndexError):
+        return float(f"{parts[0]}.{parts[1]}")
+    except ValueError:
         return 0.0
 
 
@@ -209,8 +205,7 @@ def classify(assets, wanted=""):
 
 def rejected(assets):
     """The assets that were passed over, with the reason, for a full view."""
-    passed_over = ((asset, rejection(asset.name)) for asset in assets)
-    return [(asset, why) for asset, why in passed_over if why]
+    return [(asset, why) for asset in assets if (why := rejection(asset.name))]
 
 
 def spellings_of(version):

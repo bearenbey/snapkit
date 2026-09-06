@@ -72,13 +72,18 @@ def situations(snaps):
         return list(pool.map(situation, snaps))
 
 
-def built_version(snap):
-    """The version of the newest .snap in the project, or "" if none."""
+def _builds(snap):
+    """Every .snap the project has made, oldest first; none if no project."""
     directory = snap.path
     if not directory.is_dir():
-        return ""
-    made = sorted(directory.glob(f"{snap.name}_*.snap"),
+        return []
+    return sorted(directory.glob(f"{snap.name}_*.snap"),
                   key=lambda p: p.stat().st_mtime)
+
+
+def built_version(snap):
+    """The version of the newest .snap in the project, or "" if none."""
+    made = _builds(snap)
     if not made:
         return ""
     stem = made[-1].stem[len(snap.name) + 1:]
@@ -91,14 +96,9 @@ def prunable(snap):
     Every .snap but the newest, and for a snap built from a file in its own
     folder, every file the glob matches other than the one the recipe names.
     """
-    directory = snap.path
-    if not directory.is_dir():
-        return []
-    made = sorted(directory.glob(f"{snap.name}_*.snap"),
-                  key=lambda p: p.stat().st_mtime)
-    stale = made[:-1]
+    stale = _builds(snap)[:-1]
     if snap.style == "artifact" and snap.asset_glob and snap.asset:
-        stale += sorted(p for p in directory.glob(snap.asset_glob)
+        stale += sorted(p for p in snap.path.glob(snap.asset_glob)
                         if p.is_file() and p.name != snap.asset)
     return stale
 
@@ -197,8 +197,7 @@ def _asset_for(snap, release):
         return github.Asset(
             name=release.asset, url=release.url, sha=release.sha,
             glob=snap.asset_glob or release.glob, path=release.path,
-            local=snap.local_asset or (
-                release.local if release.local != release.asset else "")), ""
+            local=snap.local_asset or release.local), ""
 
     asset = classify.match_pattern(release.assets, snap.asset_pattern)
     if asset is not None:
@@ -234,9 +233,8 @@ def _dressed(snap, release, asset):
 
 def update(snap, release, asset, reporter):
     """Move a registered snap onto a newer release."""
-    was = snap.version
     if snap.style == "artifact":
-        _update_artifact(snap, release, asset, reporter, was)
+        _update_artifact(snap, release, asset, reporter)
     else:
         _update_recipe(snap, release, asset, reporter)
 
@@ -268,7 +266,7 @@ def _update_recipe(snap, release, asset, reporter):
     with tempfile.TemporaryDirectory(prefix="snapkit-") as scratch:
         if not sha or snap.verify:
             target = Path(scratch) / asset.name
-            sha = _fetch(asset.url, target, asset.sha, reporter) or sha
+            sha = _fetch(asset.url, target, asset.sha, reporter)
             _verified(snap, target, release, asset.url, reporter)
 
     if snap.source_anchor:
@@ -292,7 +290,7 @@ def _update_recipe(snap, release, asset, reporter):
         snap.snapcraft_yaml, snap.version, release.version, old_url, asset.url, sha)
 
 
-def _update_artifact(snap, release, asset, reporter, was):
+def _update_artifact(snap, release, asset, reporter):
     """Fetch the file the build opens, then rewrite the version around it."""
     directory = snap.path
     if not directory.is_dir():
@@ -319,7 +317,7 @@ def _update_artifact(snap, release, asset, reporter, was):
             fetched.unlink(missing_ok=True)
             raise
 
-    changes = rewrite.rewrite_versions(directory, was, release.version,
+    changes = rewrite.rewrite_versions(directory, snap.version, release.version,
                                        snap.asset, asset.filename)
     _say_changes(changes, reporter)
 
@@ -340,11 +338,10 @@ def _reread_recipe(snap):
 def _verified(snap, path, release, url, reporter):
     """Run the record's check over a download, and say what it found."""
     if not snap.verify:
-        return ""
+        return
     found = sources.verify(snap.verify, path, release, url)
     if found:
         reporter.detail(found)
-    return found
 
 
 def _say_changes(changes, reporter):

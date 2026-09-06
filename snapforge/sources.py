@@ -27,10 +27,6 @@ class Release:
     # Set when the file is already here, so an update is the rewrite alone.
     path: str = ""
 
-    def __post_init__(self):
-        if self.asset and not self.local:
-            object.__setattr__(self, "local", self.asset)
-
 
 def _fill(template, **values):
     """A configured template, with the architecture always available to it."""
@@ -54,22 +50,19 @@ def _release(config, version, asset, url, **extra):
 
 # --- the shapes -------------------------------------------------------------
 
-def _apt(config, want):
+def _apt(config, want, directory=None):
     """A release out of an apt Packages index."""
     base = _fill(config["base"])
     index = _fill(config["index"], base=base)
-    version, filename, sha = apt_stanza(index, config["package"], want or "",
-                                        want_arch=arch.host())
+    version, filename, sha = apt_stanza(index, config["package"], want or "")
     return _release(config, version, filename.rsplit("/", 1)[-1],
                     f"{base}/{filename}", sha=sha)
 
 
-def _index(config, want):
+def _index(config, want, directory=None):
     """A release read off a listing of every release published."""
     listing_url = _fill(config["url"])
-    version = want
-    if not version:
-        version = newest(re.findall(config["pattern"], get_text(listing_url)))
+    version = want or newest(re.findall(config["pattern"], get_text(listing_url)))
     if not version:
         raise NetworkError(f"nothing matching {config['pattern']} in "
                            f"{listing_url}")
@@ -79,7 +72,7 @@ def _index(config, want):
     return _release(config, version, asset, url)
 
 
-def _redirect(config, want):
+def _redirect(config, want, directory=None):
     """A version read off where a download endpoint redirects to."""
     version = want
     if not version:
@@ -93,7 +86,7 @@ def _redirect(config, want):
                     _fill(config["download"], version=version, asset=asset))
 
 
-def _tag_archive(config, want):
+def _tag_archive(config, want, directory=None):
     """The archive GitHub generates from a tag, rather than a release asset."""
     prefix = config.get("prefix", "")
     tag = f"{prefix}{want}" if want else github.latest_tag(config["repo"])
@@ -126,11 +119,9 @@ def _local(config, want, directory):
                     path=str(found.path))
 
 
+# Every shape takes the project directory; only `local` has a use for it.
 SHAPES = {"apt": _apt, "index": _index, "local": _local,
           "redirect": _redirect, "tag-archive": _tag_archive}
-
-# The shapes about a directory rather than the network, so they need one.
-NEEDS_DIRECTORY = ("local",)
 
 
 def resolve(config, want=None, directory=None):
@@ -140,9 +131,7 @@ def resolve(config, want=None, directory=None):
     if shape is None:
         raise NetworkError(f"no such upstream kind: {kind or '(none)'} "
                            f"(try: {', '.join(sorted(SHAPES))})")
-    if kind in NEEDS_DIRECTORY:
-        return shape(config, want, directory)
-    return shape(config, want)
+    return shape(config, want, directory)
 
 
 # --- saying which shape, and what it needs to be told ------------------------

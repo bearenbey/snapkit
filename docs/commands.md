@@ -45,7 +45,9 @@ the clone URL, or a link to a release page.
 Useful flags: `--no-build` to write the project without building it, `--tag`
 to pin a release, `--asset` to build from a different file in it, `--name` to
 call the snap something other than the repository, `--dir` to put the project
-somewhere specific, `--plain` to keep the dashboard from opening, and
+somewhere specific, `--local` to take what `create` was given as a file or a
+folder and never a repository, `--repo owner/name` to confirm an upstream on
+`import`, `--plain` to keep the dashboard from opening, and
 `--destructive-mode` to let snapcraft build on this host rather than in a
 container.
 

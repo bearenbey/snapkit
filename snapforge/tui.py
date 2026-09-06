@@ -4,16 +4,16 @@ import subprocess
 import threading
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from rich.live import Live
 from rich.text import Text
 
 from . import adopt, github, local, project, snapdb, sources, update
-from .keys import Keyboard
 from .db import NameTaken
+from .keys import Keyboard
 from .net import NetworkError
 from .report import Reporter
 from .screen import Screen
@@ -49,7 +49,7 @@ class Row:
         if not needle:
             return True
         snap = self.snap
-        return any(needle in (field or "").lower() for field in
+        return any(needle in (value or "").lower() for value in
                    (snap.name, snap.repo, snap.summary, snap.kind))
 
 
@@ -108,7 +108,6 @@ class Dashboard:
     closing: bool = False      # the screen is being torn down: do not restart it
     asking_title: str = ""     # what the yes/no across the top is about
     asking_note: str = ""      # and the one thing worth saying under it
-    live = None               # rich's Live, once run_dashboard has one
     # Scroll, height and frame live on self.screen: drawing, not register.
 
     def __post_init__(self):
@@ -121,6 +120,7 @@ class Dashboard:
         self.answer = False
         self.worker = None
         self.keyboard = None
+        self.live = None           # rich's Live, once run_dashboard has one
         self.reload()
         for record, why in getattr(self.db, "problems", []):
             self.say(f"{record.name} could not be read and was left out: {why}",
@@ -607,18 +607,24 @@ class Dashboard:
         mode = self.mode
         if mode:
             return HANDLERS[mode](self, key)
-        if key == "q":
-            # Only q: Escape means "not this", and there is nothing to leave.
+        if key in ("q", "escape"):
             if self.busy:
                 self.cancel.set()
                 self.say("stopping after this step ...", "yellow")
-            else:
+            elif key == "q":
+                # Only q: Escape means "not this", and there is nothing to leave.
                 self.quit = True
-        elif key == "escape":
-            if self.busy:
-                self.cancel.set()
-                self.say("stopping after this step ...", "yellow")
-        elif key in ("j", "down"):
+        elif key in ACTIONS:
+            # By name, so a method put in place on one dashboard is the one run.
+            getattr(self, ACTIONS[key])()
+        elif key in MOVES:
+            self._scrolling(key)
+        else:
+            self._opening(key)
+
+    def _scrolling(self, key):
+        """The cursor keys, over the list."""
+        if key in ("j", "down"):
             self.move(1)
         elif key in ("k", "up"):
             self.move(-1)
@@ -628,20 +634,13 @@ class Dashboard:
             self.move(-self.screen.window)
         elif key == "home":
             self.cursor = 0
-        elif key in ("end", "G"):
+        else:                                   # end, G
             self.cursor = max(0, len(self.rows) - 1)
-        elif key == "n":
+
+    def _opening(self, key):
+        """The keys that put something up over the list, or reorder it."""
+        if key == "n":
             self.prompting, self.prompt = True, ""
-        elif key == "r":
-            self.recheck()
-        elif key == "u":
-            self.update_selected()
-        elif key == "U":
-            self.update_all()
-        elif key == "b":
-            self.build_selected()
-        elif key == "g":
-            self.pull_database()
         elif key == "l":
             self.reading_log, self.page_offset = True, 0
         elif key == "/":
@@ -670,10 +669,10 @@ class Dashboard:
         """The one box: find something registered, or add something new."""
         if key == "escape":
             self._close_prompt()
-        elif key in ("down",):
+        elif key == "down":
             self.match_cursor = min(self.match_cursor + 1,
                                     max(0, len(self.matches) - 1))
-        elif key in ("up",):
+        elif key == "up":
             self.match_cursor = max(self.match_cursor - 1, 0)
         elif key == "enter":
             text = self.prompt.strip()
@@ -823,7 +822,7 @@ class Dashboard:
                         keyboard.resume()
 
 
-# -- drawing helpers ---------------------------------------------------------
+# -- reporting, and the key tables ------------------------------------------
 
 
 class DashboardReporter(Reporter):
@@ -873,6 +872,14 @@ class DashboardReporter(Reporter):
     def suspended(self):
         return self.dashboard.suspended()
 
+
+# The keys that start work, by the name of the method that does it.
+ACTIONS = {"r": "recheck", "u": "update_selected", "U": "update_all",
+           "b": "build_selected", "g": "pull_database"}
+
+# The keys that only move the cursor over the list.
+MOVES = frozenset(("j", "down", "k", "up", "pagedown", "pageup", "home",
+                   "end", "G"))
 
 # One handler for every mode, so a mode cannot be added and go unanswered.
 HANDLERS = {
