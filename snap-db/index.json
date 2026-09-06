@@ -247,6 +247,63 @@
       "upstream": "index",
       "version": "9.0.1"
     },
+    "firefox-esr": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "c77efd51fe4c225e6708f33bec224a4d0caec14d9b75ac7c67a509edfe7fcf6a"
+        },
+        "overlay/bin/launcher": {
+          "exec": true,
+          "sha256": "2213df6d3fa0c4c11ef137f13a80b37d4f9ec09dd1352573346a7bfbe63cf15d"
+        },
+        "overlay/meta/gui/firefox-esr.desktop": {
+          "exec": false,
+          "sha256": "9d8bc353dff9d40e1d873030f87b276a6dd7cf8c68d4a4f2cb86075b0b44cd2c"
+        },
+        "overlay/usr/lib/firefox-esr/distribution/policies.json": {
+          "exec": false,
+          "sha256": "e977c3d690224dd727d8761d2c0a66ba41bfd02ae0fd7850c4545d06b5a8e63c"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "c9c0779d57d31828c5860b9a6a032ac195dc432f80a00f7df7af16dbd91aa2f0"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "ac2307a133c6216fb2e6f8fba9895377517e46fb49678da66d7be79ee21c8fa7"
+        }
+      },
+      "fingerprint": "218065b2461f06cf4a140b5613321adc0c40045ff174c5771fe59a83c8fc3472",
+      "name": "firefox-esr",
+      "pack": "pack.py",
+      "record": {
+        "asset": "firefox-140.15.0esr.tar.xz",
+        "asset_glob": "firefox-*esr.tar.xz",
+        "kind": "archive",
+        "pack": "pack.py",
+        "repo": "mozilla-firefox/firefox",
+        "style": "artifact",
+        "summary": "Mozilla Firefox, the Extended Support Release",
+        "upstream": {
+          "asset": "firefox-{version}.tar.xz",
+          "download": "https://archive.mozilla.org/pub/firefox/releases/{version}/linux-x86_64/en-US/{asset}",
+          "kind": "redirect",
+          "pattern": "/releases/([^/]+)/",
+          "url": "https://download.mozilla.org/?product=firefox-esr-latest-ssl&os=linux64&lang=en-US"
+        },
+        "url": "https://github.com/mozilla-firefox/firefox",
+        "verify": {
+          "kind": "gpg",
+          "suffix": ".asc"
+        },
+        "version": "140.15.0esr",
+        "write_version": false
+      },
+      "summary": "Mozilla Firefox, the Extended Support Release",
+      "upstream": "mozilla-firefox/firefox",
+      "version": "140.15.0esr"
+    },
     "floorp": {
       "files": {
         "README.md": {
@@ -391,7 +448,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "767d2a2f5ab8ed7e0018047254626579ec13a6e6eb85a9e025a20793d475917c"
+          "sha256": "082d2c6d5da86e719df6313e1df9558ed9ba8a7f7ce026f0f61092d409bd9e07"
         },
         "pack.py": {
           "exec": false,
@@ -411,14 +468,14 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "5244df2129e05110bbf4233621dd8ddb1505e17131f07ad627c60e63a164a244"
+          "sha256": "0f5704762a9211c74da7353171d762c1d74418d4a9c903fd5986b6bde75146fe"
         }
       },
-      "fingerprint": "70944a7cc54e0a9c155e305c92f5d37e17b50384960565cdb3e87c2d4bec5ce6",
+      "fingerprint": "30007b6b979aa24b157bf1c3578631d6d453f4b38b9d31febcc63974aa07eeaa",
       "name": "helium",
       "pack": "pack.py",
       "record": {
-        "asset": "helium-bin_0.16.4.1-1_amd64.deb",
+        "asset": "helium-bin_0.16.5.1-1_amd64.deb",
         "asset_glob": "helium-bin_*_amd64.deb",
         "asset_pattern": "^helium\\-bin_[0-9][0-9A-Za-z.+~_-]*\\-1_amd64\\.deb$",
         "kind": "deb",
@@ -426,14 +483,14 @@
         "repo": "imputnet/helium-linux",
         "style": "artifact",
         "summary": "Private, fast, and honest web browser",
-        "tag": "0.16.4.1",
+        "tag": "0.16.5.1",
         "url": "https://github.com/imputnet/helium-linux",
-        "version": "0.16.4.1",
+        "version": "0.16.5.1",
         "write_version": false
       },
       "summary": "Private, fast, and honest web browser",
       "upstream": "imputnet/helium-linux",
-      "version": "0.16.4.1"
+      "version": "0.16.5.1"
     },
     "irssi": {
       "files": {
@@ -963,7 +1020,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "548963b84a42903dc1e899cc342fe2b169a6cab8a6a6cbfa187332d5a2ad15a0"
+          "sha256": "724831bdfab6225ecedd7189895bf5a9693f93662b98e8b544560b5b742fd8fd"
         },
         "pack.py": {
           "exec": false,
@@ -983,14 +1040,14 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "eb7ae71db8bc4fe166fba4c1907c7a70a077a7b4f0be2e9fea58d23eec9d0b86"
+          "sha256": "4fa969f76db3466806dcd204e8d1d9a77e8a5a11c5f48c2c405f8a231b7956c8"
         }
       },
-      "fingerprint": "ed61069a477d461387f4320750f85a8fd780f74de6df7bab5dd48d004156a490",
+      "fingerprint": "1e1325b02a340e6d655967fbe6c8f8c4dc7a480f493e7fa44ce5a1bc1f7e34c1",
       "name": "ungoogled-chromium",
       "pack": "pack.py",
       "record": {
-        "asset": "ungoogled-chromium-152.0.7977.64-1-x86_64_linux.tar.xz",
+        "asset": "ungoogled-chromium-152.0.7977.82-1-x86_64_linux.tar.xz",
         "asset_glob": "ungoogled-chromium-*-x86_64_linux.tar.xz",
         "asset_pattern": "^ungoogled\\-chromium\\-[0-9][0-9A-Za-z.+~_-]*\\-x86_64_linux\\.tar\\.xz$",
         "kind": "archive",
@@ -998,14 +1055,14 @@
         "repo": "ungoogled-software/ungoogled-chromium-portablelinux",
         "style": "artifact",
         "summary": "Google Chromium, sans integration with Google",
-        "tag": "152.0.7977.64-1",
+        "tag": "152.0.7977.82-1",
         "url": "https://github.com/ungoogled-software/ungoogled-chromium-portablelinux",
-        "version": "152.0.7977.64-1",
+        "version": "152.0.7977.82-1",
         "write_version": false
       },
       "summary": "Google Chromium, sans integration with Google",
       "upstream": "ungoogled-software/ungoogled-chromium-portablelinux",
-      "version": "152.0.7977.64-1"
+      "version": "152.0.7977.82-1"
     },
     "unityhub": {
       "files": {
@@ -1092,7 +1149,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "d4a1cf875c31fbb9871e17fe6dd2c0853362df5dfa8f998299974267b85f731f"
+          "sha256": "c00e40837aa60d9308dc40d4a6fa3fc38daeffa1ce8b04123237bd71fab8764d"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -1112,10 +1169,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "67961b27bc5827c7f92b4b0c6b73018489df72bb7081c36982248cca5e4aa2cb"
+          "sha256": "8a168d2a516ffd58206253e5313c0b49002372c325a4f34bb51f0feaf492e70b"
         }
       },
-      "fingerprint": "5a827a5f6372ba3b8468d88007e188429801c0c05787d67e434aa6cf1923a8fc",
+      "fingerprint": "e64670357ae52d6c4c0d74f3ef6f870de48092e639c5a6d032eefbf465ae09e2",
       "name": "zen",
       "pack": "pack.py",
       "record": {
@@ -1127,14 +1184,14 @@
         "repo": "zen-browser/desktop",
         "style": "artifact",
         "summary": "A calmer way to browse the web",
-        "tag": "1.21.16b",
+        "tag": "1.22b",
         "url": "https://github.com/zen-browser/desktop",
-        "version": "1.21.16b",
+        "version": "1.22b",
         "write_version": false
       },
       "summary": "A calmer way to browse the web",
       "upstream": "zen-browser/desktop",
-      "version": "1.21.16b"
+      "version": "1.22b"
     }
   }
 }

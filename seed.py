@@ -70,6 +70,19 @@ CONFIG = {
         source_anchor=r"^(\s*source:\s*).*/ffmpeg-.*\.tar\.xz\s*$",
         verify=dict(kind="gpg", suffix=".asc")),
 
+    # Mozilla's ESR endpoint redirects to whichever ESR line it hands out
+    # now, and moves lines when Mozilla does. The tarball is signed beside
+    # itself, and the version in the path is the tarball's (140.15.0esr).
+    "firefox-esr": dict(
+        style="artifact", asset_glob="firefox-*esr.tar.xz", pack="pack.py",
+        upstream=dict(kind="redirect", asset="firefox-{version}.tar.xz",
+                      url="https://download.mozilla.org/"
+                          "?product=firefox-esr-latest-ssl&os=linux64&lang=en-US",
+                      pattern=r"/releases/([^/]+)/",
+                      download="https://archive.mozilla.org/pub/firefox/"
+                               "releases/{version}/linux-x86_64/en-US/{asset}"),
+        verify=dict(kind="gpg", suffix=".asc")),
+
     # The name carries no version, so it is overwritten in place each release.
     "floorp": dict(
         style="artifact", asset_glob="floorp-linux-x86_64.tar.xz",

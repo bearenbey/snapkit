@@ -1,0 +1,106 @@
+name: firefox-esr
+title: Firefox ESR
+base: core24
+version: '140.15.0esr'
+summary: Mozilla Firefox, the Extended Support Release
+description: |
+  Firefox ESR is the Extended Support Release of Mozilla's browser: one
+  feature set held for about a year and given security fixes only, for
+  people and organisations who would rather not take a new Firefox every
+  four weeks.
+
+  This snap is a repack of the official upstream Linux tarball
+  (firefox-140.15.0esr.tar.xz) and is not published or endorsed by Mozilla.
+  Firefox is a trademark of the Mozilla Foundation.
+
+license: MPL-2.0
+source-code: https://github.com/mozilla-firefox/firefox
+issues: https://bugzilla.mozilla.org/
+website: https://www.mozilla.org/firefox/enterprise/
+contact: https://support.mozilla.org/
+
+# 128px is the largest in the tarball; there is no hicolor tree to pick from.
+icon: usr/lib/firefox-esr/browser/chrome/icons/default/default128.png
+
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+apps:
+  firefox-esr:
+    command: bin/launcher
+    common-id: org.mozilla.firefox_esr
+    desktop: share/applications/firefox-esr.desktop
+    # The extension brings the command chain, desktop plugs and hooks.
+    extensions: [gnome]
+    plugs:
+      - unity7
+      - browser-sandbox
+      - network
+      - network-bind
+      - home
+      - removable-media
+      - audio-playback
+      - audio-record
+      - camera
+      - cups-control
+      - hardware-observe
+      - joystick
+      - mount-observe
+      - screen-inhibit-control
+      - password-manager-service
+      - system-packages-doc
+      - u2f-devices
+      - upower-observe
+    slots:
+      - dbus-firefox-esr
+    environment:
+      TMPDIR: $XDG_RUNTIME_DIR
+
+plugs:
+  browser-sandbox:
+    interface: browser-support
+    # Gecko's sandbox needs user namespaces, and this does not auto-connect.
+    allow-sandbox: true
+
+slots:
+  dbus-firefox-esr:
+    interface: dbus
+    bus: session
+    # application.ini says RemotingName=firefox-esr; Gecko turns the hyphen
+    # into an underscore for D-Bus and appends a per-profile suffix.
+    name: org.mozilla.firefox_esr
+
+layout:
+  # Gecko's spell checker reads its dictionaries from this path and no other.
+  /usr/share/hunspell:
+    bind: $SNAP/gnome-platform/usr/share/hunspell
+
+parts:
+  firefox-esr:
+    plugin: dump
+    source: firefox-140.15.0esr.tar.xz
+    source-type: tar
+    # craft-parts strips the firefox/ dir, so put the payload back under usr/lib.
+    organize:
+      '*': usr/lib/firefox-esr/
+    # The updater cannot write a squashfs; policies.json turns the offer off.
+    prime:
+      - -usr/lib/firefox-esr/updater
+      - -usr/lib/firefox-esr/updater.ini
+      - -usr/lib/firefox-esr/precomplete
+      - -usr/lib/firefox-esr/removed-files
+
+  overlay:
+    plugin: dump
+    source: overlay
+    organize:
+      meta/gui/firefox-esr.desktop: share/applications/firefox-esr.desktop
+    stage:
+      - bin/launcher
+      - share/applications/firefox-esr.desktop
+      - usr/lib/firefox-esr/distribution/policies.json
