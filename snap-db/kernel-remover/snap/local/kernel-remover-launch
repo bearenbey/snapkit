@@ -1,0 +1,4 @@
+#!/bin/sh
+# Classic confinement: the host's Python runs the script, so apt-get, dpkg
+# and update-grub are the host's own and /boot is the real one.
+exec /usr/bin/python3 "$SNAP/lib/kernel-remover/kernel_remover.py" "$@"

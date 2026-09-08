@@ -91,8 +91,8 @@ so they are named once and not repeated inside `upstream`. The exception is
 the `local` shape, where the glob is also how the file is found in the first
 place.
 
-A project registered this way keeps its own build. All twenty-eight hand their
-recipe to snapcraft, but fifteen of them wrap it in a `pack.py` that does the
+A project registered this way keeps its own build. All twenty-nine hand their
+recipe to snapcraft, but sixteen of them wrap it in a `pack.py` that does the
 work a recipe cannot express, and `snapkit build` imports that and calls its
 `build(project)` with a `Build`:
 

@@ -15,7 +15,7 @@ snapkit db publish <dir>      write the database out of the projects here
 In the dashboard, `g` reads the database, says how many of its snaps are not
 registered here, and asks before writing anything.
 
-A snap is more than its `snapcraft.yaml`. Three of the twenty-eight build from
+A snap is more than its `snapcraft.yaml`. Three of the twenty-nine build from
 the recipe alone, and the rest also need a launcher, an overlay tree, a
 `pack.py` or a hook, so a project is published whole, minus the release it
 was built from, the `.snap` it produced and any build tree. `index.json`

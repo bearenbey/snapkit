@@ -526,6 +526,46 @@
       "upstream": "irssi/irssi",
       "version": "1.4.5"
     },
+    "kernel-remover": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "54d3495c09aa7e3d3045d1c184c8a14574074fb5ac768af7bdebd4ae8f1591ec"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "b3cb7f87b451babf9ee2871176fdfb4c927d66c59be21c44f277f0a0bd797680"
+        },
+        "snap/local/kernel-remover-launch": {
+          "exec": true,
+          "sha256": "a6436a56cbc9ec4d0cf2c620c3779e54462762fc2b27f01e684344cb2dbfc392"
+        },
+        "snap/local/kernel_remover.py": {
+          "exec": true,
+          "sha256": "1de7e384eeb07c526fff84f85bbd6e2a111b9db9e5885ee907fc08f685f05498"
+        },
+        "snap/local/tests.py": {
+          "exec": true,
+          "sha256": "602466659dc0ba20f99f3393632ce45594e16c321e797c01be9184cb23296561"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "9ac0d8392dc7c50b26fe5df2b50c8ea30b965497f7577af660029847566895f9"
+        }
+      },
+      "fingerprint": "85759c957252d3a33cbcb56c909d2ba9e53ad441993d62e32e3c15d0b4e07ff7",
+      "name": "kernel-remover",
+      "pack": "pack.py",
+      "record": {
+        "pack": "pack.py",
+        "summary": "Safely remove old Ubuntu kernels and their leftovers",
+        "version": "1.1.0",
+        "write_version": false
+      },
+      "summary": "Safely remove old Ubuntu kernels and their leftovers",
+      "upstream": "",
+      "version": "1.1.0"
+    },
     "lutris": {
       "files": {
         "README.md": {

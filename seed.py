@@ -103,6 +103,10 @@ CONFIG = {
         style="recipe",
         source_anchor=r"^(\s*source:\s*).*/irssi-.*\.tar\.xz\s*$"),
 
+    # No upstream at all: the script is the project, kept in snap/local.
+    # Nothing to fetch and nothing to check; pack.py runs its tests first.
+    "kernel-remover": dict(pack="pack.py"),
+
     # No source tarball: the release is the tag and GitHub rolls the archive.
     "mpv": dict(
         style="recipe",

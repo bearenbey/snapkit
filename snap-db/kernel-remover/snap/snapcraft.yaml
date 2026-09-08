@@ -1,0 +1,61 @@
+# kernel-remover: a classic snap of snap/local/kernel_remover.py.
+#
+# The script has no upstream; this project is where it lives. The tool
+# drives the host's apt-get, dpkg and update-grub, and reads the host's
+# /boot and dpkg database. None of that is reachable from strict
+# confinement, so the snap is classic. It carries no Python of its own: the
+# launcher hands the script to the host's /usr/bin/python3, which every
+# Ubuntu system has because apt itself depends on it. The script needs only
+# the standard library, 3.8 or newer.
+
+name: kernel-remover
+base: core24
+version: '1.1.0'
+summary: Safely remove old Ubuntu kernels and their leftovers
+description: |
+  An interactive TUI (or a plain, scriptable mode) that purges old Ubuntu
+  kernel packages, leftover configuration of already-removed packages, and
+  orphaned kernel files in /boot.
+
+  Safety rules that are never overridden:
+    * the running kernel is never removed;
+    * the newest installed kernel is never removed;
+    * the N newest kernels are kept (default 2, adjustable);
+    * metapackages such as linux-generic-hwe-* are never touched, and the
+      run is refused if apt would remove one as collateral;
+    * packages on hold are never removed;
+    * nothing is removed without confirmation.
+
+  Run it as root:
+
+    sudo kernel-remover              # TUI
+    kernel-remover --dry-run         # TUI, apply only prints the commands
+    sudo kernel-remover --plain --yes
+
+  The snap is classic because it has to run the host's apt and dpkg.
+grade: stable
+confinement: classic
+license: MIT
+title: Kernel Remover
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+apps:
+  kernel-remover:
+    command: bin/kernel-remover
+
+parts:
+  kernel-remover:
+    plugin: dump
+    # The trailing slash keeps snapkit from reading "local" as a release file.
+    source: snap/local/
+    organize:
+      kernel-remover-launch: bin/kernel-remover
+      kernel_remover.py: lib/kernel-remover/kernel_remover.py
+    # Only these two: tests.py stays out, and so does any __pycache__.
+    stage:
+      - bin/kernel-remover
+      - lib/kernel-remover/kernel_remover.py
