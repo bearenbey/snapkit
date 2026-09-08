@@ -5,7 +5,8 @@ from pathlib import Path
 
 ARCH = "amd64"
 LOCAL = Path("snap/local")
-# The whole payload. Anything else under bin/ or lib/ is a recipe mistake.
+# The whole payload, and where each file comes from. Anything else under
+# bin/ or lib/ is a recipe mistake.
 SHIPPED = {
     "bin/kernel-remover": LOCAL / "kernel-remover-launch",
     "lib/kernel-remover/kernel_remover.py": LOCAL / "kernel_remover.py",
@@ -21,7 +22,7 @@ def test(project):
 def check_payload(project, built):
     """Refuse a snap that does not carry exactly the files in snap/local."""
     listing = project.capture("unsquashfs", "-l", built)
-    inside = {line.removeprefix("squashfs-root/")
+    inside = {line[len("squashfs-root/"):]
               for line in listing.splitlines() if line.startswith("squashfs-root/")}
     for path, source in SHIPPED.items():
         if path not in inside:
@@ -29,9 +30,10 @@ def check_payload(project, built):
         packed = project.run("unsquashfs", "-cat", built, path, capture_output=True).stdout
         if packed != (project.directory / source).read_bytes():
             project.die(f"{built.name} ships a {path} that is not {source}")
+    # Directories on the way to a shipped file are fine; anything else is not.
+    parents = {str(p) for path in SHIPPED for p in Path(path).parents}
     stray = sorted(p for p in inside
-                   if p.startswith(("bin/", "lib/")) and p not in SHIPPED
-                   and p not in ("bin/", "lib/", "lib/kernel-remover"))
+                   if p.split("/")[0] in ("bin", "lib") and p not in SHIPPED and p not in parents)
     if stray:
         project.die(f"{built.name} carries more than the script and its launcher: "
                     + ", ".join(stray))

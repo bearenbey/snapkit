@@ -534,7 +534,7 @@
         },
         "pack.py": {
           "exec": false,
-          "sha256": "b3cb7f87b451babf9ee2871176fdfb4c927d66c59be21c44f277f0a0bd797680"
+          "sha256": "7f85355baac6ec07a0b07230d588193ae4007648f5d85a4e3f518a74224dd6e6"
         },
         "snap/local/kernel-remover-launch": {
           "exec": true,
@@ -542,18 +542,18 @@
         },
         "snap/local/kernel_remover.py": {
           "exec": true,
-          "sha256": "1de7e384eeb07c526fff84f85bbd6e2a111b9db9e5885ee907fc08f685f05498"
+          "sha256": "f6764ed89aaa1a1cd6d0a55f8053a6f4b35aa9bd75c95c532a2580bfbc73cdda"
         },
         "snap/local/tests.py": {
           "exec": true,
-          "sha256": "602466659dc0ba20f99f3393632ce45594e16c321e797c01be9184cb23296561"
+          "sha256": "18674f8ceee96479b497dd7d22fbaebae500a3865e0fc328d8248d7db1773bcf"
         },
         "snap/snapcraft.yaml": {
           "exec": false,
           "sha256": "9ac0d8392dc7c50b26fe5df2b50c8ea30b965497f7577af660029847566895f9"
         }
       },
-      "fingerprint": "85759c957252d3a33cbcb56c909d2ba9e53ad441993d62e32e3c15d0b4e07ff7",
+      "fingerprint": "4a2afd25fcf767bfaf92eab41840a51789a38905e41cb86dc35e867859d94c93",
       "name": "kernel-remover",
       "pack": "pack.py",
       "record": {

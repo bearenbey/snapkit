@@ -48,15 +48,13 @@ DEFAULT_KEEP = 2
 # linux-headers-6.8.0-45, linux-hwe-6.8-headers-6.8.0-45,
 # linux-modules-nvidia-535-6.8.0-45-generic. Metapackages such as
 # linux-generic-hwe-24.04 carry no <major>.<minor>.<patch>-<abi> and never match.
-PKG_RE = re.compile(
-    r"^linux-(?P<kind>[a-z0-9.-]+?)-(?P<ver>\d+\.\d+\.\d+-\d+)(?:-(?P<flavor>[a-z0-9-]+))?$"
-)
+PKG_RE = re.compile(r"^linux-[a-z0-9.-]+?-(?P<ver>\d+\.\d+\.\d+-\d+)(?:-[a-z0-9-]+)?$")
 # What a kernel leaves in /boot: vmlinuz-6.8.0-45-generic, initrd.img-..., ...
 BOOT_FILE_RE = re.compile(
     r"^(vmlinuz|initrd\.img|System\.map|config|retpoline)-(?P<ver>\d+\.\d+\.\d+-\d+)(-[a-z0-9-]+)?$"
 )
 # uname -r: 6.8.0-45-generic
-RELEASE_RE = re.compile(r"^(?P<ver>\d+\.\d+\.\d+-\d+)(?:-(?P<flavor>[a-z0-9-]+))?$")
+RELEASE_RE = re.compile(r"^(?P<ver>\d+\.\d+\.\d+-\d+)(?:-[a-z0-9-]+)?$")
 
 
 # --------------------------------------------------------------------------- #
@@ -64,23 +62,23 @@ RELEASE_RE = re.compile(r"^(?P<ver>\d+\.\d+\.\d+-\d+)(?:-(?P<flavor>[a-z0-9-]+))
 # --------------------------------------------------------------------------- #
 @dataclass(frozen=True)
 class Pkg:
+    """One line of the dpkg database."""
     name: str
     status: str            # ii installed / hi installed, on hold / rc removed, config left
     size: int              # bytes, from Installed-Size
     version: str | None    # 6.8.0-45 for versioned kernel packages, else None
-    flavor: str | None = None
 
     @property
     def installed(self) -> bool:
         return self.status in ("ii", "hi")
 
-    @property
-    def removed(self) -> bool:
-        return self.status == "rc"
 
-    @property
-    def is_kernel(self) -> bool:
-        return self.name.startswith("linux-")
+@dataclass(frozen=True)
+class Item:
+    """One thing that can be ticked for removal."""
+    kind: str              # pkg: installed package / rc: leftover config / file: /boot orphan
+    name: str              # package name, or path
+    size: int = 0          # bytes
 
 
 @dataclass
@@ -89,7 +87,7 @@ class Host:
     running: str                       # 6.8.0-45
     packages: list[Pkg]
     held: set[str]                     # apt-mark showhold
-    boot_files: list[str]              # names in /boot
+    boot_files: dict[str, int]         # name -> bytes, for everything in /boot
     owned: Callable[[str], bool]       # does dpkg own this path?
     is_root: bool
 
@@ -100,16 +98,12 @@ class Plan:
     keep: int
     versions: list[str]                 # every installed kernel version, newest first
     protected: list[str]                # versions that stay, newest first
-    old: dict[str, list[Pkg]]           # version -> removable packages, oldest version first
-    held: list[Pkg]                     # old, but on hold
-    kernel_rc: list[Pkg]                # rc state, linux-*
-    other_rc: list[Pkg]                 # rc state, everything else
-    orphans: list[tuple[str, int]]      # (path, bytes) in /boot
+    old: dict[str, list[Item]]          # version -> removable packages, oldest version first
+    held: list[str]                     # old packages that stay because they are on hold
+    kernel_rc: list[Item]               # rc state, linux-*
+    other_rc: list[Item]                # rc state, everything else
+    orphans: list[Item]                 # unowned kernel files in /boot
     is_root: bool
-    sizes: dict[str, int] = field(default_factory=dict)   # selection key -> bytes
-
-    def size_of(self, keys: Iterable[str]) -> int:
-        return sum(self.sizes.get(k, 0) for k in keys)
 
 
 @dataclass
@@ -124,18 +118,17 @@ class Options:
 
 @dataclass
 class Selection:
-    """What to act on. Keys are pkg:NAME, rc:NAME and file:PATH."""
-    pkgs: list[str] = field(default_factory=list)   # installed packages to purge
-    rc: list[str] = field(default_factory=list)     # rc packages to purge
-    files: list[str] = field(default_factory=list)  # /boot orphans to delete
+    """Ticked items, grouped by what removes them."""
+    pkgs: list[str] = field(default_factory=list)   # apt-get purge
+    rc: list[str] = field(default_factory=list)     # dpkg --purge
+    files: list[str] = field(default_factory=list)  # rm
 
     @classmethod
-    def from_keys(cls, keys: Iterable[str]) -> Selection:
+    def of(cls, items: Iterable[Item]) -> Selection:
         sel = cls()
         buckets = {"pkg": sel.pkgs, "rc": sel.rc, "file": sel.files}
-        for key in sorted(keys):
-            kind, _, value = key.partition(":")
-            buckets[kind].append(value)
+        for item in sorted(items, key=lambda i: (i.kind, i.name)):
+            buckets[item.kind].append(item.name)
         return sel
 
     def empty(self) -> bool:
@@ -176,6 +169,10 @@ def plural(n: int, word: str) -> str:
     return f"{n} {word}" + ("" if n == 1 else "s")
 
 
+def total(items: Iterable[Item]) -> int:
+    return sum(i.size for i in items)
+
+
 def boot_free() -> int:
     st = os.statvfs(BOOT)
     return st.f_bavail * st.f_frsize
@@ -189,15 +186,11 @@ def read_host() -> Host:
     m = RELEASE_RE.match(release)
     if not m:
         die(f"cannot parse the running kernel release {release!r}")
-    try:
-        boot_files = sorted(os.listdir(BOOT))
-    except OSError:
-        boot_files = []
     return Host(
         running=m.group("ver"),
         packages=list_packages(),
         held=set(run(["apt-mark", "showhold"], check=False).stdout.split()),
-        boot_files=boot_files,
+        boot_files=list_boot(),
         owned=lambda path: run(["dpkg", "-S", path], check=False).returncode == 0,
         is_root=os.geteuid() == 0,
     )
@@ -220,12 +213,28 @@ def list_packages() -> list[Pkg]:
             status=status.strip()[:2],
             size=int(size) * 1024 if size.isdigit() else 0,
             version=m.group("ver") if m else None,
-            flavor=m.group("flavor") if m else None,
         ))
     return pkgs
 
 
-def orphaned_boot_files(host: Host, installed_versions: set[str]) -> list[tuple[str, int]]:
+def list_boot() -> dict[str, int]:
+    found = {}
+    try:
+        names = os.listdir(BOOT)
+    except OSError:
+        return found
+    for name in names:
+        try:
+            found[name] = os.path.getsize(os.path.join(BOOT, name))
+        except OSError:
+            found[name] = 0
+    return found
+
+
+# --------------------------------------------------------------------------- #
+# planning
+# --------------------------------------------------------------------------- #
+def orphaned_boot_files(host: Host, installed_versions: set[str]) -> list[Item]:
     """Kernel files in /boot of a version that is not installed and that dpkg
     does not own. Files of installed versions are skipped even when dpkg does
     not own them: initrd images are generated rather than shipped, and the
@@ -236,13 +245,8 @@ def orphaned_boot_files(host: Host, installed_versions: set[str]) -> list[tuple[
         if not m or m.group("ver") in installed_versions:
             continue
         path = os.path.join(BOOT, name)
-        if host.owned(path):
-            continue
-        try:
-            size = os.path.getsize(path)
-        except OSError:
-            size = 0
-        orphans.append((path, size))
+        if not host.owned(path):
+            orphans.append(Item("file", path, host.boot_files[name]))
     return orphans
 
 
@@ -251,21 +255,17 @@ def build_plan(host: Host, keep: int) -> Plan:
     versions = sorted({p.version for p in installed}, key=version_key, reverse=True)
     protected = set(versions[:keep]) | {host.running}
 
-    old: dict[str, list[Pkg]] = {}
-    held: list[Pkg] = []
+    old: dict[str, list[Item]] = {}
+    held: list[str] = []
     for p in sorted(installed, key=lambda p: p.name):
         if p.version in protected:
             continue
         if p.status == "hi" or p.name in host.held:
-            held.append(p)
+            held.append(p.name)
         else:
-            old.setdefault(p.version, []).append(p)
+            old.setdefault(p.version, []).append(Item("pkg", p.name, p.size))
 
-    rc = sorted((p for p in host.packages if p.removed), key=lambda p: p.name)
-    orphans = orphaned_boot_files(host, set(versions) | {host.running})
-
-    sizes = {f"pkg:{p.name}": p.size for pkgs in old.values() for p in pkgs}
-    sizes.update((f"file:{path}", size) for path, size in orphans)
+    rc = [Item("rc", p.name) for p in sorted(host.packages, key=lambda p: p.name) if p.status == "rc"]
 
     return Plan(
         running=host.running,
@@ -274,23 +274,22 @@ def build_plan(host: Host, keep: int) -> Plan:
         protected=sorted(protected, key=version_key, reverse=True),
         old=dict(sorted(old.items(), key=lambda kv: version_key(kv[0]))),
         held=held,
-        kernel_rc=[p for p in rc if p.is_kernel],
-        other_rc=[p for p in rc if not p.is_kernel],
-        orphans=orphans,
+        kernel_rc=[i for i in rc if i.name.startswith("linux-")],
+        other_rc=[i for i in rc if not i.name.startswith("linux-")],
+        orphans=orphaned_boot_files(host, set(versions) | {host.running}),
         is_root=host.is_root,
-        sizes=sizes,
     )
 
 
-def default_selection(plan: Plan, opts: Options) -> set[str]:
+def default_selection(plan: Plan, opts: Options) -> set[Item]:
     """What is ticked before the user touches anything."""
-    keys = {f"pkg:{p.name}" for pkgs in plan.old.values() for p in pkgs}
-    keys |= {f"rc:{p.name}" for p in plan.kernel_rc}
+    items = {i for group in plan.old.values() for i in group}
+    items |= set(plan.kernel_rc)
     if opts.all_rc:
-        keys |= {f"rc:{p.name}" for p in plan.other_rc}
+        items |= set(plan.other_rc)
     if opts.purge_orphans:
-        keys |= {f"file:{path}" for path, _ in plan.orphans}
-    return keys
+        items |= set(plan.orphans)
+    return items
 
 
 # --------------------------------------------------------------------------- #
@@ -373,12 +372,14 @@ def execute(sel: Selection, dry_run: bool) -> None:
 # --------------------------------------------------------------------------- #
 @dataclass
 class Row:
-    kind: str                  # section / group / item / info / blank / protected
+    kind: str                       # section / group / item / info / blank / protected
     text: str
-    key: str | None = None     # item: its selection key; group: grp:NAME
-    children: list[str] = field(default_factory=list)   # group: keys of its items
-    size: int = 0              # bytes
-    note: str = ""             # protected: why it stays
+    items: tuple[Item, ...] = ()    # what Space toggles: one for an item, all for a group
+    note: str = ""                  # protected: why it stays
+
+    @property
+    def size(self) -> int:
+        return total(self.items)
 
 
 class Tui:
@@ -401,7 +402,7 @@ class Tui:
         self.scr = scr
         self.plan = plan
         self.opts = opts
-        self.selected: set[str] = set()
+        self.selected: set[Item] = set()
         self.rows: list[Row] = []
         self.cursor = 0
         self.top = 0
@@ -459,16 +460,16 @@ class Tui:
             return 27
         return cls.ESC_SEQ.get(seq, -1)
 
-    # ----- model ---------------------------------------------------------- #
+    # ----- rows ----------------------------------------------------------- #
     @staticmethod
-    def section(title: str, items: list[Row], group: str | None = None, unit: str = "") -> list[Row]:
+    def section(title: str, items: list[Item], group: str = "", unit: str = "") -> list[Row]:
+        """A heading, then its items; with a group row above them when asked."""
         rows = [Row("blank", ""), Row("section", title)]
         if not items:
             return rows + [Row("info", "None.")]
         if group:
-            rows.append(Row("group", f"all ({plural(len(items), unit)})", key=f"grp:{group}",
-                            children=[r.key for r in items], size=sum(r.size for r in items)))
-        return rows + items
+            rows.append(Row("group", f"{group} ({plural(len(items), unit)})", tuple(items)))
+        return rows + [Row("item", i.name, (i,)) for i in items]
 
     def rebuild(self) -> None:
         """Rows from the plan, with the default selection ticked."""
@@ -480,69 +481,49 @@ class Tui:
             rows.append(Row("protected", v, note="kept: " + ", ".join(tags or ["within --keep"])))
         if not p.old:
             rows.append(Row("info", "No old kernels to remove."))
-        for v, pkgs in p.old.items():
-            rows.append(Row("group", f"{v}  (old, {plural(len(pkgs), 'package')})", key=f"grp:{v}",
-                            children=[f"pkg:{x.name}" for x in pkgs], size=sum(x.size for x in pkgs)))
-            rows += [Row("item", x.name, key=f"pkg:{x.name}", size=x.size) for x in pkgs]
-        rows += [Row("protected", x.name, note="on hold") for x in p.held]
-
-        rows += self.section("Leftover configuration of removed kernel packages",
-                             [Row("item", x.name, key=f"rc:{x.name}") for x in p.kernel_rc])
-        rows += self.section("Leftover configuration of other removed packages",
-                             [Row("item", x.name, key=f"rc:{x.name}") for x in p.other_rc],
-                             group="other-rc", unit="package")
-        rows += self.section("Orphaned kernel files in /boot (owned by no package)",
-                             [Row("item", path, key=f"file:{path}", size=size) for path, size in p.orphans],
-                             group="orphans", unit="file")
+        for v, items in p.old.items():
+            rows.append(Row("group", f"{v}  (old, {plural(len(items), 'package')})", tuple(items)))
+            rows += [Row("item", i.name, (i,)) for i in items]
+        rows += [Row("protected", name, note="on hold") for name in p.held]
+        rows += self.section("Leftover configuration of removed kernel packages", p.kernel_rc)
+        rows += self.section("Leftover configuration of other removed packages", p.other_rc,
+                             group="all", unit="package")
+        rows += self.section("Orphaned kernel files in /boot (owned by no package)", p.orphans,
+                             group="all", unit="file")
 
         self.rows = rows
         self.selected = default_selection(p, self.opts)
-        self.cursor = min(self.cursor, len(rows) - 1)
-        if not self.selectable(self.cursor):
-            self.move(1)
+        self.settle(self.cursor, +1)
 
-    def selectable(self, i: int) -> bool:
-        return 0 <= i < len(self.rows) and self.rows[i].kind in ("item", "group")
+    def state(self, row: Row) -> str:
+        """The mark in a row's box: all ticked, some, or none."""
+        n = sum(1 for i in row.items if i in self.selected)
+        return "x" if n == len(row.items) else ("-" if n else " ")
 
-    def group_state(self, row: Row) -> str:
-        n = sum(1 for k in row.children if k in self.selected)
-        return "x" if n == len(row.children) else ("-" if n else " ")
-
-    def toggle(self, i: int) -> None:
-        row = self.rows[i]
-        if row.kind == "item":
-            self.selected ^= {row.key}
-        elif row.kind == "group":
-            if self.group_state(row) == "x":
-                self.selected -= set(row.children)
-            else:
-                self.selected |= set(row.children)
-
-    def selection(self) -> Selection:
-        return Selection.from_keys(self.selected)
+    def toggle(self, row: Row) -> None:
+        if self.state(row) == "x":
+            self.selected -= set(row.items)
+        else:
+            self.selected |= set(row.items)
 
     # ----- navigation ----------------------------------------------------- #
+    def settle(self, i: int, direction: int) -> None:
+        """Put the cursor on the toggleable row nearest i, looking that way first."""
+        i = max(0, min(len(self.rows) - 1, i))
+        ahead = range(i, len(self.rows)) if direction > 0 else range(i, -1, -1)
+        behind = range(i, -1, -1) if direction > 0 else range(i, len(self.rows))
+        for j in (*ahead, *behind):
+            if self.rows[j].items:
+                self.cursor = j
+                return
+
     def move(self, delta: int) -> None:
-        i = self.cursor
-        while True:
-            i += delta
-            if not 0 <= i < len(self.rows):
+        j = self.cursor + delta
+        while 0 <= j < len(self.rows):
+            if self.rows[j].items:
+                self.cursor = j
                 return
-            if self.selectable(i):
-                self.cursor = i
-                return
-
-    def page(self, delta: int) -> None:
-        self.cursor = max(0, min(len(self.rows) - 1, self.cursor + delta * self.list_height()))
-        if not self.selectable(self.cursor):
-            self.move(1 if delta > 0 else -1)
-            if not self.selectable(self.cursor):
-                self.move(-1 if delta > 0 else 1)
-
-    def jump(self, to_end: bool) -> None:
-        self.cursor = len(self.rows) - 1 if to_end else 0
-        if not self.selectable(self.cursor):
-            self.move(-1 if to_end else 1)
+            j += delta
 
     # ----- drawing -------------------------------------------------------- #
     def list_height(self) -> int:
@@ -558,12 +539,15 @@ class Tui:
             pass
 
     def draw(self) -> None:
-        scr = self.scr
-        scr.erase()
-        h, w = scr.getmaxyx()
-        p = self.plan
+        self.scr.erase()
+        self.draw_header()
+        self.draw_rows()
+        self.draw_footer()
+        self.scr.refresh()
 
-        # header
+    def draw_header(self) -> None:
+        w = self.scr.getmaxyx()[1]
+        p = self.plan
         title = " Kernel Remover "
         right = f" running {p.running} | keep {p.keep} | /boot free {human(boot_free())} "
         if self.opts.dry_run:
@@ -574,45 +558,45 @@ class Tui:
         self.put(0, 0, title, self.attr(self.C_TITLE, curses.A_BOLD))
         self.put(0, max(len(title), w - len(right)), right, self.attr(self.C_TITLE))
 
-        # list
+    def draw_rows(self) -> None:
+        w = self.scr.getmaxyx()[1]
         lh = self.list_height()
         if self.cursor < self.top:
             self.top = self.cursor
         elif self.cursor >= self.top + lh:
             self.top = self.cursor - lh + 1
-        for i in range(self.top, min(len(self.rows), self.top + lh)):
-            y = 2 + i - self.top
-            row = self.rows[i]
-            focused = i == self.cursor
-            if row.kind == "section":
-                self.put(y, 1, row.text, self.attr(self.C_SECTION, curses.A_BOLD))
-                self.put(y, 2 + len(row.text), "─" * max(0, w - len(row.text) - 3), self.attr(self.C_SECTION))
-            elif row.kind == "info":
-                self.put(y, 5, row.text, self.attr(self.C_DIM))
-            elif row.kind == "protected":
-                self.put(y, 3, "🔒 " if w > 60 else "* ")
-                self.put(y, 6, row.text, curses.A_BOLD)
-                self.put(y, 7 + len(row.text), f"({row.note})", self.attr(self.C_OK))
-            elif row.kind in ("item", "group"):
-                mark = self.group_state(row) if row.kind == "group" else ("x" if row.key in self.selected else " ")
-                indent = 3 if row.kind == "group" else 5
-                a = self.attr(self.C_SEL) if focused else (curses.A_BOLD if row.kind == "group" else 0)
-                if focused:
-                    self.put(y, 0, " " * w, a)
-                self.put(y, indent, f"[{mark}] {row.text}", a)
-                if row.size:
-                    s = human(row.size)
-                    self.put(y, w - len(s) - 2, s, a if focused else self.attr(self.C_DIM))
-
-        # scroll position
+        last = min(len(self.rows), self.top + lh)
+        for i in range(self.top, last):
+            self.draw_row(2 + i - self.top, self.rows[i], focused=i == self.cursor)
         if len(self.rows) > lh:
-            self.put(1, w - 12, f"{self.top + 1}-{min(len(self.rows), self.top + lh)}/{len(self.rows)}",
-                     self.attr(self.C_DIM))
+            self.put(1, w - 12, f"{self.top + 1}-{last}/{len(self.rows)}", self.attr(self.C_DIM))
 
-        # footer
-        sel = self.selection()
+    def draw_row(self, y: int, row: Row, focused: bool) -> None:
+        w = self.scr.getmaxyx()[1]
+        if row.kind == "section":
+            self.put(y, 1, row.text, self.attr(self.C_SECTION, curses.A_BOLD))
+            self.put(y, 2 + len(row.text), "─" * max(0, w - len(row.text) - 3), self.attr(self.C_SECTION))
+        elif row.kind == "info":
+            self.put(y, 5, row.text, self.attr(self.C_DIM))
+        elif row.kind == "protected":
+            self.put(y, 3, "🔒 " if w > 60 else "* ")
+            self.put(y, 6, row.text, curses.A_BOLD)
+            self.put(y, 7 + len(row.text), f"({row.note})", self.attr(self.C_OK))
+        elif row.items:
+            group = row.kind == "group"
+            a = self.attr(self.C_SEL) if focused else (curses.A_BOLD if group else 0)
+            if focused:
+                self.put(y, 0, " " * w, a)
+            self.put(y, 3 if group else 5, f"[{self.state(row)}] {row.text}", a)
+            if row.size:
+                s = human(row.size)
+                self.put(y, w - len(s) - 2, s, a if focused else self.attr(self.C_DIM))
+
+    def draw_footer(self) -> None:
+        h, w = self.scr.getmaxyx()
+        sel = Selection.of(self.selected)
         summary = (f" Selected: {plural(len(sel.pkgs), 'package')}, {plural(len(sel.rc), 'config')}, "
-                   f"{plural(len(sel.files), 'file')}  (~{human(p.size_of(self.selected))})")
+                   f"{plural(len(sel.files), 'file')}  (~{human(total(self.selected))})")
         self.put(h - 3, 0, "─" * w, self.attr(self.C_DIM))
         self.put(h - 2, 0, summary, curses.A_BOLD)
         if self.status:
@@ -623,7 +607,6 @@ class Tui:
             x += len(key)
             self.put(h - 1, x, f" {label}  ")
             x += len(label) + 3
-        scr.refresh()
 
     # ----- dialogs -------------------------------------------------------- #
     def dialog(self, title: str, lines: list[str], footer: str, pair: int) -> int:
@@ -645,7 +628,7 @@ class Tui:
         return self.getkey(win)
 
     def confirm_apply(self) -> bool:
-        sel = self.selection()
+        sel = Selection.of(self.selected)
         if sel.empty():
             self.status = "Nothing selected."
             return False
@@ -660,12 +643,12 @@ class Tui:
 
         lines = []
         if sel.pkgs:
-            size = human(self.plan.size_of(f"pkg:{n}" for n in sel.pkgs))
+            size = human(total(i for i in self.selected if i.kind == "pkg"))
             lines.append(f"Purge {plural(len(sel.pkgs), 'kernel package')}  (~{size})")
         if sel.rc:
             lines.append(f"Purge leftover configuration of {plural(len(sel.rc), 'package')}")
         if sel.files:
-            size = human(self.plan.size_of(f"file:{f}" for f in sel.files))
+            size = human(total(i for i in self.selected if i.kind == "file"))
             lines.append(f"Delete {plural(len(sel.files), 'orphaned /boot file')}  (~{size})")
         lines += ["", "Kept kernels: " + ", ".join(self.plan.protected)]
         if self.opts.dry_run:
@@ -686,18 +669,17 @@ class Tui:
             elif ch in (curses.KEY_DOWN, ord("j")):
                 self.move(1)
             elif ch == curses.KEY_PPAGE:
-                self.page(-1)
+                self.settle(self.cursor - self.list_height(), -1)
             elif ch == curses.KEY_NPAGE:
-                self.page(1)
+                self.settle(self.cursor + self.list_height(), +1)
             elif ch in (curses.KEY_HOME, ord("g")):
-                self.jump(False)
+                self.settle(0, +1)
             elif ch in (curses.KEY_END, ord("G")):
-                self.jump(True)
+                self.settle(len(self.rows) - 1, -1)
             elif ch == ord(" "):
-                if self.selectable(self.cursor):
-                    self.toggle(self.cursor)
+                self.toggle(self.rows[self.cursor])
             elif ch == ord("a"):
-                self.selected = {r.key for r in self.rows if r.kind == "item"}
+                self.selected = {i for r in self.rows for i in r.items}
             elif ch == ord("n"):
                 self.selected = set()
             elif ch in (ord("+"), ord("=")):
@@ -711,7 +693,7 @@ class Tui:
                 self.rescan(self.plan.keep)
             elif ch in (10, 13, curses.KEY_ENTER):
                 if self.confirm_apply():
-                    return self.selection()
+                    return Selection.of(self.selected)
             elif ch == curses.KEY_RESIZE:
                 self.scr.clear()
 
@@ -743,23 +725,23 @@ def plain_mode(plan: Plan, opts: Options) -> int:
     print(f"/boot free     : {human(boot_free())}")
 
     if plan.old:
-        listing("Old kernel packages to purge:", [x.name for pkgs in plan.old.values() for x in pkgs])
+        listing("Old kernel packages to purge:", [i.name for group in plan.old.values() for i in group])
     else:
         print("\nNo old kernel packages to remove.")
-    listing("Skipped (on hold):", [x.name for x in plan.held])
-    listing("Leftover kernel configuration to purge:", [x.name for x in plan.kernel_rc])
+    listing("Skipped (on hold):", plan.held)
+    listing("Leftover kernel configuration to purge:", [i.name for i in plan.kernel_rc])
     if plan.other_rc and opts.all_rc:
-        listing("Other leftover configuration to purge:", [x.name for x in plan.other_rc])
+        listing("Other leftover configuration to purge:", [i.name for i in plan.other_rc])
     elif plan.other_rc:
         print(f"\nLeftover configuration of {plural(len(plan.other_rc), 'other package')} "
               "not included (use --all-rc).")
     if plan.orphans:
         print("\nOrphaned /boot files" + (" to delete:" if opts.purge_orphans else " (use --purge-orphans to delete):"))
-        for path, size in plan.orphans:
-            print(f"  {path}  ({human(size)})")
+        for i in plan.orphans:
+            print(f"  {i.name}  ({human(i.size)})")
     print()
 
-    sel = Selection.from_keys(default_selection(plan, opts))
+    sel = Selection.of(default_selection(plan, opts))
     if sel.empty():
         print("Nothing to do.")
         return 0

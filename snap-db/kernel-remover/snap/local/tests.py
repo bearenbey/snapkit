@@ -19,10 +19,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import kernel_remover as kr  # noqa: E402
 
+K = 1024
 
-def pkg(name: str, status: str = "ii", size: int = 1024) -> kr.Pkg:
+
+def pkg(name: str, status: str = "ii", size: int = K) -> kr.Pkg:
     m = kr.PKG_RE.match(name)
-    return kr.Pkg(name, status, size, m.group("ver") if m else None, m.group("flavor") if m else None)
+    return kr.Pkg(name, status, size, m.group("ver") if m else None)
 
 
 def host(**overrides) -> kr.Host:
@@ -32,8 +34,8 @@ def host(**overrides) -> kr.Host:
             pkg("linux-image-6.8.0-47-generic"),
             pkg("linux-headers-6.8.0-47-generic"),
             pkg("linux-image-6.8.0-45-generic"),
-            pkg("linux-image-6.8.0-40-generic", size=100 * 1024),
-            pkg("linux-hwe-6.8-headers-6.8.0-40", size=50 * 1024),
+            pkg("linux-image-6.8.0-40-generic", size=100 * K),
+            pkg("linux-hwe-6.8-headers-6.8.0-40", size=50 * K),
             pkg("linux-image-6.8.0-38-generic"),
             pkg("linux-modules-6.8.0-38-generic", status="hi"),
             pkg("linux-tools-6.8.0-38"),
@@ -43,16 +45,16 @@ def host(**overrides) -> kr.Host:
             pkg("some-app", status="rc", size=0),
         ],
         held={"linux-tools-6.8.0-38"},
-        boot_files=[
-            "grub",
-            "vmlinuz-6.8.0-47-generic",
-            "initrd.img-6.8.0-47-generic",
-            "initrd.img-6.8.0-40-generic",
-            "vmlinuz-6.8.0-45-generic.old",
-            "vmlinuz-6.5.0-10-generic",
-            "initrd.img-6.5.0-10-generic",
-            "config-6.5.0-10-generic",
-        ],
+        boot_files={
+            "grub": 0,
+            "vmlinuz-6.8.0-47-generic": 15 * K,
+            "initrd.img-6.8.0-47-generic": 80 * K,
+            "initrd.img-6.8.0-40-generic": 80 * K,
+            "vmlinuz-6.8.0-45-generic.old": 15 * K,
+            "vmlinuz-6.5.0-10-generic": 14 * K,
+            "initrd.img-6.5.0-10-generic": 70 * K,
+            "config-6.5.0-10-generic": 1 * K,
+        },
         owned=lambda path: "6.8.0-47" in path or path.endswith("config-6.5.0-10-generic"),
         is_root=False,
     )
@@ -60,20 +62,24 @@ def host(**overrides) -> kr.Host:
     return kr.Host(**base)
 
 
+def names(items) -> list[str]:
+    return [i.name for i in items]
+
+
 class PatternTests(unittest.TestCase):
     def test_versioned_kernel_packages(self):
         cases = {
-            "linux-image-6.8.0-45-generic": ("image", "6.8.0-45", "generic"),
-            "linux-headers-6.8.0-45": ("headers", "6.8.0-45", None),
-            "linux-hwe-6.8-headers-6.8.0-45": ("hwe-6.8-headers", "6.8.0-45", None),
-            "linux-modules-extra-6.8.0-45-generic": ("modules-extra", "6.8.0-45", "generic"),
-            "linux-modules-nvidia-535-6.8.0-45-generic": ("modules-nvidia-535", "6.8.0-45", "generic"),
-            "linux-image-6.11.0-1007-oem": ("image", "6.11.0-1007", "oem"),
+            "linux-image-6.8.0-45-generic": "6.8.0-45",
+            "linux-headers-6.8.0-45": "6.8.0-45",
+            "linux-hwe-6.8-headers-6.8.0-45": "6.8.0-45",
+            "linux-modules-extra-6.8.0-45-generic": "6.8.0-45",
+            "linux-modules-nvidia-535-6.8.0-45-generic": "6.8.0-45",
+            "linux-image-6.11.0-1007-oem": "6.11.0-1007",
         }
-        for name, (kind, ver, flavor) in cases.items():
+        for name, ver in cases.items():
             m = kr.PKG_RE.match(name)
             self.assertIsNotNone(m, name)
-            self.assertEqual((m.group("kind"), m.group("ver"), m.group("flavor")), (kind, ver, flavor), name)
+            self.assertEqual(m.group("ver"), ver, name)
 
     def test_metapackages_and_others_never_match(self):
         for name in ("linux-generic-hwe-24.04", "linux-image-generic", "linux-headers-generic-hwe-26.04",
@@ -82,9 +88,9 @@ class PatternTests(unittest.TestCase):
             self.assertIsNone(kr.PKG_RE.match(name), name)
 
     def test_boot_files(self):
-        self.assertEqual(kr.BOOT_FILE_RE.match("vmlinuz-6.8.0-45-generic").group("ver"), "6.8.0-45")
-        self.assertEqual(kr.BOOT_FILE_RE.match("initrd.img-6.8.0-45-generic").group("ver"), "6.8.0-45")
-        self.assertEqual(kr.BOOT_FILE_RE.match("System.map-6.8.0-45-generic").group("ver"), "6.8.0-45")
+        for name in ("vmlinuz-6.8.0-45-generic", "initrd.img-6.8.0-45-generic", "System.map-6.8.0-45-generic",
+                     "config-6.8.0-45-generic", "retpoline-6.8.0-45-generic"):
+            self.assertEqual(kr.BOOT_FILE_RE.match(name).group("ver"), "6.8.0-45", name)
         for name in ("grub", "vmlinuz", "vmlinuz-6.8.0-45-generic.old", "memtest86+x64.bin", "efi"):
             self.assertIsNone(kr.BOOT_FILE_RE.match(name), name)
 
@@ -102,14 +108,18 @@ class HelperTests(unittest.TestCase):
     def test_human(self):
         self.assertEqual(kr.human(0), "0B")
         self.assertEqual(kr.human(1023), "1023B")
-        self.assertEqual(kr.human(1024), "1K")
-        self.assertEqual(kr.human(1536), "1.5K")
-        self.assertEqual(kr.human(10 * 1024 ** 2), "10M")
-        self.assertEqual(kr.human(-2 * 1024 ** 3), "-2G")
+        self.assertEqual(kr.human(K), "1K")
+        self.assertEqual(kr.human(1.5 * K), "1.5K")
+        self.assertEqual(kr.human(10 * K ** 2), "10M")
+        self.assertEqual(kr.human(-2 * K ** 3), "-2G")
 
     def test_plural(self):
         self.assertEqual(kr.plural(1, "package"), "1 package")
         self.assertEqual(kr.plural(2, "package"), "2 packages")
+
+    def test_total(self):
+        self.assertEqual(kr.total([kr.Item("pkg", "a", 3), kr.Item("file", "b", 4)]), 7)
+        self.assertEqual(kr.total([]), 0)
 
     def test_collateral(self):
         transcript = "\n".join([
@@ -146,56 +156,54 @@ class PlanTests(unittest.TestCase):
         self.assertEqual(plan.old, {})
         self.assertEqual(plan.held, [])
 
-    def test_removable_packages_are_grouped_and_sorted(self):
+    def test_removable_packages_are_grouped_sorted_and_sized(self):
         plan = kr.build_plan(host(), keep=1)
-        self.assertEqual([p.name for p in plan.old["6.8.0-40"]],
-                         ["linux-hwe-6.8-headers-6.8.0-40", "linux-image-6.8.0-40-generic"])
-        self.assertEqual([p.name for p in plan.old["6.8.0-38"]], ["linux-image-6.8.0-38-generic"])
+        self.assertEqual(plan.old["6.8.0-40"], [
+            kr.Item("pkg", "linux-hwe-6.8-headers-6.8.0-40", 50 * K),
+            kr.Item("pkg", "linux-image-6.8.0-40-generic", 100 * K),
+        ])
+        self.assertEqual(names(plan.old["6.8.0-38"]), ["linux-image-6.8.0-38-generic"])
 
     def test_metapackages_and_unversioned_never_appear(self):
         plan = kr.build_plan(host(), keep=1)
-        names = {p.name for pkgs in plan.old.values() for p in pkgs} | {p.name for p in plan.held}
-        self.assertNotIn("linux-generic-hwe-24.04", names)
-        self.assertNotIn("linux-firmware", names)
+        seen = {i.name for group in plan.old.values() for i in group} | set(plan.held)
+        self.assertNotIn("linux-generic-hwe-24.04", seen)
+        self.assertNotIn("linux-firmware", seen)
 
     def test_holds_from_apt_mark_and_dpkg(self):
         plan = kr.build_plan(host(), keep=1)
-        self.assertEqual([p.name for p in plan.held],
-                         ["linux-modules-6.8.0-38-generic", "linux-tools-6.8.0-38"])
+        self.assertEqual(plan.held, ["linux-modules-6.8.0-38-generic", "linux-tools-6.8.0-38"])
 
     def test_rc_split(self):
         plan = kr.build_plan(host(), keep=1)
-        self.assertEqual([p.name for p in plan.kernel_rc], ["linux-image-6.5.0-10-generic"])
-        self.assertEqual([p.name for p in plan.other_rc], ["some-app"])
+        self.assertEqual(plan.kernel_rc, [kr.Item("rc", "linux-image-6.5.0-10-generic")])
+        self.assertEqual(plan.other_rc, [kr.Item("rc", "some-app")])
 
     def test_orphans_skip_installed_versions_and_owned_files(self):
         plan = kr.build_plan(host(), keep=1)
-        self.assertEqual([path for path, _ in plan.orphans],
-                         ["/boot/initrd.img-6.5.0-10-generic", "/boot/vmlinuz-6.5.0-10-generic"])
-
-    def test_sizes(self):
-        plan = kr.build_plan(host(), keep=1)
-        self.assertEqual(plan.size_of(["pkg:linux-image-6.8.0-40-generic"]), 100 * 1024)
-        self.assertEqual(plan.size_of(["pkg:linux-hwe-6.8-headers-6.8.0-40", "pkg:missing"]), 50 * 1024)
+        self.assertEqual(plan.orphans, [
+            kr.Item("file", "/boot/initrd.img-6.5.0-10-generic", 70 * K),
+            kr.Item("file", "/boot/vmlinuz-6.5.0-10-generic", 14 * K),
+        ])
 
 
 class SelectionTests(unittest.TestCase):
     def test_defaults(self):
         plan = kr.build_plan(host(), keep=1)
-        keys = kr.default_selection(plan, kr.Options())
-        self.assertEqual(keys, {
-            "pkg:linux-hwe-6.8-headers-6.8.0-40", "pkg:linux-image-6.8.0-40-generic",
-            "pkg:linux-image-6.8.0-38-generic", "rc:linux-image-6.5.0-10-generic",
-        })
+        self.assertEqual(sorted(names(kr.default_selection(plan, kr.Options()))), [
+            "linux-hwe-6.8-headers-6.8.0-40", "linux-image-6.5.0-10-generic",
+            "linux-image-6.8.0-38-generic", "linux-image-6.8.0-40-generic",
+        ])
 
     def test_options_widen_the_default(self):
         plan = kr.build_plan(host(), keep=1)
-        keys = kr.default_selection(plan, kr.Options(all_rc=True, purge_orphans=True))
-        self.assertIn("rc:some-app", keys)
-        self.assertIn("file:/boot/vmlinuz-6.5.0-10-generic", keys)
+        items = kr.default_selection(plan, kr.Options(all_rc=True, purge_orphans=True))
+        self.assertIn(kr.Item("rc", "some-app"), items)
+        self.assertIn(kr.Item("file", "/boot/vmlinuz-6.5.0-10-generic", 14 * K), items)
 
-    def test_from_keys(self):
-        sel = kr.Selection.from_keys({"file:/boot/x", "pkg:b", "pkg:a", "rc:c"})
+    def test_of_groups_and_sorts(self):
+        sel = kr.Selection.of({kr.Item("file", "/boot/x"), kr.Item("pkg", "b"), kr.Item("pkg", "a"),
+                               kr.Item("rc", "c")})
         self.assertEqual((sel.pkgs, sel.rc, sel.files), (["a", "b"], ["c"], ["/boot/x"]))
         self.assertFalse(sel.empty())
         self.assertTrue(kr.Selection().empty())
@@ -212,10 +220,26 @@ class PreflightTests(unittest.TestCase):
         self.assertIsNone(kr.preflight(kr.Selection(rc=["some-app"]), plan, dry_run=True))
 
 
+class RowTests(unittest.TestCase):
+    def test_section_with_and_without_group(self):
+        items = [kr.Item("rc", "a"), kr.Item("rc", "b")]
+        rows = kr.Tui.section("Title", items, group="all", unit="package")
+        self.assertEqual([r.kind for r in rows], ["blank", "section", "group", "item", "item"])
+        self.assertEqual(rows[2].text, "all (2 packages)")
+        self.assertEqual(rows[2].items, tuple(items))
+        self.assertEqual(rows[3].items, (items[0],))
+        rows = kr.Tui.section("Title", [])
+        self.assertEqual([r.kind for r in rows], ["blank", "section", "info"])
+
+    def test_row_size_sums_its_items(self):
+        row = kr.Row("group", "x", (kr.Item("pkg", "a", 2), kr.Item("pkg", "b", 3)))
+        self.assertEqual(row.size, 5)
+        self.assertEqual(kr.Row("info", "x").size, 0)
+
+
 class ArgTests(unittest.TestCase):
     def test_defaults(self):
-        opts = kr.parse_args([])
-        self.assertEqual(opts, kr.Options())
+        self.assertEqual(kr.parse_args([]), kr.Options())
 
     def test_flags(self):
         opts = kr.parse_args(["-k", "3", "-n", "-p", "-y", "--all-rc", "--purge-orphans"])
