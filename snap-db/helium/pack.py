@@ -6,7 +6,6 @@ import tarfile
 import tempfile
 from pathlib import Path
 
-ARCH = "amd64"
 GUI = Path("snap/gui")
 # What to lift out of the .deb, and what it is called in snap/gui.
 FROM_DEB = {
@@ -15,17 +14,8 @@ FROM_DEB = {
 }
 
 
-def packaged_deb(project):
-    """The .deb the recipe names, which is the one to open."""
-    for line in project.snapcraft_yaml.read_text().splitlines():
-        found = re.match(r"^\s*source:\s*(helium-bin_.*\.deb)\s*$", line)
-        if found:
-            return project.directory / found.group(1)
-    project.die(f"could not read the .deb source: from {project.snapcraft_yaml}")
-
-
 def refresh_gui(project, deb):
-    """Take the desktop entry and icon from the .deb rather than keeping a"""
+    """Take the desktop entry and icon from the .deb rather than keeping a copy."""
     project.say(f"refreshing {GUI} from the .deb")
     GUI.mkdir(parents=True, exist_ok=True)
 
@@ -59,31 +49,16 @@ def refresh_gui(project, deb):
 
 
 def build(project):
-    project.need_tools("dpkg-deb", "tar", "snapcraft")
-
-    deb = packaged_deb(project)
-    if not deb.is_file():
-        project.die(f"{project.snapcraft_yaml.name} wants {deb.name}, which is "
-                    f"not here -- snapkit update helium --force fetches it")
+    project.need_tools("dpkg-deb", "tar")
+    # The recipe's own source:, so a superseded .deb beside it is not opened.
+    deb = project.artifact("helium-bin_*.deb")
     project.run("dpkg-deb", "-I", deb, capture_output=True)
 
     project.say(f"building Helium {project.version}  (from {deb.name})")
     refresh_gui(project, deb)
 
     # Stale parts leak into the pull step, and a browser is big enough to care.
-    project.say("snapcraft clean")
-    project.run("snapcraft", "clean")
-    project.say("snapcraft pack")
-    project.run("snapcraft", "pack")
-
-    built = project.directory / f"helium_{project.version}_{ARCH}.snap"
-    if not built.is_file():
-        project.die(f"build finished but {built.name} was not produced")
-    project.say(f"built {built.name} ({built.stat().st_size / 1e6:.0f} MB)")
+    built = project.pack(clean=True)
 
     # Neither interface auto-connects for a local --dangerous install.
-    project.note(f"install it with:\n"
-                 f"      sudo snap install --dangerous {built.name}\n"
-                 f"      sudo snap connect helium:browser-sandbox\n"
-                 f"      sudo snap connect helium:u2f-devices")
-    return built
+    return project.finish(built, "browser-sandbox", "u2f-devices")

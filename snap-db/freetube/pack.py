@@ -1,7 +1,5 @@
 """Rebuild the FreeTube snap from the official upstream .deb."""
 
-ARCH = "amd64"
-
 
 def deb_contents(project, deb):
     """The absolute paths inside a .deb, as `dpkg-deb -c` reports them."""
@@ -16,13 +14,11 @@ def deb_contents(project, deb):
 
 def build(project):
     deb = project.artifact("freetube_*_amd64.deb")
-    project.need_tools("dpkg-deb", "snapcraft")
+    project.need_tools("dpkg-deb")
 
     # Upstream tags the release beta; the deb inside carries the bare version.
-    reported = project.capture("dpkg-deb", "-f", deb, "Version")
-    if reported != project.version.removesuffix("-beta"):
-        project.die(f"version mismatch: {project.yaml.name} says {project.version}, "
-                    f"the deb ships {reported}")
+    project.check_version(project.deb_field(deb, "Version"), deb.name,
+                          expected=project.version.removesuffix("-beta"))
 
     # electron-builder moves this between /opt and /usr/lib; accept either.
     contents = deb_contents(project, deb)
@@ -30,16 +26,4 @@ def build(project):
         project.die(f"no freetube binary in {deb.name}: the payload layout changed")
 
     project.say(f"building FreeTube {project.version}  (from {deb.name})")
-
-    # No clean first: craft-parts re-pulls when the source changes.
-    project.say("snapcraft pack")
-    project.run("snapcraft", "pack")
-
-    built = project.directory / f"freetube_{project.version}_{ARCH}.snap"
-    if not built.is_file():
-        project.die(f"build finished but {built.name} was not produced")
-    project.say(f"built {built.name} ({built.stat().st_size / 1e6:.0f} MB)")
-
-    project.note(f"install it with:\n"
-                 f"      sudo snap install --dangerous {built.name}")
-    return built
+    return project.finish(project.pack())

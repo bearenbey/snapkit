@@ -2460,6 +2460,236 @@ def dashboard():
                 assert "--classic" in ran[-1], ran[-1]
 
 
+# -- what a pack.py is handed --------------------------------------------------
+
+def elf_needing(*sonames):
+    """A 64-bit ELF whose dynamic section names these libraries, and no more."""
+    import struct
+    strtab, offsets = b"\0", []
+    for soname in sonames:
+        offsets.append(len(strtab))
+        strtab += soname.encode() + b"\0"
+    strtab_at = 64 + 2 * 56
+    dynamic_at = strtab_at + len(strtab)
+    entries = [(5, strtab_at)] + [(1, at) for at in offsets] + [(0, 0)]
+    dynamic = b"".join(struct.pack("<QQ", *entry) for entry in entries)
+    total = dynamic_at + len(dynamic)
+    ident = b"\x7fELF" + bytes([2, 1, 1, 0]) + b"\0" * 8
+    header = ident + struct.pack("<HHIQQQIHHHHHH", 3, 62, 1, 0, 64, 0, 0,
+                                 64, 56, 2, 64, 0, 0)
+
+    def segment(kind, offset, size):
+        return struct.pack("<IIQQQQQQ", kind, 5, offset, offset, offset,
+                           size, size, 0x1000)
+    return (header + segment(1, 0, total) + segment(2, dynamic_at, len(dynamic))
+            + strtab + dynamic)
+
+
+def packing():
+    """The Build a pack.py is handed, and what it does around snapcraft."""
+    from snapforge import build as buildlib
+
+    class Noted(Reporter):
+        """A reporter that keeps what was noted and warned."""
+
+        def __init__(self):
+            self.notes, self.warnings = [], []
+
+        def detail(self, text):
+            self.notes.append(text)
+
+        def warn(self, text):
+            self.warnings.append(text)
+
+    class FakeSubprocess:
+        """snapcraft and unsquashfs that do nothing, and say they did."""
+        ran = []
+
+        @classmethod
+        def run(cls, argv, **kwargs):
+            cls.ran.append(argv)
+            return subprocess_result()
+
+    def project(here, yaml="name: demo\nversion: '1.0'\n", reporter=None):
+        (here / "snap").mkdir(exist_ok=True)
+        (here / "snap" / "snapcraft.yaml").write_text(yaml)
+        made = buildlib.Build("demo", here, reporter or Quiet())
+        # The tools are not the subject, and CI has neither.
+        made.need_tools = lambda *names: None
+        return made
+
+    @check("pack hands back the snap for the recipe's version, whatever its arch")
+    def _():
+        with tempfile.TemporaryDirectory() as home, \
+                patched(buildlib, subprocess=FakeSubprocess):
+            here = Path(home)
+            build = project(here)
+            (here / "demo_0.9_amd64.snap").write_bytes(b"old")
+            try:
+                build.pack()
+                assert False, "nothing for 1.0, so it should have died"
+            except buildlib.BuildError as exc:
+                assert "demo_1.0_*.snap" in str(exc), str(exc)
+            (here / "demo_1.0_arm64.snap").write_bytes(b"new")
+            same(build.pack().name, "demo_1.0_arm64.snap")
+            same(FakeSubprocess.ran[-1], ["snapcraft", "pack"])
+            build.pack(clean=True)
+            same(FakeSubprocess.ran[-2:], [["snapcraft", "clean"],
+                                           ["snapcraft", "pack"]])
+
+    @check("a check that dies inside unpacked takes the snap with it")
+    def _():
+        with tempfile.TemporaryDirectory() as home, \
+                patched(buildlib, subprocess=FakeSubprocess):
+            here = Path(home)
+            build = project(here)
+            snap = here / "demo_1.0_amd64.snap"
+            snap.write_bytes(b"snap")
+            with build.unpacked(snap) as root:
+                assert not root.exists(), "unsquashfs ran nowhere"
+            assert snap.is_file(), "a snap that passed was deleted"
+            same(FakeSubprocess.ran[-1][0], "unsquashfs")
+
+            try:
+                with build.unpacked(snap):
+                    build.die("the payload is wrong")
+                assert False, "should have raised"
+            except buildlib.BuildError:
+                pass
+            assert not snap.exists(), "a snap that failed its check survived"
+
+            # Only a refusal deletes it: a tool crashing is not a verdict.
+            snap.write_bytes(b"snap")
+            try:
+                with build.unpacked(snap):
+                    raise RuntimeError("objdump exploded")
+            except RuntimeError:
+                pass
+            assert snap.is_file(), "an error that was not a check deleted it"
+
+    @check("artifact takes the file the recipe names over an ambiguous glob")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            here = Path(home)
+            (here / "demo-1.0.tar.gz").write_text("old")
+            (here / "demo-2.0.tar.gz").write_text("new")
+            build = project(here)
+            try:
+                build.artifact("demo-*.tar.gz")
+                assert False, "two candidates and no recipe naming one"
+            except buildlib.BuildError as exc:
+                assert "more than one" in str(exc), str(exc)
+
+            named = project(here, "name: demo\nversion: '2.0'\nparts:\n"
+                                  "  app:\n    source: demo-2.0.tar.gz\n")
+            same(named.artifact("demo-*.tar.gz").name, "demo-2.0.tar.gz")
+            same(named.recipe_source("*.deb"), None, "nothing matches that")
+
+            (here / "demo-2.0.tar.gz").unlink()
+            try:
+                named.artifact("demo-*.tar.gz")
+                assert False, "the recipe names a file that is not here"
+            except buildlib.BuildError as exc:
+                assert "--force fetches it" in str(exc), str(exc)
+
+    @check("finish says --classic when the recipe does, and names the plugs")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            here = Path(home)
+            said = Noted()
+            build = project(here, reporter=said)
+            same(build.finish(here / "demo_1.0_amd64.snap", "camera"),
+                 here / "demo_1.0_amd64.snap", "finish hands the snap back")
+            same(said.notes[-1],
+                 "install it with:\n"
+                 "      sudo snap install --dangerous demo_1.0_amd64.snap\n"
+                 "      sudo snap connect demo:camera")
+
+            classic = project(here, "name: demo\nversion: '1.0'\n"
+                                    "confinement: classic\n", reporter=said)
+            assert classic.classic
+            classic.finish(here / "demo_1.0_amd64.snap")
+            assert "--dangerous --classic demo_1.0_amd64.snap" in said.notes[-1]
+            assert "connect" not in said.notes[-1], "no plugs were named"
+
+    @check("check_version can be told what the payload should say")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            build = project(Path(home), "name: demo\nversion: '1.0-beta'\n")
+            same(build.check_version("1.0", "the deb", expected="1.0"), "1.0")
+            try:
+                build.check_version("1.1", "the deb")
+                assert False, "should have raised"
+            except buildlib.BuildError as exc:
+                assert "says 1.0-beta, the deb ships 1.1" in str(exc), str(exc)
+
+    @check("application_ini reads a Gecko payload, and an absent one is empty")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            here = Path(home)
+            build = project(here)
+            ini = build.application_ini(here)
+            same(ini.get("App", "Version", fallback=None), None)
+            (here / "application.ini").write_text(
+                "[App]\nVendor=Mozilla\nVersion=140.15.0\n"
+                "RemotingName=firefox-esr\n[Gecko]\nMinVersion=140.15.0\n")
+            ini = build.application_ini(here)
+            same(ini.get("App", "Version"), "140.15.0")
+            same(ini.get("App", "RemotingName"), "firefox-esr")
+            same(ini.get("Gecko", "MinVersion"), "140.15.0")
+
+    @check("python_modules names what is staged under dist-packages")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            here = Path(home)
+            where = here / "usr/lib/python3.12/dist-packages"
+            where.mkdir(parents=True)
+            (where / "requests").mkdir()
+            (where / "PIL").mkdir()
+            (where / "six.py").write_text("")
+            (where / "psutil-5.9.8.egg-info").mkdir()
+            same(project(here).python_modules(here),
+                 {"requests", "PIL", "six", "psutil-5"})
+
+    @check("unprovided names what the payload links that nothing supplies")
+    def _():
+        from snapforge import elf
+        with tempfile.TemporaryDirectory() as home:
+            here = Path(home)
+            tree = here / "opt" / "app"
+            (tree / "lib").mkdir(parents=True)
+            (tree / "lib" / "libown.so.1").write_bytes(elf_needing("libc.so.6"))
+            (tree / "app").write_bytes(elf_needing(
+                "libc.so.6", "libgtk-3.so.0", "libown.so.1", "libcuda.so.1",
+                "libnowhere.so.3"))
+            (tree / "notes.txt").write_text("not a binary")
+            same(elf.needed(tree / "lib" / "libown.so.1"), ["libc.so.6"],
+                 "the fixture is an ELF the reader understands")
+            build = project(here)
+            same(build.unprovided(tree, tree / "app"),
+                 {"libnowhere.so.3": ["app"]})
+            said = Noted()
+            build = project(here, reporter=said)
+            build.warn_unprovided(tree, tree / "app")
+            assert "libnowhere.so.3" in said.warnings[-1], said.warnings
+            assert "needed by app" in said.warnings[-1], said.warnings
+            same(build.needed(tree / "app")[:2], ["libc.so.6", "libgtk-3.so.0"])
+            try:
+                build.needed(tree / "notes.txt")
+                assert False, "should have raised"
+            except buildlib.BuildError as exc:
+                assert "not an ELF" in str(exc), str(exc)
+
+    @check("deb_field reads the control stanza of a .deb")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            here = Path(home)
+            deb = make_deb(here / "demo_2.5.0_amd64.deb", "demo", "2.5.0")
+            build = project(here)
+            same(build.deb_field(deb, "Version"), "2.5.0")
+            same(build.deb_field(deb, "Nothing"), "")
+
+
 # -- the updater, ported from the tool this replaced --------------------------
 
 def updater():
@@ -3798,7 +4028,7 @@ def dependencies():
 
 
 GROUPS = (upstreams, architectures, recipes, register, payloads,
-          reading_payloads, projects, checking, dashboard, updater,
+          reading_payloads, projects, checking, dashboard, updater, packing,
           from_a_file, database, tracking, dependencies, imports)
 
 

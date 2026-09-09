@@ -99,16 +99,35 @@ work a recipe cannot express, and `snapkit build` imports that and calls its
 ```python
 def build(project):                       # floorp-snap/pack.py
     tarball = project.artifact("floorp-linux-x86_64.tar.xz")
-    project.run("snapcraft", "pack")
-    built = project.directory / f"floorp_{project.version}_amd64.snap"
-    check_the_packed_snap(project, built)
-    return built
+    built = project.pack()
+    with project.unpacked(built) as root:
+        app = root / "usr/lib/floorp"
+        version = project.application_ini(app).get("App", "Version")
+        project.check_version(version.partition("@")[0], "the packed payload")
+        project.warn_unprovided(app, app / "floorp")
+    return project.finish(built, "browser-sandbox", "u2f-devices")
 ```
 
 Almost all of that work is one thing: refusing to ship a snap whose payload is
-not the release the recipe claims. The rest is per project, such as reading a
-version out of an `application.ini` or warning about a library a classic snap
-will need from the host.
+not the release the recipe claims. What every project does around snapcraft
+to get there is on the `Build` rather than repeated in the file. `pack()` runs
+snapcraft and finds the snap it made for the recipe's version, whatever the
+architecture. `unpacked()` opens that snap for the checks, and a check that
+dies inside the block deletes it, so a payload that failed is not left where
+the next install finds it. `check_version()` is the refusal, told what the
+payload should say where the recipe spells it differently. `finish()` says
+how to install the result, `--classic` where the recipe asks for it and the
+plugs that will not auto-connect. `artifact()` takes the file the recipe's
+own `source:` names when one matches, so a superseded release beside the
+current one is neither an ambiguity nor the one that gets built.
+
+The questions more than one project asked are answered there too: a Gecko
+payload's `application.ini`, a `.deb`'s control fields, the python modules
+staged into a snap, what a staged library shadows in the gnome platform, and
+what a strict payload links against that neither it nor the platform snaps
+supply, read out of the ELF headers rather than out of `objdump`. What is
+left in a `pack.py` is what only that project knows: where its binary lands,
+what its `--version` prints, which plugs it needs, and why.
 
 The dependency runs this way round on purpose. These scripts used to reach
 the shared half of themselves along a relative path, which stops working the

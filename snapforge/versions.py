@@ -115,17 +115,22 @@ def deb_compare(a, b):
 deb_key = functools.cmp_to_key(deb_compare)
 
 
-def yaml_version(path):
-    """The `version:` field of a snapcraft.yaml or meta/snap.yaml."""
+def yaml_field(path, name):
+    """A top-level field of a snapcraft.yaml or meta/snap.yaml, bare."""
     try:
         with open(path, encoding="utf-8", errors="replace") as handle:
             lines = handle.read().splitlines()
     except FileNotFoundError:
         return ""
     for line in lines:
-        if line.startswith("version:"):
+        if line.startswith(name + ":"):
             return line.split(":", 1)[1].strip().strip("'\"")
     return ""
+
+
+def yaml_version(path):
+    """The `version:` field of a snapcraft.yaml or meta/snap.yaml."""
+    return yaml_field(path, "version")
 
 
 def apt_stanza(index_url, package, want="", want_arch=""):

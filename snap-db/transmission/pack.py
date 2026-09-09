@@ -4,9 +4,6 @@ import re
 import tarfile
 
 
-ARCH = "amd64"
-
-
 def source_version(project, tarball):
     """What the tarball says it is."""
     with tarfile.open(tarball) as tar:
@@ -27,22 +24,9 @@ def source_version(project, tarball):
 
 def build(project):
     tarball = project.artifact("transmission-*.tar.xz")
-    project.need_tools("snapcraft")
 
     # Before the compile, so a mismatch costs a second and not ten minutes.
     project.check_version(source_version(project, tarball), "the tarball")
 
     project.say(f"building Transmission {project.version}  (from {tarball.name})")
-
-    # No clean first: craft-parts re-pulls when the source changes.
-    project.say("snapcraft pack")
-    project.run("snapcraft", "pack")
-
-    built = project.directory / f"transmission_{project.version}_{ARCH}.snap"
-    if not built.is_file():
-        project.die(f"build finished but {built.name} was not produced")
-    project.say(f"built {built.name} ({built.stat().st_size / 1e6:.0f} MB)")
-
-    project.note(f"install it with:\n"
-                 f"      sudo snap install --dangerous {built.name}")
-    return built
+    return project.finish(project.pack())

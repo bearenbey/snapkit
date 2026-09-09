@@ -1,20 +1,30 @@
 """The Build a project's pack.py is handed, and running the pack.py itself."""
 
+import configparser
+import contextlib
+import fnmatch
 import importlib.util
 import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
-from .inspect import missing_libraries
+from . import depends, elf, platform
+from .inspect import control_fields, missing_libraries
 from .net import download, sha256_file
 from .report import PlainReporter
-from .versions import deb_compare, yaml_version
+from .versions import deb_compare, yaml_field, yaml_version
 
 # Where the desktop builds get their GTK and font helpers from.
 GNOME_SNAP = Path("/snap/gnome-46-2404/current")
+
+# What a strict snap under the gnome extension links against, when it is
+# installed here: the base, the extension's platform snap, and mesa.
+PLATFORM_SNAPS = (Path("/snap/core24/current"), GNOME_SNAP,
+                  Path("/snap/mesa-2404/current"))
 
 # A part name sits two spaces in, its settings deeper than that.
 PART_NAME = re.compile(r"^  ([A-Za-z0-9][\w.+-]*):\s*$")
@@ -134,6 +144,22 @@ class Build:
             die(f"could not read version: from {self.yaml}")
         return version
 
+    @property
+    def classic(self):
+        """Whether the recipe asks for classic confinement."""
+        return yaml_field(self.yaml, "confinement") == "classic"
+
+    def recipe_source(self, pattern):
+        """The file a part's `source:` names, if one matches the glob."""
+        if not self.snapcraft_yaml.is_file():
+            return None
+        for line in self.snapcraft_yaml.read_text(encoding="utf-8",
+                                                  errors="replace").splitlines():
+            found = PART_SOURCE.match(line)
+            if found and fnmatch.fnmatch(found.group(1).strip("'\""), pattern):
+                return self.directory / found.group(1).strip("'\"")
+        return None
+
     # -- pre-flight ----------------------------------------------------------
 
     def need_tools(self, *names):
@@ -148,9 +174,18 @@ class Build:
         return path
 
     def artifact(self, pattern, given=None):
-        """The upstream file this build consumes."""
+        """The upstream file this build consumes.
+
+        The recipe's own `source:` settles it where one matches: a project
+        that keeps a superseded release beside the current one still builds
+        the one the recipe names. Otherwise the glob has to be unambiguous.
+        """
         if given:
             return self.need_file(given)
+        named = self.recipe_source(pattern)
+        if named is not None:
+            return self.need_file(
+                named, f"snapkit update {self.app} --force fetches it")
         found = sorted(self.directory.glob(pattern))
         if not found:
             die(f"no {pattern} in {self.directory.name} -- "
@@ -167,12 +202,147 @@ class Build:
                 f"sudo snap install {GNOME_SNAP.parent.name}")
         return GNOME_SNAP
 
-    def check_version(self, found, what):
+    def check_version(self, found, what, expected=None):
         """Refuse to pack a snap whose payload is not the version it claims."""
-        if found != self.version:
+        expected = expected or self.version
+        if found != expected:
             die(f"version mismatch: {self.yaml.name} says {self.version}, "
                 f"{what} ships {found}")
         return found
+
+    # -- the packed snap: what every pack.py does around snapcraft -----------
+
+    def pack(self, clean=False):
+        """Run snapcraft, and hand back the .snap it made for this version."""
+        self.need_tools("snapcraft")
+        if clean:
+            self.say("snapcraft clean")
+            self.run("snapcraft", "clean")
+        self.say("snapcraft pack")
+        self.run("snapcraft", "pack")
+        return self.packed()
+
+    def packed(self):
+        """The snap on disk for the recipe's version, whatever its arch."""
+        made = sorted(self.directory.glob(f"{self.app}_{self.version}_*.snap"),
+                      key=lambda path: path.stat().st_mtime)
+        if not made:
+            die(f"build finished but no {self.app}_{self.version}_*.snap "
+                f"was produced")
+        return made[-1]
+
+    @contextlib.contextmanager
+    def unpacked(self, snap):
+        """The packed snap's contents, in a directory gone by the end.
+
+        A check that dies inside the block takes the snap with it, so a
+        payload that failed is not left where the next install finds it.
+        """
+        self.need_tools("unsquashfs")
+        snap = Path(snap)
+        holding = Path(tempfile.mkdtemp(prefix="snapkit-check-"))
+        try:
+            self.say("checking the packed snap")
+            self.run("unsquashfs", "-n", "-q", "-d", holding / "root", snap)
+            yield holding / "root"
+        except BuildError:
+            snap.unlink(missing_ok=True)
+            raise
+        finally:
+            shutil.rmtree(holding, ignore_errors=True)
+
+    def finish(self, built, *connect):
+        """Say how to install what was built, and hand it back."""
+        install = "sudo snap install --dangerous"
+        if self.classic:
+            install += " --classic"
+        lines = [f"{install} {Path(built).name}"]
+        # Named because none of these auto-connect for a --dangerous install.
+        lines += [f"sudo snap connect {self.app}:{plug}" for plug in connect]
+        self.note("install it with:\n" +
+                  "\n".join(f"      {line}" for line in lines))
+        return built
+
+    # -- reading a payload: what more than one pack.py has to know -----------
+
+    def application_ini(self, app):
+        """A Gecko payload's application.ini, empty when there is none."""
+        ini = configparser.ConfigParser(interpolation=None)
+        ini.read(Path(app) / "application.ini", encoding="utf-8")
+        return ini
+
+    def deb_field(self, deb, name):
+        """One field of a .deb's control stanza, or "" when it has none."""
+        return control_fields(Path(deb)).get(name, "")
+
+    def needed(self, binary):
+        """The sonames a binary names in its ELF header, none resolved."""
+        try:
+            return elf.needed(binary)
+        except elf.NotAnELF as exc:
+            die(f"{Path(binary).name} is not an ELF binary: {exc}")
+
+    def python_modules(self, root):
+        """The python packages staged into a snap, by import name."""
+        found = set()
+        for where in Path(root).glob("usr/lib/python3*/dist-packages"):
+            found |= {p.name.split(".")[0] for p in where.iterdir()}
+        return found
+
+    def shadowing(self, root):
+        """Libraries staged here that the gnome platform snap also carries.
+
+        The platform ships newer GNOME components than the base archive,
+        so a library staged from the archive loads first and the platform's
+        own then resolve against the older copy. It surfaces a long way from
+        the cause, as an undefined symbol in a library nobody staged.
+        """
+        # lib*.so* only: perl and python extension modules are .so files
+        # too, and counting those buries the answer. Keyed on the
+        # architecture directory as well, so a 32-bit library is not
+        # counted as shadowing a 64-bit one of the same name.
+        theirs = {(p.parent.name, p.name) for p in
+                  (self.gnome_platform() / "usr/lib").rglob("lib*.so*")}
+        ours = {(p.parent.name, p.name)
+                for p in (Path(root) / "usr/lib").rglob("lib*.so*")}
+        return sorted({re.match(r"(.+?)\.so", name).group(1)
+                       for _arch, name in ours & theirs})
+
+    def unprovided(self, tree, *binaries):
+        """What a strict payload links that neither it nor the platform has.
+
+        {soname: [what asks for it]}, read out of the ELF headers of every
+        library under `tree` and the binaries named. Driver libraries
+        arrive through an interface and are not counted.
+        """
+        tree = Path(tree)
+        bundled = depends.bundled_libraries(tree)
+        available = depends.supplied(gui=True) | platform.FROM_THE_HOST
+        for root in PLATFORM_SNAPS:
+            if root.is_dir():
+                available |= {path.name for path in root.rglob("*.so*")}
+        missing = {}
+        candidates = sorted(tree.rglob("*.so*")) + [Path(b) for b in binaries]
+        for candidate in candidates:
+            if not candidate.is_file() or candidate.is_symlink():
+                continue
+            try:
+                names = elf.needed(candidate)
+            except elf.NotAnELF:
+                continue
+            for soname in names:
+                if soname not in bundled and soname not in available:
+                    missing.setdefault(soname, []).append(candidate.name)
+        return missing
+
+    def warn_unprovided(self, tree, *binaries):
+        """Say what a strict snap's payload will not find at runtime."""
+        self.say("checking platform libraries")
+        missing = self.unprovided(tree, *binaries)
+        for soname, users in sorted(missing.items()):
+            self.warn(f"{soname} is in neither the base nor the platform "
+                      f"snaps (needed by {', '.join(sorted(set(users)))})")
+        return missing
 
     # -- running things ------------------------------------------------------
 

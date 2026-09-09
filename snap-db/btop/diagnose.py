@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""Reinstall the btop snap, connect its interfaces, and capture everything"""
+"""Reinstall the btop snap, connect its interfaces, and capture everything."""
 
 import os
 import subprocess
 import sys
 from pathlib import Path
 
+HERE = Path(__file__).resolve().parent
+LOG = HERE / "diagnose.log"
+
+INTERFACES = ("system-observe", "process-control", "hardware-observe",
+              "mount-observe", "network-observe", "removable-media")
 
 
 def yaml_version(path):
@@ -14,12 +19,6 @@ def yaml_version(path):
         if line.startswith("version:"):
             return line.split(":", 1)[1].strip().strip("'\"")
     return ""
-
-HERE = Path(__file__).resolve().parent
-LOG = HERE / "diagnose.log"
-
-INTERFACES = ("system-observe", "process-control", "hardware-observe",
-              "mount-observe", "network-observe", "removable-media")
 
 
 def say(title):
@@ -102,4 +101,4 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except KeyboardInterrupt:
-        raise SystemExit(130)
+        raise SystemExit(130) from None

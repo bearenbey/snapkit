@@ -19,7 +19,7 @@ downloading one, so the archive reader is checked against bytes the test file
 made and knows the shape of.
 
 One function per subject: upstreams, architectures, recipes, register,
-payloads, reading_payloads, projects, checking, dashboard, updater,
+payloads, reading_payloads, projects, checking, dashboard, updater, packing,
 from_a_file, database, tracking, dependencies, imports. A failure names the
 area before it names the case.
 
@@ -91,7 +91,7 @@ Several exist because of bugs that were in here:
 
 ```console
 ./build.py
-sudo snap install --dangerous --classic snapkit_0.2.0_amd64.snap
+sudo snap install --dangerous --classic snapkit_0.3.0_amd64.snap
 ```
 
 It is a classic snap because building a snap means running snapcraft and
