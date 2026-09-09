@@ -17,6 +17,13 @@ from .inspect import control_fields, missing_libraries
 from .report import PlainReporter
 from .versions import yaml_field, yaml_version
 
+# The oldest snapkit whose Build a pack.py written against this one runs on.
+# A project with a pack.py is published with this as what it needs, and a
+# snapkit behind it refuses the project at pull time, by name, rather than
+# failing on the first missing helper at build time. Raise it whenever a
+# method is added to Build or one changes what it does.
+NEEDS = "0.3.0"
+
 # Where the desktop builds get their GTK and font helpers from.
 GNOME_SNAP = Path("/snap/gnome-46-2404/current")
 

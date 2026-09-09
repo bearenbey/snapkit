@@ -3765,6 +3765,54 @@ def database():
             same(fresh.asset_glob, "demo-*.tar.gz")
             same(fresh.repo, "who/demo")
 
+    @check("a project with a pack.py says which snapkit it needs, and is refused by one behind")
+    def _():
+        from snapforge import build as buildlib
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home)
+            plain = a_project(root, "plain")
+            packed = a_project(root, "packed", {"pack.py": "def build(project):\n    pass\n"})
+            snaps = [db.Snap(name="plain", version="1.0", directory=str(plain),
+                             style="artifact", asset="plain-1.0.tar.gz",
+                             asset_glob="plain-*.tar.gz"),
+                     db.Snap(name="packed", version="1.0", directory=str(packed),
+                             style="artifact", asset="packed-1.0.tar.gz",
+                             asset_glob="packed-*.tar.gz", pack="pack.py")]
+            published = root / "snap-db"
+            index, _ = snapdb.publish(snaps, published)
+            assert "needs" not in index["snaps"]["plain"], "a recipe alone needs nothing"
+            same(index["snaps"]["packed"]["needs"], buildlib.NEEDS)
+
+            # This snapkit is new enough for what it just published.
+            same(snapdb.needs_newer(index["snaps"]["packed"]), "")
+            url = published.resolve().as_uri()
+            snapdb.fetch("packed", root / "out", index, url)
+            assert (root / "out" / "pack.py").is_file()
+
+            # One behind is told at pull time, by name, and writes nothing.
+            with patched(snapdb, __version__="0.2.0"):
+                same(snapdb.needs_newer(index["snaps"]["packed"]), buildlib.NEEDS)
+                try:
+                    snapdb.fetch("packed", root / "old", index, url)
+                    assert False, "an old snapkit pulled a new pack.py"
+                except snapdb.DatabaseError as exc:
+                    assert "upgrade snapkit" in str(exc) and buildlib.NEEDS in str(exc), str(exc)
+                assert not (root / "old").exists(), "something was written first"
+                # and the recipe-only project still comes through
+                snapdb.fetch("plain", root / "old-plain", index, url)
+
+    @check("the version is spelled the same in the package, pyproject and the recipe")
+    def _():
+        import snapforge
+        here = Path(__file__).resolve().parent
+        pyproject = (here / "pyproject.toml").read_text()
+        recipe = (here / "snap" / "snapcraft.yaml").read_text()
+        assert f'version = "{snapforge.__version__}"' in pyproject, snapforge.__version__
+        assert f"version: '{snapforge.__version__}'" in recipe, snapforge.__version__
+        from snapforge import build as buildlib, versions
+        assert versions.version_key(buildlib.NEEDS) <= versions.version_key(snapforge.__version__), (
+            "NEEDS names a snapkit that does not exist yet")
+
     @check("a snap the database does not have says what it does have")
     def _():
         with tempfile.TemporaryDirectory() as home:

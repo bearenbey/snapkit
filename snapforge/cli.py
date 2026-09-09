@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from snapforge import __version__
+
 from . import adopt, github, local, project, snapdb, sources, update
 from .db import Database, DatabaseError, NameTaken
 from .net import NetworkError
@@ -124,6 +126,7 @@ def parse_args(argv):
                         help="let snapcraft build on this host rather than in "
                              "a container")
     parser.add_argument("-h", "--help", action="help", help="this")
+    parser.add_argument("--version", action="version", version=f"snapkit {__version__}")
     # Intermixed: `db pull --dir x btop` puts an option between positionals.
     return parser.parse_intermixed_args(argv)
 
@@ -677,7 +680,7 @@ def cmd_db(db, args, reporter):
     found = snapdb.index()
     if action == "list":
         return db_list(db, found["snaps"], reporter)
-    return db_pull(args, rest, found, reporter)
+    return db_pull(db, args, rest, found, reporter)
 
 
 def db_publish(db, rest, reporter):
@@ -698,11 +701,15 @@ def db_list(db, snaps, reporter):
     width = max((len(n) for n in snaps), default=4)
     drifted, unpublished = [], []
 
+    behind = []
     for name in sorted(snaps):
         published = snaps[name]
         mark = _drift_mark(db.snaps.get(name), published)
         if mark == "~":
             drifted.append(name)
+        if snapdb.needs_newer(published):
+            mark = "!"
+            behind.append(name)
         reporter.detail(f"{mark} {name:<{width}}  {published['version']:<16}"
                         f"  {published.get('summary', '')[:42]}")
     for name in sorted(db.snaps):
@@ -713,7 +720,10 @@ def db_list(db, snaps, reporter):
 
     reporter.detail("")
     reporter.detail("*  registered here    ~  differs from the database"
-                    "    +  here but not published")
+                    "    +  here but not published    !  needs a newer snapkit")
+    if behind:
+        reporter.warn(f"{len(behind)} project(s) need a newer snapkit than "
+                      f"{__version__}: {', '.join(behind)}")
     if drifted or unpublished:
         reporter.warn(f"{len(drifted) + len(unpublished)} project(s) have "
                       f"moved on: snapkit db publish <dir> writes them out")
@@ -733,8 +743,12 @@ def _drift_mark(here, published):
     return "*"
 
 
-def db_pull(args, rest, found, reporter):
-    """Write the named projects here, or all of them."""
+def db_pull(db, args, rest, found, reporter):
+    """Write the named projects here, or all of them, and register them.
+
+    Registered, so what was pulled can be checked, updated and built by
+    name; a project directory the register does not know is only files.
+    """
     wanted = rest or sorted(found["snaps"])
     where = Path(args.directory) if args.directory else Path.cwd()
     done, failed = 0, []
@@ -742,16 +756,18 @@ def db_pull(args, rest, found, reporter):
         target = where / f"{name}-snap"
         reporter.step(f"{name} -> {target}")
         try:
-            snapdb.fetch(name, target, found)
-        except snapdb.DatabaseError as exc:
+            snap, _recipe, _is_snapcraft = snapdb.install(
+                name, target, found, store=db.root)
+        except (snapdb.DatabaseError, adopt.NotAProject) as exc:
             # One bad snap should not stop the rest; named outright, it does.
             if rest:
                 raise
             reporter.warn(str(exc))
             failed.append(name)
             continue
+        db.add(snap, replace=True)
         done += 1
-    reporter.result(f"pulled {done} of {len(wanted)}")
+    reporter.result(f"pulled and registered {done} of {len(wanted)}")
     if failed:
         reporter.detail(f"not pulled: {', '.join(failed)}")
     return 0

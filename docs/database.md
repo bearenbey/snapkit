@@ -6,7 +6,7 @@ packaged again.
 
 ```sh
 snapkit db                    what is published
-snapkit db pull               write every project into the current directory
+snapkit db pull               write every project here, and register it
 snapkit db pull zen godot     just those
 snapkit install zen           fetch it, build it, and offer to install it
 snapkit db publish <dir>      write the database out of the projects here
@@ -30,6 +30,17 @@ which is how the tests reach one on disk.
 
 A project whose recipe names a file too large to publish is marked incomplete
 and refused by name, rather than pulled and left to fail at build time.
+
+A project with a `pack.py` is published with `needs`, the oldest snapkit
+whose `Build` that script runs on. A snapkit behind it refuses the project at
+pull time, by name, with the version to upgrade to; `snapkit db` marks such
+projects `!`. The number is `NEEDS` in `snapforge/build.py`, raised whenever
+a helper is added to `Build` or one changes what it does. Nothing is refused
+by a project without a `pack.py`: the recipe alone needs no particular
+snapkit.
+
+What `pull` writes is registered, the same as the dashboard's `g` and
+`snapkit install`, so it can be checked, updated and built by name.
 
 Every path in the index is checked before a byte is written. A file key that
 is absolute, or that climbs out of the project with `..`, is refused and the

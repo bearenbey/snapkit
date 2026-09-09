@@ -22,6 +22,7 @@
       },
       "fingerprint": "e2af382adc093a5c7f5d19a3d8332ee8e01d8185ef84d5ed42f8895288e9c609",
       "name": "btop",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "asset": "btop-x86_64-unknown-linux-musl.tar.gz",
@@ -61,6 +62,7 @@
       },
       "fingerprint": "efd6f0c8af7df699f835780be60d97d3abccf32d8ee4a9d637c19e299aa172e3",
       "name": "clamui",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "asset": "clamui_0.4.0_all.deb",
@@ -105,6 +107,7 @@
       },
       "fingerprint": "65f926ce4593156a888054565952297c56bb44d9917cd336b8b87bae932ecc1b",
       "name": "defold",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "asset": "Defold-x86_64-linux.zip",
@@ -169,7 +172,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "3933a09acceb9eba4ba6f14f48f845a71ecf82b17a3ab29e681a6a448863cb65"
+          "sha256": "4d788d29a0b982cb9e01fa5d4aeb98c80a9d8312588bf9a416cb1924b0faeac3"
         },
         "snap/gui/emacs.png": {
           "exec": false,
@@ -177,10 +180,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "6c9b679685ad2d0a6d568206555cbe79e30bd61e9341c18055216068d2810c9f"
+          "sha256": "ec145310a382d4833fde746a0de8b5cd983294933ff0811084ab2512ad124a17"
         }
       },
-      "fingerprint": "aa6d4b42b051e9527cd133d2e6cfbfc6805f44965b49df079637876f56b8e1b5",
+      "fingerprint": "b7c010198d81b79ecee1e73e77f8c2b9cb8cd36832f835b89cd3adabc832c957",
       "name": "emacs",
       "pack": "",
       "record": {
@@ -276,6 +279,7 @@
       },
       "fingerprint": "9b5291a90240bc25b8d27a757cf96d5a84bd00c2f0f1c2d41a9b017469e85876",
       "name": "firefox-esr",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "asset": "firefox-140.15.0esr.tar.xz",
@@ -333,6 +337,7 @@
       },
       "fingerprint": "7f281ad1169604b69af3c00b832431e40344689e32ae1243e2b327a08ebcab04",
       "name": "floorp",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "asset": "floorp-linux-x86_64.tar.xz",
@@ -377,6 +382,7 @@
       },
       "fingerprint": "6211c59eba82119e13e6c56f3efcd5f98b898fada34ebcaab73b80f9a942729f",
       "name": "freetube",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "asset": "freetube_0.25.3_beta_amd64.deb",
@@ -425,6 +431,7 @@
       },
       "fingerprint": "d7bff05b735c93c63c02652c6705cddeee36bf7aee55944247d60912225bfd07",
       "name": "godot",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "asset": "Godot_v4.7.2-stable_linux.x86_64.zip",
@@ -473,6 +480,7 @@
       },
       "fingerprint": "0ea69e73eab716020fab05f215b895a6200fa0d312b6f37ac0ac8ed80f93d813",
       "name": "helium",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "asset": "helium-bin_0.16.5.1-1_amd64.deb",
@@ -555,6 +563,7 @@
       },
       "fingerprint": "41a2b7c16f1f7cc2e6b470e9ec8aa0a0707d64801abe668af19376349d0f269c",
       "name": "kernel-remover",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "pack": "pack.py",
@@ -587,6 +596,7 @@
       },
       "fingerprint": "98d03a6fd02512e176181fd7aa7e97447c888d726f1d7a83d975575f93c5bc6f",
       "name": "lutris",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "asset": "lutris_0.5.22_all.deb",
@@ -705,6 +715,7 @@
       },
       "fingerprint": "0cc46df4fcf94a086e3f25ef3ebf5b5afefcef4a32ec2181fbe0a62a971e2b7a",
       "name": "nvim",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "asset": "nvim-linux-x86_64.tar.gz",
@@ -876,6 +887,7 @@
       },
       "fingerprint": "b45606d2de0e0a5296ceece8a1878d5ab7e312493fe270d9ee635562ffdadfbf",
       "name": "shotcut",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "asset": "shotcut-linux-x86_64-26.8.1.txz",
@@ -1038,6 +1050,7 @@
       },
       "fingerprint": "a63f19d970aeb1d4abe2063ddef3f0906e1d83cc24bdda03bd742b1e59577cd3",
       "name": "transmission",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "asset": "transmission-4.1.3.tar.xz",
@@ -1085,6 +1098,7 @@
       },
       "fingerprint": "e45c749b0ec390389ca4cfccde921d0973e9245d3da7bb2ff844dd258317dbd6",
       "name": "ungoogled-chromium",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "asset": "ungoogled-chromium-152.0.7977.82-1-x86_64_linux.tar.xz",
@@ -1125,6 +1139,7 @@
       },
       "fingerprint": "25ef886a68bde2262fb5134494f4e0af68923ca1c6640d93dfc5d965c786b747",
       "name": "unityhub",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "asset": "unityhub_3.21.1_amd64.deb",
@@ -1214,6 +1229,7 @@
       },
       "fingerprint": "65bcaeaf74ab145642f60dfc35cb3c012399dbc612e3c9c38208c5734474b26e",
       "name": "zen",
+      "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
         "asset": "zen.linux-x86_64.tar.xz",

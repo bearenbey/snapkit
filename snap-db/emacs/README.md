@@ -54,9 +54,9 @@ Then run it as `emacs`, or `emacs -nw` for the terminal interface.
 | `network`, `network-bind` | yes | Tramp, package archives, the Emacs server |
 | `browser-support` | yes | Opening links in the host browser |
 | `audio-playback` | yes | The bell, and `play-sound-file` |
-| `cups` | yes | Printing |
 | `desktop`, `desktop-legacy`, `wayland`, `x11`, `opengl`, `gsettings` | yes | Added by the `gnome` extension |
 | `removable-media` | no | Files under `/media` and `/mnt` |
+| `cups-control` | no | Printing through the host's CUPS, as the browsers here do |
 | `password-manager-service` | no | Secrets via the freedesktop Secret Service (`auth-source`) |
 | `mount-observe` | no | Reading `/proc/self/mountinfo`, which `df`-style commands want |
 
@@ -66,6 +66,7 @@ Connect the optional ones with:
 sudo snap connect emacs:removable-media
 sudo snap connect emacs:password-manager-service
 sudo snap connect emacs:mount-observe
+sudo snap connect emacs:cups-control
 ```
 
 ## Where the config lives

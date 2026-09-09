@@ -91,8 +91,16 @@ Several exist because of bugs that were in here:
 
 ```console
 ./build.py
-sudo snap install --dangerous --classic snapkit_0.3.0_amd64.snap
+sudo snap install --dangerous --classic snapkit_0.3.1_amd64.snap
 ```
+
+The version is spelled in `pyproject.toml`, `snap/snapcraft.yaml` and
+`snapforge/__init__.py`, and a test holds the three together. `NEEDS` in
+`snapforge/build.py` is separate: it is the oldest snapkit a `pack.py`
+written against today's `Build` runs on, and every published project with a
+`pack.py` carries it. Raise it with the version whenever `Build` gains a
+helper or one changes what it does, or an older snapkit fails on that
+project at build time instead of being told at pull time.
 
 It is a classic snap because building a snap means running snapcraft and
 writing project directories wherever you keep them, and a confined snap can

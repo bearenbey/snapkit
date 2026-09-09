@@ -3,6 +3,7 @@
 | command | what it does |
 | --- | --- |
 | `snapkit` | the dashboard |
+| `snapkit --version` | which snapkit this is |
 | `snapkit create <repo>` | make a snap from a repository |
 | `snapkit create ./thing.deb` | or from a file you already have |
 | `snapkit create ~/Downloads` | or from whichever of those is in there |
@@ -24,7 +25,7 @@
 | `snapkit remove <name>` | forget a snap, and its recipe with it |
 | `snapkit prune [name ...]` | delete superseded builds and files, keeping the newest |
 | `snapkit db` | what the shared recipe database holds |
-| `snapkit db pull [name ...]` | write those projects here, or all of them |
+| `snapkit db pull [name ...]` | write those projects here and register them, or all of them |
 | `snapkit db <name>` | the same as `db pull <name>` |
 | `snapkit db publish <dir>` | write the database out of the projects here |
 | `snapkit install <name>` | fetch it, build it, and offer to install it |

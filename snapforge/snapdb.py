@@ -9,7 +9,11 @@ import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from snapforge import __version__
+
 from . import adopt, net, recipe
+from .build import NEEDS
+from .versions import version_key
 
 REPO = "bearenbey/snapkit"
 BRANCH = "main"
@@ -108,6 +112,11 @@ project needs no new client, and a client a version behind still works.
   }
 }
 ```
+
+`needs` names the oldest snapkit a project's `pack.py` runs on, since that
+script is written against the `Build` snapkit hands it. A snapkit behind it
+refuses the project at pull time, by name, rather than failing on the first
+missing helper at build time. A project without a `pack.py` has no such line.
 
 `record` is the part a project cannot tell you about itself. Reading a project
 says what it builds. It never says where the release comes from, or how an
@@ -251,6 +260,9 @@ def _entry(snap, directory, kept, skipped):
         "pack": snap.pack or "",
         "fingerprint": fingerprint(files),
     }
+    if snap.pack:
+        # A pack.py is written against this snapkit's Build; say so.
+        entry["needs"] = NEEDS
     missing = [str(r) for r, _ in skipped] + unmet_sources(
         directory, kept, (snap.asset, snap.local_asset, snap.asset_glob))
     if missing:
@@ -338,6 +350,14 @@ def _fetch_one(url, name, relative, about, target):
         target.chmod(0o755)
 
 
+def needs_newer(record):
+    """The snapkit a published project needs, when this one is behind it."""
+    needed = record.get("needs", "")
+    if needed and version_key(needed) > version_key(__version__):
+        return needed
+    return ""
+
+
 def fetch(name, into, found=None, url=None, reporter=None):
     """Download one snap's project files. Returns the directory written."""
     if not SNAP_NAME.fullmatch(name):
@@ -345,7 +365,11 @@ def fetch(name, into, found=None, url=None, reporter=None):
                             f"a project directory called that")
     url = url or base_url()
     record = entry(name, found, url)
-    # Before anything is written: half a project on disk helps nobody.
+    # Before anything is written: a project this cannot build helps nobody.
+    needed = needs_newer(record)
+    if needed:
+        raise DatabaseError(f"{name}'s pack.py needs snapkit {needed}, and this "
+                            f"is {__version__} -- upgrade snapkit to pull it")
     if record.get("incomplete"):
         missing = ", ".join(record["incomplete"])
         raise DatabaseError(f"{name} is published without {missing}, which its "

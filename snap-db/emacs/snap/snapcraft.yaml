@@ -133,7 +133,10 @@ apps:
       - removable-media
       - browser-support
       - audio-playback
-      - cups
+      # cups-control, as the browsers here plug it: it connects to the host's
+      # own CUPS, where `cups` wants the cups snap, which a local install
+      # does not pull in. Connected by hand.
+      - cups-control
       - password-manager-service
       - mount-observe
 

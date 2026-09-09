@@ -64,6 +64,11 @@ project needs no new client, and a client a version behind still works.
 }
 ```
 
+`needs` names the oldest snapkit a project's `pack.py` runs on, since that
+script is written against the `Build` snapkit hands it. A snapkit behind it
+refuses the project at pull time, by name, rather than failing on the first
+missing helper at build time. A project without a `pack.py` has no such line.
+
 `record` is the part a project cannot tell you about itself. Reading a project
 says what it builds. It never says where the release comes from, or how an
 update reaches the packaging, and without that a pulled project has nothing to
