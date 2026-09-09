@@ -3704,6 +3704,29 @@ def database():
             assert (root / "register" / "icons" / "demo.png").is_file(), \
                 "the kept icon did not land in this register"
 
+    @check("db pull registers what it writes, so it can be built by name")
+    def _():
+        from snapforge import cli
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home)
+            directory = a_project(root, "demo")
+            snap = db.Snap(name="demo", version="1.0", directory=str(directory),
+                           asset="demo-1.0.tar.gz", asset_glob="demo-*.tar.gz",
+                           style="artifact", repo="who/demo")
+            published = root / "snap-db"
+            index, _ = snapdb.publish([snap], published)
+
+            store = db.Database(root / "register")
+            out = root / "out"
+            with env("SNAPKIT_DB_URL", published.resolve().as_uri()):
+                args = cli.parse_args(["db", "pull", "demo", "--dir", str(out)])
+                same(cli.db_pull(store, args, ["demo"], index, Quiet()), 0)
+            assert (out / "demo-snap" / "snap" / "snapcraft.yaml").is_file()
+            # And not only files: the register knows it, where it is.
+            pulled = db.Database(root / "register").get("demo")
+            same(Path(pulled.directory), (out / "demo-snap").resolve())
+            same((pulled.style, pulled.repo), ("artifact", "who/demo"))
+
     @check("a database naming a file outside the project writes nothing at all")
     def _():
         with tempfile.TemporaryDirectory() as home:
