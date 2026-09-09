@@ -42,7 +42,7 @@ Chromium's namespace sandbox), which is not auto-connected, so connect it
 manually:
 
 ```sh
-sudo snap install --dangerous helium_0.15.6.1_amd64.snap
+sudo snap install --dangerous helium_0.16.5.1_amd64.snap
 sudo snap connect helium:browser-sandbox
 sudo snap connect helium:u2f-devices
 snap connections helium          # check what else is unconnected
@@ -103,29 +103,27 @@ snapkit update helium --force     # redo the release it is already on
 The build prints the `snap install --dangerous` and `snap connect` lines to
 run afterwards; neither interface auto-connects for a local install.
 
-`snapkit build helium` is still the whole update in one command; it is just no longer
-all in one file. `snapkit update helium` does the first half:
+`snapkit update helium` is the whole update in one command. snapkit does the
+first half:
 
 1. Resolves the release tag (from the releases atom feed, which has no rate
    limit, unlike the REST API) and the matching `helium-bin_*_amd64.deb`
    asset name, including its debian revision.
-2. Downloads the `.deb`, to a `.part` file that is only renamed once the
-   transfer finishes. Upstream signs only the tarballs, so there is no
+2. Downloads the `.deb`. Upstream signs only the tarballs, so there is no
    checksum to verify this one against.
 3. Rewrites `version:` and the part's `source:` in `snap/snapcraft.yaml` and
-   the version references in this README, printing every line it changed, and
-   deletes the `.deb` it superseded.
+   the version references in this README, and deletes the `.deb` it
+   superseded.
 
-and `pack.py` the second, on whatever the recipe says by then:
+and `pack.py` the second, on whatever the recipe says by then, which is also
+all that `snapkit build helium` does:
 
 4. Re-extracts `helium.desktop` and the 256x256 icon from the `.deb` into
    `snap/gui/`, repointing `Icon=` at `${SNAP}/meta/gui/helium.png`, and says
    which of them actually changed.
-5. Runs `snapcraft clean && snapcraft`.
-
-Other flags: `--no-clean` skips the `snapcraft clean` (faster, but stale parts
-can leak into the build), `--keep-old` keeps the superseded `.deb` files, and
-`--help` lists everything.
+5. Runs `snapcraft clean` and then `snapcraft pack`. The clean is
+   unconditional here because stale parts leak into the pull step, and a
+   browser is big enough to care.
 
 Nothing is modified until the download has succeeded, so a failed or
-interrupted run leaves the checkout on the version it was already building.
+interrupted run leaves the project on the version it was already building.

@@ -119,18 +119,13 @@ def _local(config, want, directory):
                     path=str(found.path))
 
 
-# Every shape takes the project directory; only `local` has a use for it.
-SHAPES = {"apt": _apt, "index": _index, "local": _local,
-          "redirect": _redirect, "tag-archive": _tag_archive}
-
-
 def resolve(config, want=None, directory=None):
     """What this upstream offers now. Raises NetworkError if it cannot say."""
-    kind = config.get("kind", "")
-    shape = SHAPES.get(kind)
+    kind = ALIASES.get(config.get("kind", ""), config.get("kind", ""))
+    shape = RESOLVERS.get(kind)
     if shape is None:
-        raise NetworkError(f"no such upstream kind: {kind or '(none)'} "
-                           f"(try: {', '.join(sorted(SHAPES))})")
+        raise BadUpstream(f"no such upstream kind: {kind or '(none)'} "
+                          f"(try: {', '.join(sorted(RESOLVERS))})")
     return shape(config, want, directory)
 
 
@@ -153,6 +148,9 @@ class Shape:
     templates: dict = field(default_factory=dict)
     patterns: tuple = ()                        # keys that are regexes
     example: str = ""
+    # What answers "what is there now"; every one takes the project directory
+    # as well, though only `local` has a use for it.
+    resolve: object = None
 
     @property
     def optional(self):
@@ -171,7 +169,7 @@ COMMON = {
 }
 
 SPECS = (
-    Shape(kind="apt",
+    Shape(kind="apt", resolve=_apt,
           summary="the newest stanza for this architecture in an apt index",
           keys={"base": "the repository root that Filename: is relative to",
                 "package": "the Package: name to take out of the index",
@@ -184,7 +182,7 @@ SPECS = (
                   " base=https://updates.signal.org/desktop/apt"
                   " package=signal-desktop"),
 
-    Shape(kind="index",
+    Shape(kind="index", resolve=_index,
           summary="the newest version named in a listing of every release",
           keys={"url": "the listing to read",
                 "pattern": "a regex with one group around the version",
@@ -197,7 +195,7 @@ SPECS = (
                   " 'pattern=emacs-(\\d+\\.\\d+)\\.tar\\.xz\"'"
                   " asset=emacs-{version}.tar.xz"),
 
-    Shape(kind="redirect",
+    Shape(kind="redirect", resolve=_redirect,
           summary="the version in the URL a download endpoint redirects to",
           keys={"url": "the endpoint to ask, without following it",
                 "pattern": "a regex with one group, against the redirect target",
@@ -211,7 +209,7 @@ SPECS = (
                   " 'pattern=/apps/linux/([^/]+)/' asset=discord-{version}.deb"
                   " download=https://dl.discordapp.net/apps/linux/{version}/{asset}"),
 
-    Shape(kind="tag-archive",
+    Shape(kind="tag-archive", resolve=_tag_archive,
           summary="a GitHub tag, for a project that attaches no source tarball",
           keys={"repo": "owner/name on GitHub",
                 "prefix": "what the tag puts before the version, usually v",
@@ -225,7 +223,7 @@ SPECS = (
                   " asset=mpv-{version}.tar.gz download=https://github.com/"
                   "mpv-player/mpv/archive/refs/tags/{tag}.tar.gz"),
 
-    Shape(kind="local",
+    Shape(kind="local", resolve=_local,
           summary="the newest package file sitting in the project folder",
           keys={},
           templates={"local": ("version", "arch")},
@@ -233,6 +231,7 @@ SPECS = (
 )
 
 SPEC = {shape.kind: shape for shape in SPECS}
+RESOLVERS = {shape.kind: shape.resolve for shape in SPECS}
 
 
 def parse_pairs(words):
@@ -354,7 +353,8 @@ def manifest_sha(url, asset, required=True):
         return ""
     for line in lines:
         cells = line.split()
-        if len(cells) == 2 and cells[1].lstrip("./") == asset:
+        # sha256sum writes `*name` for binary mode, and some `./name`.
+        if len(cells) == 2 and cells[1].lstrip("*").removeprefix("./") == asset:
             return cells[0]
     if required:
         raise NetworkError(f"no checksum for {asset} in {url}")
@@ -378,9 +378,12 @@ def _gpg(config, path, release, url):
     except NetworkError:
         return "gpg: upstream published no signature for this release"
     try:
+        # A keyring set to fetch keys would go to the network here.
         done = subprocess.run(
             ["gpg", "--status-fd", "2", "--verify", str(signature), str(path)],
-            capture_output=True)
+            capture_output=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        return "gpg: took too long, signature not checked"
     finally:
         signature.unlink(missing_ok=True)
     if done.returncode == 0:

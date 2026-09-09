@@ -3,7 +3,7 @@
 Worth saying plainly, because packaging software means running it.
 
 **Building a project runs code that came from somewhere else.** `pack.py` is
-imported and called, and 15 of the 28 published projects have one. `snapkit
+imported and called, and 16 of the 29 published projects have one. `snapkit
 install <name>` fetches a project from the database and builds it, so it runs
 that project's `pack.py` on your machine. The file is in the project you can
 read, and its sha256 is in the index, but it is code and it runs. Read a

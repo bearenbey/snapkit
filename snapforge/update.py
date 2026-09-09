@@ -9,7 +9,7 @@ from pathlib import Path
 from . import classify, github, local, net, recipe, rewrite, sources
 from .db import now
 from .net import NetworkError
-from .project import ForgeError, write
+from .project import ForgeError, builds, choose, take_recipe, write
 
 
 class NotTracked(ForgeError):
@@ -57,7 +57,7 @@ def situation(snap, force=False, timeout=net.CHECK_TIMEOUT):
             release, asset, note = check(snap, force)
     except NotTracked as exc:
         return Situation("untracked", problem=str(exc))
-    except (NetworkError, ForgeError) as exc:
+    except (NetworkError, ForgeError, sources.BadUpstream) as exc:
         return Situation("error", problem=str(exc))
     return Situation("behind" if asset is not None else "current",
                      release=release, asset=asset, note=note)
@@ -72,18 +72,9 @@ def situations(snaps):
         return list(pool.map(situation, snaps))
 
 
-def _builds(snap):
-    """Every .snap the project has made, oldest first; none if no project."""
-    directory = snap.path
-    if not directory.is_dir():
-        return []
-    return sorted(directory.glob(f"{snap.name}_*.snap"),
-                  key=lambda p: p.stat().st_mtime)
-
-
 def built_version(snap):
     """The version of the newest .snap in the project, or "" if none."""
-    made = _builds(snap)
+    made = builds(snap)
     if not made:
         return ""
     stem = made[-1].stem[len(snap.name) + 1:]
@@ -96,10 +87,12 @@ def prunable(snap):
     Every .snap but the newest, and for a snap built from a file in its own
     folder, every file the glob matches other than the one the recipe names.
     """
-    stale = _builds(snap)[:-1]
+    stale = builds(snap)[:-1]
     if snap.style == "artifact" and snap.asset_glob and snap.asset:
+        # Saved under its own name where the record renames the download.
+        kept = snap.local_asset or snap.asset
         stale += sorted(p for p in snap.path.glob(snap.asset_glob)
-                        if p.is_file() and p.name != snap.asset)
+                        if p.is_file() and p.name != kept)
     return stale
 
 
@@ -131,6 +124,28 @@ def resolve(snap):
         raise NotTracked(f"{snap.name} has no release file recorded to match "
                          f"against, so there is nothing to check")
     return github.release(snap.repo)
+
+
+def track_repo(snap, repo, tag=None, asset=None):
+    """Point a snap back at a repository's releases, and relearn its file.
+
+    Returns the release, the file chosen from it, and the candidates it was
+    chosen among. The snap is changed and not saved; that is the caller's.
+    """
+    release = github.release(repo, tag=tag)
+    candidates = classify.classify(release.assets, wanted=repo.split("/")[-1])
+    if not candidates:
+        raise ForgeError(f"{repo} {release.tag} publishes nothing that can be "
+                         f"packaged here -- `snapkit create {repo}` says what "
+                         f"it does publish")
+    # Keep the kind this snap already is, unless nothing in the release is one.
+    same_kind = [c for c in candidates if c.kind == snap.kind] or candidates
+    chosen = choose(same_kind, asset)
+    snap.upstream = {}
+    snap.repo, snap.url = repo, f"https://github.com/{repo}"
+    snap.kind, snap.asset = chosen.kind, chosen.name
+    snap.asset_pattern = classify.asset_pattern(chosen.name, release.version)
+    return release, chosen, same_kind
 
 
 def retrack(snap, upstream, force=False):
@@ -166,8 +181,7 @@ def fitting(snap, release):
                      f"superseded one will be left behind -- add "
                      f"glob='{suggestion}'")
     if snap.style == "recipe" and not snap.source_anchor:
-        named = sum(1 for line in snap.snapcraft_yaml.splitlines()
-                    if line.strip().startswith("source:"))
+        named = len(recipe.sources(snap.snapcraft_yaml))
         if named > 1:
             notes.append(f"the recipe names {named} sources and the record has "
                          f"no source_anchor, so an update would repoint "
@@ -279,7 +293,7 @@ def _update_recipe(snap, release, asset, reporter):
             yaml_path, snap.source_anchor, asset.url, sha,
             release.version if snap.write_version else "")
         _say_changes(changes, reporter)
-        _reread_recipe(snap)
+        take_recipe(snap)
         return
 
     old_url = _source_url(snap.snapcraft_yaml)
@@ -318,21 +332,16 @@ def _update_artifact(snap, release, asset, reporter):
             raise
 
     changes = rewrite.rewrite_versions(directory, snap.version, release.version,
-                                       snap.asset, asset.filename)
+                                       snap.local_asset or snap.asset,
+                                       asset.filename)
     _say_changes(changes, reporter)
 
     for old in superseded:
         old.unlink()
         reporter.detail(f"removed superseded {old.name}")
 
-    _reread_recipe(snap)
-
-
-def _reread_recipe(snap):
-    """Follow the rewrite, or `package` would put the old recipe back."""
-    yaml_path = snap.path / "snap" / "snapcraft.yaml"
-    if yaml_path.is_file():
-        snap.snapcraft_yaml = yaml_path.read_text(encoding="utf-8")
+    # Follow the rewrite, or `package` would put the old recipe back.
+    take_recipe(snap)
 
 
 def _verified(snap, path, release, url, reporter):
@@ -353,8 +362,6 @@ def _say_changes(changes, reporter):
 
 
 def _source_url(yaml_text):
-    for line in yaml_text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("source:") and "http" in stripped:
-            return stripped.split(":", 1)[1].strip()
-    return ""
+    """The first part fed from a URL, which is the one an update repoints."""
+    return next((value for _, value in recipe.sources(yaml_text)
+                 if "://" in value), "")

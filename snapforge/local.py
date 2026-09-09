@@ -31,7 +31,7 @@ def _declared(path, field, kind=""):
         return ""
     try:
         return inspect.control_fields(path).get(field, "")
-    except Exception:                                         # noqa: BLE001
+    except Exception:
         return ""
 
 

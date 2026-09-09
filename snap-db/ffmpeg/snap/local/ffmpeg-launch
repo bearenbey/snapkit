@@ -36,7 +36,7 @@ if [ -s "$fc_conf" ]; then
 	export FONTCONFIG_PATH="$SNAP/etc/fonts"
 fi
 
-# libasound compiles in /usr/share/alsa/alsa.conf, which core24 lacks.
+# libasound compiles in /usr/share/alsa/alsa.conf, which the base lacks.
 if [ -f "$SNAP/usr/share/alsa/alsa.conf" ]; then
 	export ALSA_CONFIG_PATH="$SNAP/usr/share/alsa/alsa.conf"
 fi

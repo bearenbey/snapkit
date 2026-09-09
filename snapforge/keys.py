@@ -54,7 +54,7 @@ class Keyboard:
         ready, _, _ = select.select([self.fd], [], [], timeout)
         if not ready:
             # Nothing followed it, so it was a bare Escape and not an arrow key.
-            if self.pending == "\x1b":
+            if self.pending:
                 self.pending = ""
                 return ["escape"]
             return []

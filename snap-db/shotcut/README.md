@@ -8,8 +8,10 @@ This snap is not published or endorsed by the upstream project.
 
 ## Building
 
-    cd /home/bearen/Development/snap/shotcut-snap
-    snapcraft
+    snapkit build shotcut
+
+`pack.py` checks the packed snap before it is handed back; plain
+`snapcraft` skips those checks.
 
 ## Installing what you built
 

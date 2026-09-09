@@ -111,13 +111,8 @@ identical to a working one until you ask for those.
 
 ## Updating to a new irssi release
 
-In `snap/snapcraft.yaml`, bump the `source:` URL and replace
-`source-checksum:` with the new tarball's sha256:
-
-```sh
-curl -sLO https://github.com/irssi/irssi/releases/download/<ver>/irssi-<ver>.tar.xz
-sha256sum irssi-<ver>.tar.xz
-```
+`snapkit update irssi` repoints `source:` in `snap/snapcraft.yaml` at the
+new tarball, replaces `source-checksum:` with its sha256, and builds.
 
 The snap `version` is read from the source's `meson.build`, so it follows
 automatically.

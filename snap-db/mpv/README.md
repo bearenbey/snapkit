@@ -220,24 +220,18 @@ not play.
 ## Updating to a new release
 
 ```sh
-`snapkit update mpv`          # newest release on GitHub
-`snapkit update mpv` 0.41.0   # a specific version
+snapkit update mpv          # newest release on GitHub, and build it
 ```
 
 This rewrites `source:` and `source-checksum:` in `snap/snapcraft.yaml`. mpv
 publishes no source tarball of its own. The release is the tag and GitHub
 generates the archive, so there is nothing to verify a signature against and
-the script computes the sha256 from the download itself. The snap version is
+snapkit computes the sha256 from the download itself. The snap version is
 taken from the tarball's `MPV_VERSION` file at build time via `adopt-info`, so
 it never needs editing by hand.
 
-`snapkit update` does the same thing for every project in this directory, and
-`snapkit update mpv` above is the entry point that touches only this one:
-
-```sh
-`snapkit update check` mpv
-`snapkit update mpv` --build
-```
+`snapkit check mpv` says whether there is anything to move to, and
+`snapkit build mpv` packs what the recipe points at without moving it.
 
 ## Licence
 

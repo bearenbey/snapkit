@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Regenerate snapforge/platform.py from the snaps installed on this machine."""
 
+import os
 import re
 import textwrap
 from pathlib import Path
@@ -57,10 +58,9 @@ def dpkg_lists(pattern="*.list"):
 def renamed_t64():
     """Packages noble renamed for 64-bit time_t, read off this host's dpkg."""
     found = set(ALSO_T64)
-    for listing in DPKG_INFO.glob("*t64*.list"):
-        name = listing.name.removesuffix(".list").split(":")[0]
-        if name.endswith("t64"):
-            found.add(name.removesuffix("t64"))
+    for package, _files in dpkg_lists("*t64*.list"):
+        if package.endswith("t64"):
+            found.add(package.removesuffix("t64"))
     return found
 
 
@@ -114,7 +114,8 @@ def conventions(soname):
 def proven_packages():
     """Package names from recipes that build, so noble is known to have them."""
     found = set()
-    root = Path("~/Development/github/snapkit/snap-db").expanduser()
+    root = Path(os.environ.get("SNAPKIT_DB_DIR",
+                               "~/Development/github/snapkit/snap-db")).expanduser()
     for recipe in root.glob("*/snap/snapcraft.yaml"):
         text = recipe.read_text()
         for head in re.finditer(r"(?m)^(\s*)stage-packages:\s*$", text):
@@ -162,7 +163,8 @@ def supplied_packages(base, gnome):
 
 def block(name, items, why):
     """One frozenset, wrapped so the file stays something a person can read."""
-    body = "\n".join(textwrap.wrap(" ".join(sorted(items)), 74))
+    body = "\n".join(textwrap.wrap(" ".join(sorted(items)), 74,
+                                   break_on_hyphens=False, break_long_words=False))
     return f'# {why}\n{name} = frozenset("""\n{body}\n""".split())\n\n'
 
 

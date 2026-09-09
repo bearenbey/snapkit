@@ -107,7 +107,7 @@ do neither.
   each, all sitting in `projects/`. `snapkit prune` deletes every build but
   the newest; nothing runs it for you.
 
-- The 23 projects in `seed.py` name amd64 asset globs, because that is
+- The 24 projects in `seed.py` name amd64 asset globs, because that is
   what this machine is. The tool is not tied to it; that list is.
 - `grade: devel` on the generated recipes' sibling, because this tool is new.
 - A snap built from someone else's release is not published or endorsed by

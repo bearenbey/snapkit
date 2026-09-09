@@ -13,20 +13,20 @@ libapparmor.so.1 libargon2.so.1 libarpt_mangle.so libassuan.so.0
 libattr.so.1 libaudit.so.1 libblkid.so.1 libbpf.so.1 libbrotlicommon.so.1
 libbrotlidec.so.1 libbrotlienc.so.1 libbsd.so.0 libbz2.so.1 libc.so.6
 libc_malloc_debug.so.0 libcap-ng.so.0 libcap.so.2 libcom_err.so.2
-libcrack.so.2 libcrypt.so.1 libcrypto.so.3 libcryptsetup-token-systemd-
-fido2.so libcryptsetup-token-systemd-pkcs11.so libcryptsetup-token-
-systemd-tpm2.so libcryptsetup.so.12 libdb-5.3.so libdbus-1.so.3
-libdebconfclient.so.0 libdl.so.2 libdrm.so.2 libdrop_ambient.so.0
-libduktape.so.207 libe2p.so.2 libeac.so.3 libebt_802_3.so libebt_among.so
-libebt_arp.so libebt_arpreply.so libebt_dnat.so libebt_ip.so libebt_ip6.so
-libebt_log.so libebt_mark.so libebt_mark_m.so libebt_nflog.so
-libebt_pkttype.so libebt_redirect.so libebt_snat.so libebt_stp.so
-libebt_vlan.so libedit.so.2 libelf-0.190.so libelf.so.1 libevdev.so.2
-libevent-2.1.so.7 libexpat.so.1 libexpatw.so.1 libext2fs.so.2
-libfdisk.so.1 libffi.so.8 libfido2.so.1 libformw.so.6 libfreetype.so.6
-libgcc_s.so.1 libgcrypt.so.20 libgio-2.0.so.0 libglib-2.0.so.0
-libgmodule-2.0.so.0 libgmp.so.10 libgnutls-dane.so.0 libgnutls.so.30
-libgobject-2.0.so.0 libgpg-error.so.0 libgssapi_krb5.so.2
+libcrack.so.2 libcrypt.so.1 libcrypto.so.3
+libcryptsetup-token-systemd-fido2.so libcryptsetup-token-systemd-pkcs11.so
+libcryptsetup-token-systemd-tpm2.so libcryptsetup.so.12 libdb-5.3.so
+libdbus-1.so.3 libdebconfclient.so.0 libdl.so.2 libdrm.so.2
+libdrop_ambient.so.0 libduktape.so.207 libe2p.so.2 libeac.so.3
+libebt_802_3.so libebt_among.so libebt_arp.so libebt_arpreply.so
+libebt_dnat.so libebt_ip.so libebt_ip6.so libebt_log.so libebt_mark.so
+libebt_mark_m.so libebt_nflog.so libebt_pkttype.so libebt_redirect.so
+libebt_snat.so libebt_stp.so libebt_vlan.so libedit.so.2 libelf-0.190.so
+libelf.so.1 libevdev.so.2 libevent-2.1.so.7 libexpat.so.1 libexpatw.so.1
+libext2fs.so.2 libfdisk.so.1 libffi.so.8 libfido2.so.1 libformw.so.6
+libfreetype.so.6 libgcc_s.so.1 libgcrypt.so.20 libgio-2.0.so.0
+libglib-2.0.so.0 libgmodule-2.0.so.0 libgmp.so.10 libgnutls-dane.so.0
+libgnutls.so.30 libgobject-2.0.so.0 libgpg-error.so.0 libgssapi_krb5.so.2
 libgthread-2.0.so.0 libhistory.so.8 libhogweed.so.6 libidn2.so.0
 libinproctrace.so libip4tc.so.2 libip6t_DNPT.so libip6t_HL.so
 libip6t_NETMAP.so libip6t_REJECT.so libip6t_SNPT.so libip6t_ah.so
@@ -45,23 +45,24 @@ libnsl.so.1 libnss_compat.so.2 libnss_dns.so.2 libnss_extrausers.so.2
 libnss_files.so.2 libnss_hesiod.so.2 libnss_mdns4_minimal.so.2
 libopensc.so.11 libopts.so.25 libp11-kit.so.0 libp11.so.3 libpam.so.0
 libpam_misc.so.0 libpamc.so.0 libpanelw.so.6 libpciaccess.so.0
-libpcprofile.so libpcre2-8.so.0 libpcsclite.so.1 libpkcs11.so libply-boot-
-client.so.5 libply-splash-core.so.5 libply-splash-graphics.so.5
-libply.so.5 libpng16.so.16 libpolkit-agent-1.so.0 libpolkit-gobject-1.so.0
-libpopt.so.0 libproc2.so.0 libpsx.so.2 libpthread.so.0 libpwquality.so.1
-libreadline.so.8 libresolv.so.2 librt.so.1 libseccomp.so.2 libselinux.so.1
-libsemanage.so.2 libsepol.so.2 libsmartcols.so.1 libsqlite3.so.0
-libss.so.2 libssl.so.3 libstdc++.so.6 libsystemd-core-255.so libsystemd-
-shared-255.so libsystemd.so.0 libtasn1.so.6 libthread_db.so.1 libtic.so.6
-libtinfo.so.6 libtirpc.so.3 libudev.so.1 libunistring.so.5 libutil.so.1
-libuuid.so.1 libwrap.so.0 libxkbcommon.so.0 libxt_AUDIT.so
-libxt_CHECKSUM.so libxt_CLASSIFY.so libxt_CONNMARK.so libxt_CONNSECMARK.so
-libxt_CT.so libxt_DNAT.so libxt_DSCP.so libxt_HMARK.so libxt_IDLETIMER.so
-libxt_LED.so libxt_LOG.so libxt_MARK.so libxt_MASQUERADE.so libxt_NAT.so
-libxt_NFLOG.so libxt_NFQUEUE.so libxt_NOTRACK.so libxt_RATEEST.so
-libxt_REDIRECT.so libxt_SECMARK.so libxt_SET.so libxt_SNAT.so
-libxt_SYNPROXY.so libxt_TCPMSS.so libxt_TCPOPTSTRIP.so libxt_TEE.so
-libxt_TOS.so libxt_TPROXY.so libxt_TRACE.so libxt_addrtype.so libxt_bpf.so
+libpcprofile.so libpcre2-8.so.0 libpcsclite.so.1 libpkcs11.so
+libply-boot-client.so.5 libply-splash-core.so.5
+libply-splash-graphics.so.5 libply.so.5 libpng16.so.16
+libpolkit-agent-1.so.0 libpolkit-gobject-1.so.0 libpopt.so.0 libproc2.so.0
+libpsx.so.2 libpthread.so.0 libpwquality.so.1 libreadline.so.8
+libresolv.so.2 librt.so.1 libseccomp.so.2 libselinux.so.1 libsemanage.so.2
+libsepol.so.2 libsmartcols.so.1 libsqlite3.so.0 libss.so.2 libssl.so.3
+libstdc++.so.6 libsystemd-core-255.so libsystemd-shared-255.so
+libsystemd.so.0 libtasn1.so.6 libthread_db.so.1 libtic.so.6 libtinfo.so.6
+libtirpc.so.3 libudev.so.1 libunistring.so.5 libutil.so.1 libuuid.so.1
+libwrap.so.0 libxkbcommon.so.0 libxt_AUDIT.so libxt_CHECKSUM.so
+libxt_CLASSIFY.so libxt_CONNMARK.so libxt_CONNSECMARK.so libxt_CT.so
+libxt_DNAT.so libxt_DSCP.so libxt_HMARK.so libxt_IDLETIMER.so libxt_LED.so
+libxt_LOG.so libxt_MARK.so libxt_MASQUERADE.so libxt_NAT.so libxt_NFLOG.so
+libxt_NFQUEUE.so libxt_NOTRACK.so libxt_RATEEST.so libxt_REDIRECT.so
+libxt_SECMARK.so libxt_SET.so libxt_SNAT.so libxt_SYNPROXY.so
+libxt_TCPMSS.so libxt_TCPOPTSTRIP.so libxt_TEE.so libxt_TOS.so
+libxt_TPROXY.so libxt_TRACE.so libxt_addrtype.so libxt_bpf.so
 libxt_cgroup.so libxt_cluster.so libxt_comment.so libxt_connbytes.so
 libxt_connlabel.so libxt_connlimit.so libxt_connmark.so libxt_conntrack.so
 libxt_cpu.so libxt_dccp.so libxt_devgroup.so libxt_dscp.so libxt_ecn.so
@@ -97,36 +98,38 @@ libaa.so.1 libadrg.so libadwaita-1.so libadwaita-1.so.0 libaec.so.0
 libamd_comgr.so.2 libamdhip64.so.5 libanl.so libaom.so libaom.so.3
 libappstream-glib.so.8 libappstream.so libappstream.so.5 libarchive.so.13
 libarmadillo.so.12 libarpack.so.2 libasan.so libasan.so.8 libasound.so.2
-libaspell.so.15 libasyncns.so.0 libatk-1.0.so libatk-1.0.so.0 libatk-
-bridge-2.0.so libatk-bridge-2.0.so.0 libatk-bridge.so libatkmm-2.36.so
-libatkmm-2.36.so.1 libatomic.so libatomic.so.1 libatspi.so libatspi.so.0
-libavahi-client.so.3 libavahi-common.so.3 libavc1394.so.0 libavcodec.so
-libavcodec.so.60 libavformat.so libavformat.so.60 libavutil.so
-libavutil.so.58 libayatana-appindicator3.so libayatana-appindicator3.so.1
-libayatana-ido3-0.4.so libayatana-ido3-0.4.so.0 libayatana-indicator3.so
+libaspell.so.15 libasyncns.so.0 libatk-1.0.so libatk-1.0.so.0
+libatk-bridge-2.0.so libatk-bridge-2.0.so.0 libatk-bridge.so
+libatkmm-2.36.so libatkmm-2.36.so.1 libatomic.so libatomic.so.1
+libatspi.so libatspi.so.0 libavahi-client.so.3 libavahi-common.so.3
+libavc1394.so.0 libavcodec.so libavcodec.so.60 libavformat.so
+libavformat.so.60 libavutil.so libavutil.so.58 libayatana-appindicator3.so
+libayatana-appindicator3.so.1 libayatana-ido3-0.4.so
+libayatana-ido3-0.4.so.0 libayatana-indicator3.so
 libayatana-indicator3.so.7 libbfd-2.42-system.so libblas.so.3 libblkid.so
 libblosc.so.1 libbluray.so.2 libbnxt_re-rdmav34.so libbrotlicommon.so
 libbrotlidec.so libbrotlienc.so libbz2.so libc.so libc_malloc_debug.so
-libcaca++.so.0 libcaca.so.0 libcairo-fdr.so libcairo-gobject.so libcairo-
-gobject.so.2 libcairo-script-interpreter.so libcairo-script-
-interpreter.so.2 libcairo-trace.so libcairo.so libcairo.so.2
-libcairomm-1.16.so libcairomm-1.16.so.1 libcanberra-alsa.so libcanberra-
-gtk-module.so libcanberra-gtk3-module.so libcanberra-gtk3.so libcanberra-
-gtk3.so.0 libcanberra-pulse.so libcanberra.so libcanberra.so.0 libcc1.so
-libcc1.so.0 libcc1plugin.so libcc1plugin.so.0 libcdda_interface.so.0
-libcdda_paranoia.so.0 libcdt.so libcdt.so.5 libcfitsio.so.10 libcgraph.so
-libcgraph.so.6 libcharls.so.2 libchromaprint.so.1 libcjson.so.1
-libcjson_utils.so.1 libclutter-1.0.so libclutter-1.0.so.0 libclutter-
-gtk-1.0.so libclutter-gtk-1.0.so.0 libcogl-gles2.so libcogl-gles2.so.20
-libcogl-pango.so libcogl-pango.so.20 libcogl-path.so libcogl-path.so.20
-libcogl.so libcogl.so.20 libcolord.so.2 libcolordprivate.so.2
-libcom_err.so libcomposeplatforminputcontextplugin.so libcp1plugin.so
-libcp1plugin.so.0 libcrypt.so libctf-nobfd.so.0 libctf.so.0 libcups.so.2
-libcurl-gnutls.so.3 libcurl-gnutls.so.4 libcurl.so libcurl.so.4
-libcxgb4-rdmav34.so libdatrie.so libdatrie.so.1 libdav1d.so libdav1d.so.7
-libdazzle-1.0.so libdazzle-1.0.so.0 libdbus-1.so libdbus-glib-1.so
-libdbus-glib-1.so.2 libdbusmenu-glib.so libdbusmenu-glib.so.4 libdbusmenu-
-gtk3.so libdbusmenu-gtk3.so.4 libdc1394.so libdc1394.so.25 libdconf.so.1
+libcaca++.so.0 libcaca.so.0 libcairo-fdr.so libcairo-gobject.so
+libcairo-gobject.so.2 libcairo-script-interpreter.so
+libcairo-script-interpreter.so.2 libcairo-trace.so libcairo.so
+libcairo.so.2 libcairomm-1.16.so libcairomm-1.16.so.1 libcanberra-alsa.so
+libcanberra-gtk-module.so libcanberra-gtk3-module.so libcanberra-gtk3.so
+libcanberra-gtk3.so.0 libcanberra-pulse.so libcanberra.so libcanberra.so.0
+libcc1.so libcc1.so.0 libcc1plugin.so libcc1plugin.so.0
+libcdda_interface.so.0 libcdda_paranoia.so.0 libcdt.so libcdt.so.5
+libcfitsio.so.10 libcgraph.so libcgraph.so.6 libcharls.so.2
+libchromaprint.so.1 libcjson.so.1 libcjson_utils.so.1 libclutter-1.0.so
+libclutter-1.0.so.0 libclutter-gtk-1.0.so libclutter-gtk-1.0.so.0
+libcogl-gles2.so libcogl-gles2.so.20 libcogl-pango.so libcogl-pango.so.20
+libcogl-path.so libcogl-path.so.20 libcogl.so libcogl.so.20 libcolord.so.2
+libcolordprivate.so.2 libcom_err.so
+libcomposeplatforminputcontextplugin.so libcp1plugin.so libcp1plugin.so.0
+libcrypt.so libctf-nobfd.so.0 libctf.so.0 libcups.so.2 libcurl-gnutls.so.3
+libcurl-gnutls.so.4 libcurl.so libcurl.so.4 libcxgb4-rdmav34.so
+libdatrie.so libdatrie.so.1 libdav1d.so libdav1d.so.7 libdazzle-1.0.so
+libdazzle-1.0.so.0 libdbus-1.so libdbus-glib-1.so libdbus-glib-1.so.2
+libdbusmenu-glib.so libdbusmenu-glib.so.4 libdbusmenu-gtk3.so
+libdbusmenu-gtk3.so.4 libdc1394.so libdc1394.so.25 libdconf.so.1
 libdconfsettings.so libde265.so libde265.so.0 libdee-1.0.so
 libdee-1.0.so.4 libdeflate.so libdeflate.so.0 libdep.so libdfalt.so.0
 libdouble-conversion.so.3 libdv.so.4 libdw-0.190.so libdw.so libdw.so.1
@@ -138,10 +141,10 @@ libfcitx-gclient.so.1 libfcitx-utils.so.0 libffi.so libfontconfig.so
 libfontconfig.so.1 libform.so.6 libfreebl3.so libfreeblpriv3.so
 libfreetype.so libfreexl.so.1 libfribidi.so libfribidi.so.0 libfyba.so.0
 libfygm.so.0 libfyut.so.0 libgailutil-3.so libgailutil-3.so.0 libgcc_s.so
-libgck-1.so libgck-1.so.0 libgcr-base-3.so libgcr-base-3.so.1 libgcr-
-ui-3.so libgcr-ui-3.so.1 libgcrypt.so libgd.so.3 libgdal.so libgdal.so.34
-libgdbm.so.6 libgdbm_compat.so.4 libgdcmCommon.so libgdcmDICT.so
-libgdcmDSED.so libgdcmIOD.so libgdcmMEXD.so libgdcmMSFF.so
+libgck-1.so libgck-1.so.0 libgcr-base-3.so libgcr-base-3.so.1
+libgcr-ui-3.so libgcr-ui-3.so.1 libgcrypt.so libgd.so.3 libgdal.so
+libgdal.so.34 libgdbm.so.6 libgdbm_compat.so.4 libgdcmCommon.so
+libgdcmDICT.so libgdcmDSED.so libgdcmIOD.so libgdcmMEXD.so libgdcmMSFF.so
 libgdcmjpeg12.so libgdcmjpeg16.so libgdcmjpeg8.so libgdk-3.so
 libgdk-3.so.0 libgdk-x11-2.0.so.0 libgdk_pixbuf-2.0.so
 libgdk_pixbuf-2.0.so.0 libgee-0.8.so libgee-0.8.so.2 libgeocode-glib-2.so
@@ -238,13 +241,14 @@ libgweather-4.so libgweather-4.so.0 libhandy-1.so libhandy-1.so.0
 libharfbuzz-cairo.so libharfbuzz-cairo.so.0 libharfbuzz-gobject.so
 libharfbuzz-gobject.so.0 libharfbuzz-icu.so libharfbuzz-icu.so.0
 libharfbuzz-subset.so libharfbuzz-subset.so.0 libharfbuzz.so
-libharfbuzz.so.0 libhdf5_serial.so.103 libhdf5_serial_hl.so.100 libheif-
-aomdec.so libheif.so libheif.so.1 libhelloworld.so libhfi1verbs-rdmav34.so
-libhns-rdmav34.so libhogweed.so libhsa-runtime64.so.1 libhsakmt.so.1
-libhunspell-1.7.so.0 libhwasan.so libhwasan.so.0 libhwloc.so.15
-libhwy.so.1 libhwy_contrib.so.1 libhwy_test.so.1 libhyphen.so.0
-libibus-1.0.so.5 libibusplatforminputcontextplugin.so libibverbs.so.1
-libidn2.so libiec61883.so.0 libinfinipath.so.4 libinput.so libinput.so.10
+libharfbuzz.so.0 libhdf5_serial.so.103 libhdf5_serial_hl.so.100
+libheif-aomdec.so libheif.so libheif.so.1 libhelloworld.so
+libhfi1verbs-rdmav34.so libhns-rdmav34.so libhogweed.so
+libhsa-runtime64.so.1 libhsakmt.so.1 libhunspell-1.7.so.0 libhwasan.so
+libhwasan.so.0 libhwloc.so.15 libhwy.so.1 libhwy_contrib.so.1
+libhwy_test.so.1 libhyphen.so.0 libibus-1.0.so.5
+libibusplatforminputcontextplugin.so libibverbs.so.1 libidn2.so
+libiec61883.so.0 libinfinipath.so.4 libinput.so libinput.so.10
 libipathverbs-rdmav34.so libirdma-rdmav34.so libisl.so.23 libitm.so
 libitm.so.1 libjansson.so.4 libjavascriptcoregtk-4.1.so
 libjavascriptcoregtk-4.1.so.0 libjbig.so libjbig.so.0 libjpeg.so
@@ -258,8 +262,8 @@ liblsan.so liblsan.so.0 libltdl.so libltdl.so.7 liblto_plugin.so
 liblzma.so liblzo2.so libm.so libmana-rdmav34.so libmana.so.1
 libmanette-0.2.so.0 libmbedcrypto.so.7 libmca_common_monitoring.so.50
 libmca_common_ofi.so.10 libmca_common_ompio.so.41 libmca_common_sm.so.40
-libmca_common_ucx.so.40 libmca_common_verbs.so.40 libmd4c.so.0 libmedia-
-gstreamer.so libmenu.so.6 libmfhdfalt.so.0 libminizip.so.1
+libmca_common_ucx.so.40 libmca_common_verbs.so.40 libmd4c.so.0
+libmedia-gstreamer.so libmenu.so.6 libmfhdfalt.so.0 libminizip.so.1
 libmlx4-rdmav34.so libmlx4.so.1 libmlx5-rdmav34.so libmlx5.so.1
 libmount.so libmozjs-115.so libmozjs-115.so.0 libmp3lame.so.0 libmpc.so.3
 libmpfr.so.6 libmpg123.so.0 libmpi.so.40 libmpi_cxx.so.40
@@ -325,89 +329,93 @@ libpcre2-16.so libpcre2-16.so.0 libpcre2-32.so libpcre2-32.so.0
 libpcre2-8.so libpcre2-posix.so libpcre2-posix.so.3 libpcre32.so
 libpcre32.so.3 libpcrecpp.so libpcrecpp.so.0 libpcreposix.so
 libpcreposix.so.3 libpeas-1.0.so libpeas-1.0.so.0 libpeas-gtk-1.0.so
-libpeas-gtk-1.0.so.0 libpgm-5.3.so.0 libpipewire-0.3.so.0 libpipewire-
-module-access.so libpipewire-module-adapter.so libpipewire-module-avb.so
-libpipewire-module-client-device.so libpipewire-module-client-node.so
-libpipewire-module-combine-stream.so libpipewire-module-echo-cancel.so
-libpipewire-module-fallback-sink.so libpipewire-module-filter-chain.so
-libpipewire-module-jack-tunnel.so libpipewire-module-jackdbus-detect.so
-libpipewire-module-link-factory.so libpipewire-module-loopback.so
-libpipewire-module-metadata.so libpipewire-module-netjack2-driver.so
+libpeas-gtk-1.0.so.0 libpgm-5.3.so.0 libpipewire-0.3.so.0
+libpipewire-module-access.so libpipewire-module-adapter.so
+libpipewire-module-avb.so libpipewire-module-client-device.so
+libpipewire-module-client-node.so libpipewire-module-combine-stream.so
+libpipewire-module-echo-cancel.so libpipewire-module-fallback-sink.so
+libpipewire-module-filter-chain.so libpipewire-module-jack-tunnel.so
+libpipewire-module-jackdbus-detect.so libpipewire-module-link-factory.so
+libpipewire-module-loopback.so libpipewire-module-metadata.so
+libpipewire-module-netjack2-driver.so
 libpipewire-module-netjack2-manager.so libpipewire-module-pipe-tunnel.so
-libpipewire-module-portal.so libpipewire-module-profiler.so libpipewire-
-module-protocol-native.so libpipewire-module-protocol-pulse.so
+libpipewire-module-portal.so libpipewire-module-profiler.so
+libpipewire-module-protocol-native.so libpipewire-module-protocol-pulse.so
 libpipewire-module-protocol-simple.so libpipewire-module-pulse-tunnel.so
 libpipewire-module-raop-discover.so libpipewire-module-raop-sink.so
 libpipewire-module-roc-sink.so libpipewire-module-roc-source.so
-libpipewire-module-rt.so libpipewire-module-rtkit.so libpipewire-module-
-rtp-sap.so libpipewire-module-rtp-session.so libpipewire-module-rtp-
-sink.so libpipewire-module-rtp-source.so libpipewire-module-session-
-manager.so libpipewire-module-spa-device-factory.so libpipewire-module-
-spa-device.so libpipewire-module-spa-node-factory.so libpipewire-module-
-spa-node.so libpipewire-module-vban-recv.so libpipewire-module-vban-
-send.so libpipewire-module-zeroconf-discover.so libpixbufloader-ani.so
+libpipewire-module-rt.so libpipewire-module-rtkit.so
+libpipewire-module-rtp-sap.so libpipewire-module-rtp-session.so
+libpipewire-module-rtp-sink.so libpipewire-module-rtp-source.so
+libpipewire-module-session-manager.so
+libpipewire-module-spa-device-factory.so libpipewire-module-spa-device.so
+libpipewire-module-spa-node-factory.so libpipewire-module-spa-node.so
+libpipewire-module-vban-recv.so libpipewire-module-vban-send.so
+libpipewire-module-zeroconf-discover.so libpixbufloader-ani.so
 libpixbufloader-bmp.so libpixbufloader-gif.so libpixbufloader-heif.so
 libpixbufloader-icns.so libpixbufloader-ico.so libpixbufloader-pnm.so
 libpixbufloader-qtif.so libpixbufloader-tga.so libpixbufloader-tiff.so
 libpixbufloader-webp.so libpixbufloader-xbm.so libpixbufloader-xpm.so
 libpixbufloader_svg.so libpixman-1.so libpixman-1.so.0 libpkgconf.so.3
-libplc4.so libplds4.so libpmix.so.2 libpng.so libpng16.so libpoppler-
-glib.so libpoppler-glib.so.8 libpoppler.so libpoppler.so.134 libportal-
-gtk3.so libportal-gtk3.so.1 libportal-gtk4.so libportal-gtk4.so.1
-libportal.so libportal.so.1 libpq.so.5 libpresage.so.1 libprintbackend-
-cups.so libprintbackend-file.so libprintbackend-lpr.so libprintbackend-
-test.so libproj.so.25 libprotobuf.so.32 libproxy.so.1 libpsl.so
-libpsl.so.5 libpsm2.so.2 libpspell.so.15 libpulse-mainloop-glib.so
-libpulse-mainloop-glib.so.0 libpulse-simple.so libpulse-simple.so.0
-libpulse.so libpulse.so.0 libpulsecommon-16.1.so libpxbackend-1.0.so
-libpython3.12.so libpython3.12.so.1 libpython3loader.so
-libqconnmanbearer.so libqedr-rdmav34.so libqeglfs-emu-integration.so
-libqeglfs-kms-egldevice-integration.so libqeglfs-kms-integration.so
-libqeglfs-x11-integration.so libqeglfs.so libqevdevkeyboardplugin.so
-libqevdevmouseplugin.so libqevdevtabletplugin.so libqevdevtouchplugin.so
-libqgenericbearer.so libqgif.so libqico.so libqjpeg.so
-libqlibinputplugin.so libqlinuxfb.so libqminimal.so libqminimalegl.so
-libqnmbearer.so libqoffscreen.so libqtuiotouchplugin.so libquadmath.so
-libquadmath.so.0 libqvnc.so libqxcb-egl-integration.so libqxcb-glx-
-integration.so libqxcb.so librabbitmq.so.4 librav1e.so.0 libraw1394.so
-libraw1394.so.11 librdmacm.so.1 libremote.so libresolv.so librest-1.0.so
-librest-1.0.so.0 librest-extras-1.0.so librest-extras-1.0.so.0
-librist.so.4 libroc.so.0 librom1394.so.0 librpf.so librspreload.so
-librspreload.so.1 librsvg-2.so librsvg-2.so.2 librtmp.so.1 librttopo.so.1
-librxe-rdmav34.so libsasl2.so.2 libsasldb.so libsasldb.so.2 libseccomp.so
-libsecondtime.so libsecret-1.so libsecret-1.so.0 libselinux.so libsepol.so
-libsframe.so.1 libsharpyuv.so libsharpyuv.so.0 libshine.so.3 libshout.so.3
-libsigc-2.0.so libsigc-2.0.so.0 libsigc-3.0.so libsigc-3.0.so.0 libsiw-
-rdmav34.so libskeleton.so libslang.so.2 libsmime3.so libsnapd-glib-2.so.1
+libplc4.so libplds4.so libpmix.so.2 libpng.so libpng16.so
+libpoppler-glib.so libpoppler-glib.so.8 libpoppler.so libpoppler.so.134
+libportal-gtk3.so libportal-gtk3.so.1 libportal-gtk4.so
+libportal-gtk4.so.1 libportal.so libportal.so.1 libpq.so.5 libpresage.so.1
+libprintbackend-cups.so libprintbackend-file.so libprintbackend-lpr.so
+libprintbackend-test.so libproj.so.25 libprotobuf.so.32 libproxy.so.1
+libpsl.so libpsl.so.5 libpsm2.so.2 libpspell.so.15
+libpulse-mainloop-glib.so libpulse-mainloop-glib.so.0 libpulse-simple.so
+libpulse-simple.so.0 libpulse.so libpulse.so.0 libpulsecommon-16.1.so
+libpxbackend-1.0.so libpython3.12.so libpython3.12.so.1
+libpython3loader.so libqconnmanbearer.so libqedr-rdmav34.so
+libqeglfs-emu-integration.so libqeglfs-kms-egldevice-integration.so
+libqeglfs-kms-integration.so libqeglfs-x11-integration.so libqeglfs.so
+libqevdevkeyboardplugin.so libqevdevmouseplugin.so
+libqevdevtabletplugin.so libqevdevtouchplugin.so libqgenericbearer.so
+libqgif.so libqico.so libqjpeg.so libqlibinputplugin.so libqlinuxfb.so
+libqminimal.so libqminimalegl.so libqnmbearer.so libqoffscreen.so
+libqtuiotouchplugin.so libquadmath.so libquadmath.so.0 libqvnc.so
+libqxcb-egl-integration.so libqxcb-glx-integration.so libqxcb.so
+librabbitmq.so.4 librav1e.so.0 libraw1394.so libraw1394.so.11
+librdmacm.so.1 libremote.so libresolv.so librest-1.0.so librest-1.0.so.0
+librest-extras-1.0.so librest-extras-1.0.so.0 librist.so.4 libroc.so.0
+librom1394.so.0 librpf.so librspreload.so librspreload.so.1 librsvg-2.so
+librsvg-2.so.2 librtmp.so.1 librttopo.so.1 librxe-rdmav34.so libsasl2.so.2
+libsasldb.so libsasldb.so.2 libseccomp.so libsecondtime.so libsecret-1.so
+libsecret-1.so.0 libselinux.so libsepol.so libsframe.so.1 libsharpyuv.so
+libsharpyuv.so.0 libshine.so.3 libshout.so.3 libsigc-2.0.so
+libsigc-2.0.so.0 libsigc-3.0.so libsigc-3.0.so.0 libsiw-rdmav34.so
+libskeleton.so libslang.so.2 libsmime3.so libsnapd-glib-2.so.1
 libsnappy.so.1 libsndfile.so.1 libsocket++.so.1 libsodium.so.23
-libsoftokn3.so libsoup-3.0.so libsoup-3.0.so.0 libsoxr.so.0 libspa-aec-
-null.so libspa-aec-webrtc.so libspa-alsa.so libspa-audioconvert.so libspa-
-audiomixer.so libspa-audiotestsrc.so libspa-avb.so libspa-control.so
-libspa-dbus.so libspa-journal.so libspa-support.so libspa-test.so
-libspa-v4l2.so libspa-videoconvert.so libspa-videotestsrc.so
-libspatialite.so.8 libspeex.so.1 libspeexdsp.so.1 libsqlite3.so libssh-
-gcrypt.so.4 libssh.so.4 libssh2.so.1 libssl3.so libstdc++.so
-libsuperlu.so.6 libswresample.so libswresample.so.4 libswscale.so
-libswscale.so.7 libsystemd.so libsz.so.2 libtag.so.1 libtasn1.so libtbb.so
-libtbb.so.12 libtbbbind_2_5.so libtbbbind_2_5.so.3 libtbbmalloc.so
-libtbbmalloc.so.2 libtbbmalloc_proxy.so libtbbmalloc_proxy.so.2
-libtcl8.6.so libtcl8.6.so.0 libtdb.so libtdb.so.1 libtesseract.so.5
-libthai.so libthai.so.0 libtheora.so.0 libtheoradec.so.1 libtheoraenc.so.1
-libthread_db.so libtiff.so libtiff.so.6 libtiffxx.so libtiffxx.so.6
-libtirpc.so libtk8.6.so libtk8.6.so.0 libtsan.so libtsan.so.2
-libtwolame.so.0 libubsan.so libubsan.so.1 libucm.so.0 libucp.so.0
-libucs.so.0 libucs_signal.so.0 libuct.so.0 libuct_cma.so.0 libuct_ib.so.0
-libuct_rdmacm.so.0 libucx_perftest_rocm.so.0 libudev.so libudfread.so.0
-libunbound.so.8 libunity-extras.so libunity-extras.so.9 libunity-gtk-
-module.so libunity-gtk3-parser.so.0 libunity-protocol-private.so libunity-
-protocol-private.so.0 libunity.so libunity.so.9 libunwind-coredump.so
-libunwind-coredump.so.0 libunwind-generic.so libunwind-ptrace.so
-libunwind-ptrace.so.0 libunwind-x86_64.so libunwind-x86_64.so.8
-libunwind.so libunwind.so.8 liburiparser.so.1 libusb-1.0.so.0 libuuid.so
-libuv.so.1 libv4l-mplane.so libv4l1.so.0 libv4l2.so.0 libv4lconvert.so.0
-libva-glx.so libva-glx.so.2 libvisual-0.4.so.0 libvmw_pvrdma-rdmav34.so
-libvorbis.so.0 libvorbisenc.so.2 libvorbisfile.so.3 libvpf.so.4
-libvpl.so.2 libvpl_wayland.so libvpx.so.9 libvrf.so libvte-2.91.so.0
+libsoftokn3.so libsoup-3.0.so libsoup-3.0.so.0 libsoxr.so.0
+libspa-aec-null.so libspa-aec-webrtc.so libspa-alsa.so
+libspa-audioconvert.so libspa-audiomixer.so libspa-audiotestsrc.so
+libspa-avb.so libspa-control.so libspa-dbus.so libspa-journal.so
+libspa-support.so libspa-test.so libspa-v4l2.so libspa-videoconvert.so
+libspa-videotestsrc.so libspatialite.so.8 libspeex.so.1 libspeexdsp.so.1
+libsqlite3.so libssh-gcrypt.so.4 libssh.so.4 libssh2.so.1 libssl3.so
+libstdc++.so libsuperlu.so.6 libswresample.so libswresample.so.4
+libswscale.so libswscale.so.7 libsystemd.so libsz.so.2 libtag.so.1
+libtasn1.so libtbb.so libtbb.so.12 libtbbbind_2_5.so libtbbbind_2_5.so.3
+libtbbmalloc.so libtbbmalloc.so.2 libtbbmalloc_proxy.so
+libtbbmalloc_proxy.so.2 libtcl8.6.so libtcl8.6.so.0 libtdb.so libtdb.so.1
+libtesseract.so.5 libthai.so libthai.so.0 libtheora.so.0 libtheoradec.so.1
+libtheoraenc.so.1 libthread_db.so libtiff.so libtiff.so.6 libtiffxx.so
+libtiffxx.so.6 libtirpc.so libtk8.6.so libtk8.6.so.0 libtsan.so
+libtsan.so.2 libtwolame.so.0 libubsan.so libubsan.so.1 libucm.so.0
+libucp.so.0 libucs.so.0 libucs_signal.so.0 libuct.so.0 libuct_cma.so.0
+libuct_ib.so.0 libuct_rdmacm.so.0 libucx_perftest_rocm.so.0 libudev.so
+libudfread.so.0 libunbound.so.8 libunity-extras.so libunity-extras.so.9
+libunity-gtk-module.so libunity-gtk3-parser.so.0
+libunity-protocol-private.so libunity-protocol-private.so.0 libunity.so
+libunity.so.9 libunwind-coredump.so libunwind-coredump.so.0
+libunwind-generic.so libunwind-ptrace.so libunwind-ptrace.so.0
+libunwind-x86_64.so libunwind-x86_64.so.8 libunwind.so libunwind.so.8
+liburiparser.so.1 libusb-1.0.so.0 libuuid.so libuv.so.1 libv4l-mplane.so
+libv4l1.so.0 libv4l2.so.0 libv4lconvert.so.0 libva-glx.so libva-glx.so.2
+libvisual-0.4.so.0 libvmw_pvrdma-rdmav34.so libvorbis.so.0
+libvorbisenc.so.2 libvorbisfile.so.3 libvpf.so.4 libvpl.so.2
+libvpl_wayland.so libvpx.so.9 libvrf.so libvte-2.91.so.0
 libvtkChartsCore-9.1.so.1 libvtkCommonColor-9.1.so.1
 libvtkCommonComputationalGeometry-9.1.so.1 libvtkCommonCore-9.1.so.1
 libvtkCommonDataModel-9.1.so.1 libvtkCommonExecutionModel-9.1.so.1
@@ -475,12 +483,13 @@ libwebpdecoder.so.3 libwebpdemux.so libwebpdemux.so.2 libwebpmux.so
 libwebpmux.so.3 libwebrtc_audio_processing.so.1 libwrap.so
 libx11_plugin.so libx11_plugin.so.0 libx264.so.164 libx265.so
 libx265.so.199 libxcb-icccm.so.4 libxcb-image.so.0 libxcb-keysyms.so.1
-libxcb-render-util.so.0 libxcb-render.so libxcb-render.so.0 libxcb-
-shape.so.0 libxcb-util.so.1 libxcb-xinerama.so.0 libxcb-xinput.so.0
+libxcb-render-util.so.0 libxcb-render.so libxcb-render.so.0
+libxcb-shape.so.0 libxcb-util.so.1 libxcb-xinerama.so.0 libxcb-xinput.so.0
 libxcb-xkb.so.1 libxdot.so libxdot.so.4 libxerces-c-3.2.so
-libxkbcommon-x11.so.0 libxkbcommon.so libxml2mod.cpython-312-x86_64-linux-
-gnu.so libxmlb.so.2 libxslt.so.1 libxvidcore.so.4 libyaml.so libz.so
-libzmq.so.5 libzstd.so libzvbi-chains.so.0 libzvbi.so.0
+libxkbcommon-x11.so.0 libxkbcommon.so
+libxml2mod.cpython-312-x86_64-linux-gnu.so libxmlb.so.2 libxslt.so.1
+libxvidcore.so.4 libyaml.so libz.so libzmq.so.5 libzstd.so
+libzvbi-chains.so.0 libzvbi.so.0
 """.split())
 
 # noble renamed these for 64-bit time_t: libasound2 is libasound2t64.
@@ -489,25 +498,25 @@ libaa1 libarchive13 libasound2 libatk-bridge2.0-0 libatk1.0-0
 libatopology2 libatspi2.0-0 libbasicobjects0 libcamel-1.2-64 libcdio-cdda2
 libcdio-paranoia2 libcdio19 libcollection4 libcolord-gtk4-1 libcups2
 libcupsfilters2 libcupsimage2 libcurl4 libdb5.3 libdebuginfod1 libdhash1
-libdv4 libdvdread8 libdw1 libebackend-1.2-11 libebook-1.2-21 libebook-
-contacts-1.2-4 libedata-book-1.2-27 libedata-cal-2.0-2
+libdv4 libdvdread8 libdw1 libebackend-1.2-11 libebook-1.2-21
+libebook-contacts-1.2-4 libedata-book-1.2-27 libedata-cal-2.0-2
 libedataserver-1.2-27 libedataserverui-1.2-4 libefiboot1 libefivar1
-libelf1 libevent-core-2.1-7 libext2fs2 libgail18 libgdbm-compat4 libgdbm6
-libglib2.0-0 libgnome-bg-4-2 libgnome-desktop-3-20 libgnome-desktop-4-2
-libgnutls30 libgphoto2-6 libgphoto2-port12 libgsound0 libgtk-3-0
-libgtk2.0-0 libgtkmm-2.4-1v5 libgweather-4-0 libgxps2 libhogweed6 libhwy1
-libical3 libieee1284-3 libini-config5 libipa-hbac0 liblouisutdml9 libmad0
-libmagic1 libmpg123-0 libmspack0 libmtdev1 libmtp9 libnettle8 libnorm1
-libnpth0 libntfs-3g89 libnvme1 libonnx1 libopenal1 libopenmpt0
-liborc-0.4-0 libparted2 libpath-utils1 libpcap0.8 libpgm-5.3-0
-libpipewire-0.3-0 libpkcs11-helper1 libpng16-16 libpoppler-glib8
-libprotobuf32 libpsl5 libraw1394-11 libreadline8 libref-array1
-libsamplerate0 libsdl1.2debian libslang2 libsndio7.0 libsnmp40
-libsoup2.4-1 libsource-highlight4 libssh2-1 libssl3 libtag1v5 libtevent0
-libtirpc3 libtss2-esys-3.0.2-0 libtss2-mu-4.0.1-0 libtss2-rc0 libtss2-sys1
-libtss2-tcti-cmd0 libtss2-tcti-device0 libtss2-tcti-mssim0 libtss2-tcti-
-swtpm0 libunwind8 liburcu8 libuv1 libv4l-0 libv4lconvert0 libvte-2.91-0
-libvte9 libwxbase3.2-1 libwxgtk3.2-1 libxt6 libzip4 libzvbi0
+libelf1 libext2fs2 libgail18 libgdbm-compat4 libgdbm6 libglib2.0-0
+libgnome-bg-4-2 libgnome-desktop-3-20 libgnome-desktop-4-2 libgnutls30
+libgphoto2-6 libgphoto2-port12 libgsound0 libgtk-3-0 libgtk2.0-0
+libgtkmm-2.4-1v5 libgweather-4-0 libgxps2 libhogweed6 libhwy1 libical3
+libieee1284-3 libini-config5 libipa-hbac0 liblouisutdml9 libmad0 libmagic1
+libmpg123-0 libmspack0 libmtdev1 libmtp9 libnettle8 libnorm1 libnpth0
+libntfs-3g89 libnvme1 libonnx1 libopenal1 libopenmpt0 liborc-0.4-0
+libparted2 libpath-utils1 libpcap0.8 libpgm-5.3-0 libpipewire-0.3-0
+libpkcs11-helper1 libpng16-16 libpoppler-glib8 libprotobuf32 libpsl5
+libraw1394-11 libreadline8 libref-array1 libsamplerate0 libsdl1.2debian
+libslang2 libsndio7.0 libsnmp40 libsoup2.4-1 libsource-highlight4
+libssh2-1 libssl3 libtag1v5 libtevent0 libtirpc3 libtss2-esys-3.0.2-0
+libtss2-mu-4.0.1-0 libtss2-rc0 libtss2-sys1 libtss2-tcti-cmd0
+libtss2-tcti-device0 libtss2-tcti-mssim0 libtss2-tcti-swtpm0 libunwind8
+liburcu8 libuv1 libv4l-0 libv4lconvert0 libvte-2.91-0 libvte9
+libwxbase3.2-1 libwxgtk3.2-1 libxt6 libzip4 libzvbi0
 """.split())
 
 # Packages the base already covers, whatever a Depends: says.
@@ -536,50 +545,50 @@ libxtables12 libxxhash0 libyaml-0-2 libzstd1 systemd-cryptsetup zlib1g
 # And the ones the gnome extension covers, for apps that use it.
 SUPPLIED_BY_GNOME = frozenset("""
 binutils-x86-64-linux-gnu dconf-gsettings-backend glib-networking
-gstreamer1.0-gl gstreamer1.0-pipewire gstreamer1.0-plugins-base heif-gdk-
-pixbuf libaa1 libadwaita-1-0 libaom3 libappstream5 libarchive13
-libarchive13t64 libasound2 libasound2t64 libaspell15 libasyncns0 libatk-
-adaptor libatk-bridge2.0-0 libatk-bridge2.0-0t64 libatk1.0-0
+gstreamer1.0-gl gstreamer1.0-pipewire gstreamer1.0-plugins-base
+heif-gdk-pixbuf libaa1 libadwaita-1-0 libaom3 libappstream5 libarchive13
+libarchive13t64 libasound2 libasound2t64 libaspell15 libasyncns0
+libatk-adaptor libatk-bridge2.0-0 libatk-bridge2.0-0t64 libatk1.0-0
 libatk1.0-0t64 libatomic1 libatspi2.0-0 libatspi2.0-0t64 libavahi-client3
-libavahi-common3 libavc1394-0 libayatana-ido3-0.4-0 libayatana-
-indicator3-7 libc6-dev libcaca0 libcairo-gobject2 libcairo-script-
-interpreter2 libcairo2 libcanberra-gtk3-0 libcanberra-gtk3-module
-libcanberra-pulse libcanberra0 libcdparanoia0 libchromaprint1 libcjson1
-libcolord2 libctf-nobfd0 libctf0 libcups2 libcups2t64 libcurl3t64-gnutls
-libcurl4 libcurl4t64 libdatrie1 libdav1d7 libdbusmenu-glib4 libdbusmenu-
-gtk3-4 libdconf1 libdee-1.0-4 libdeflate0 libdv4 libdv4t64 libenchant-2-2
-libepoxy0 libevent-core-2.1-7 libevent-core-2.1-7t64 libexif12
-libfontconfig1 libfribidi0 libgck-1-0 libgcr-base-3-1 libgcr-ui-3-1 libgd3
-libgdbm-compat4 libgdbm-compat4t64 libgdbm6 libgdbm6t64 libgdk-
-pixbuf-2.0-0 libgee-0.8-2 libgeocode-glib-2-0 libgif7
-libgirepository-1.0-1 libgirepository-2.0-0 libgjs0 libgme0 libgnome-
-bg-4-2 libgnome-bg-4-2t64 libgnome-desktop-3-20 libgnome-desktop-3-20t64
-libgnome-desktop-4-2 libgnome-desktop-4-2t64 libgoa-1.0-0b libgomp1
-libgphoto2-6 libgphoto2-6t64 libgphoto2-port12 libgphoto2-port12t64
-libgpm2 libgprofng0 libgraphene-1.0-0 libgraphite2-3 libgsm1 libgsound0
-libgsound0t64 libgssdp-1.6-0 libgstreamer-gl1.0-0 libgstreamer-plugins-
-base1.0-0 libgstreamer-plugins-extra1.0-0 libgstreamer1.0-0 libgtk-3-0
-libgtk-3-0t64 libgtk-4-1 libgtksourceview-5-0 libgudev-1.0-0
-libgupnp-1.6-0 libgweather-4-0 libgweather-4-0t64 libhandy-1-0
-libharfbuzz-gobject0 libharfbuzz-icu0 libharfbuzz-subset0 libharfbuzz0b
-libheif-plugin-aomdec libheif1 libhunspell-1.7-0 libhwy1 libhwy1t64
-libhyphen0 libibus-1.0-5 libibverbs1 libice6 libiec61883-0 libinput10
-libisl23 libjansson4 libjavascriptcoregtk-4.1-0 libjbig0 libjpeg-turbo8
-libjson-glib-1.0-0 liblcms2-2 libldap2 liblerc4 libltdl7 libmp3lame0
-libmpc3 libmpfr6 libmpg123-0 libmpg123-0t64 libmtdev1 libmtdev1t64
-libncurses6 libnghttp2-14 libnorm1 libnorm1t64 libnotify4 libnspr4 libnss3
-libnuma1 libogg0 libopenjp2-7 libopenmpt0 libopenmpt0t64 libopus0
-liborc-0.4-0 liborc-0.4-0t64 libpango-1.0-0 libpangocairo-1.0-0
+libavahi-common3 libavc1394-0 libayatana-ido3-0.4-0
+libayatana-indicator3-7 libc6-dev libcaca0 libcairo-gobject2
+libcairo-script-interpreter2 libcairo2 libcanberra-gtk3-0
+libcanberra-gtk3-module libcanberra-pulse libcanberra0 libcdparanoia0
+libchromaprint1 libcjson1 libcolord2 libctf-nobfd0 libctf0 libcups2
+libcups2t64 libcurl3t64-gnutls libcurl4 libcurl4t64 libdatrie1 libdav1d7
+libdbusmenu-glib4 libdbusmenu-gtk3-4 libdconf1 libdee-1.0-4 libdeflate0
+libdv4 libdv4t64 libenchant-2-2 libepoxy0 libexif12 libfontconfig1
+libfribidi0 libgck-1-0 libgcr-base-3-1 libgcr-ui-3-1 libgd3
+libgdbm-compat4 libgdbm-compat4t64 libgdbm6 libgdbm6t64
+libgdk-pixbuf-2.0-0 libgee-0.8-2 libgeocode-glib-2-0 libgif7
+libgirepository-1.0-1 libgirepository-2.0-0 libgjs0 libgme0
+libgnome-bg-4-2 libgnome-bg-4-2t64 libgnome-desktop-3-20
+libgnome-desktop-3-20t64 libgnome-desktop-4-2 libgnome-desktop-4-2t64
+libgoa-1.0-0b libgomp1 libgphoto2-6 libgphoto2-6t64 libgphoto2-port12
+libgphoto2-port12t64 libgpm2 libgprofng0 libgraphene-1.0-0 libgraphite2-3
+libgsm1 libgsound0 libgsound0t64 libgssdp-1.6-0 libgstreamer-gl1.0-0
+libgstreamer-plugins-base1.0-0 libgstreamer-plugins-extra1.0-0
+libgstreamer1.0-0 libgtk-3-0 libgtk-3-0t64 libgtk-4-1 libgtksourceview-5-0
+libgudev-1.0-0 libgupnp-1.6-0 libgweather-4-0 libgweather-4-0t64
+libhandy-1-0 libharfbuzz-gobject0 libharfbuzz-icu0 libharfbuzz-subset0
+libharfbuzz0b libheif-plugin-aomdec libheif1 libhunspell-1.7-0 libhwy1
+libhwy1t64 libhyphen0 libibus-1.0-5 libibverbs1 libice6 libiec61883-0
+libinput10 libisl23 libjansson4 libjavascriptcoregtk-4.1-0 libjbig0
+libjpeg-turbo8 libjson-glib-1.0-0 liblcms2-2 libldap2 liblerc4 libltdl7
+libmp3lame0 libmpc3 libmpfr6 libmpg123-0 libmpg123-0t64 libmtdev1
+libmtdev1t64 libncurses6 libnghttp2-14 libnorm1 libnorm1t64 libnotify4
+libnspr4 libnss3 libnuma1 libogg0 libopenjp2-7 libopenmpt0 libopenmpt0t64
+libopus0 liborc-0.4-0 liborc-0.4-0t64 libpango-1.0-0 libpangocairo-1.0-0
 libpangoft2-1.0-0 libpangoxft-1.0-0 libpcre2-32-0 libpgm-5.3-0
 libpgm-5.3-0t64 libpipewire-0.3-0 libpipewire-0.3-0t64 libpixman-1-0
 libpoppler-glib8 libpoppler-glib8t64 libportal-gtk4-1 libportal1
-libprotobuf32 libprotobuf32t64 libproxy1v5 libpsl5 libpsl5t64 libpulse-
-mainloop-glib0 librabbitmq4 libraw1394-11 librest-1.0-0 librist4
+libprotobuf32 libprotobuf32t64 libproxy1v5 libpsl5 libpsl5t64
+libpulse-mainloop-glib0 librabbitmq4 libraw1394-11 librest-1.0-0 librist4
 librsvg2-2 librsvg2-common librtmp1 libsasl2-2 libsasl2-modules-db
-libsecret-1-0 libsharpyuv0 libshine3 libshout3 libslang2 libsm6 libsnapd-
-glib-2-1 libsnappy1v5 libsndfile1 libsodium23 libsoup-3.0-0 libsoxr0
-libspeex1 libspeexdsp1 libssh-4 libssh2-1 libssh2-1t64 libtcl8.6 libtdb1
-libthai0 libtiff6 libtwolame0 libunity-protocol-private0 libunity9
+libsecret-1-0 libsharpyuv0 libshine3 libshout3 libslang2 libsm6
+libsnapd-glib-2-1 libsnappy1v5 libsndfile1 libsodium23 libsoup-3.0-0
+libsoxr0 libspeex1 libspeexdsp1 libssh-4 libssh2-1 libssh2-1t64 libtcl8.6
+libtdb1 libthai0 libtiff6 libtwolame0 libunity-protocol-private0 libunity9
 libunwind8 libusb-1.0-0 libuv1 libuv1t64 libv4lconvert0 libv4lconvert0t64
 libvisual-0.4-0 libvorbis0a libvorbisenc2 libvorbisfile3 libvpl2
 libvte-2.91-0 libwacom9 libwavpack1 libwebkit2gtk-4.1-0 libwebp7
@@ -748,7 +757,6 @@ PACKAGE_OF = {
     "libepoxy.so.0": "libepoxy0",
     "libespeak-ng.so.1": "libespeak-ng1",
     "libestr.so.0": "libestr0",
-    "libevent_core-2.1.so.7": "libevent-core-2.1-7t64",
     "libexempi.so.8": "libexempi8",
     "libexif.so.12": "libexif12",
     "libexiv2.so.28": "libexiv2-28",

@@ -10,6 +10,7 @@ description: |
   https://github.com/imputnet/helium-linux
 
 title: Helium
+icon: snap/gui/helium.png
 license: GPL-3.0-only
 contact: helium@imput.net
 website: https://github.com/imputnet/helium-linux

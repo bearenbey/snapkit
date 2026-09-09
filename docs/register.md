@@ -134,14 +134,13 @@ the shared half of themselves along a relative path, which stops working the
 moment the tool is installed as a snap, and meant every project spent four
 lines on `sys.path` before it could say anything about itself. A `pack.py`
 imports nothing: everything it can use is on the `project` it is handed,
-including `say`, `download` and a `module()` for a build that runs to more
-than one file.
+`say`, `note`, `warn` and `die` included.
 
-Seven of them are not a GitHub release at all: the download redirects Discord
-and Mozilla's Firefox ESR answer, Emacs on a GNU mirror, ffmpeg.org, and the
-apt repositories Signal, Sublime Text and Unity publish through, and two more
-build from the archive GitHub
-rolls out of a tag rather than from anything attached to the release. Those
+Nine of them are not a GitHub release at all: the download redirects Discord
+and Mozilla's Firefox ESR answer, Emacs on a GNU mirror, ffmpeg.org, the apt
+repositories Signal, Sublime Text and Unity publish through, and mpv and
+RetroArch, which build from the archive GitHub rolls out of a tag rather
+than from anything attached to the release. Those
 are shapes rather than exceptions, and the shape is in the record:
 
 ```json

@@ -188,7 +188,7 @@ def release(repo, tag=None):
 def version_of(tag):
     """The version a tag stands for."""
     version = tag.strip()
-    version = re.sub(r"^(?:v|release[-/]?|rel[-/]?)", "", version, flags=re.I)
+    version = re.sub(r"^(?:v|release[-/]?|rel[-/]?)(?=\d)", "", version, flags=re.I)
     version = re.sub(r"[-_](?:stable|release|final)$", "", version, flags=re.I)
     # A monorepo tag such as helium-0.15.6 or app@1.2.3.
     found = re.match(r"^[A-Za-z][A-Za-z0-9._-]*?[-@/](\d.*)$", version)

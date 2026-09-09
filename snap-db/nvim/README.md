@@ -79,7 +79,7 @@ at build time. Only `TryExec` is rewritten, to `/snap/bin/nvim`.
   (lazy.nvim) or install servers into `~/.local/share/nvim/mason`
   (mason.nvim) behave normally. Nothing is redirected.
 - **Self-update does not apply.** Neovim does not update itself; drop a newer
-  tarball in here and re-run `pack.py`.
+  tarball in here and run `snapkit build nvim`.
 - **The man page is not exported.** `usr/share/man/man1/nvim.1` ships inside
   the snap, but snapd does not add snap man paths to `MANPATH`, so `man nvim`
   on the host will not find it. `:help` is unaffected.

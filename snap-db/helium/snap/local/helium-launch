@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eu
 
 # Marks the build in about: pages / crash reports so bug reports are traceable.
 export CHROME_VERSION_EXTRA=snap

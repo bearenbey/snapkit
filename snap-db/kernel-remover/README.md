@@ -40,8 +40,8 @@ These hold in every mode and cannot be switched off:
 - nothing is removed without confirmation.
 
 Before anything is purged the exact selection is passed to `apt-get -s
-purge`. If the simulation removes a single package you did not tick, the run
-stops. That is what protects the metapackages: on a healthy system purging an
+purge`. If the simulation removes or installs a single package you did not
+tick, the run stops. That is what protects the metapackages: on a healthy system purging an
 old kernel touches nothing else, and when it would, the right fix is
 `sudo apt update && sudo apt full-upgrade`, not a forced removal.
 
@@ -83,10 +83,12 @@ kernel-remover --help
 | `--all-rc` | also select leftover configuration of non-kernel packages |
 | `--purge-orphans` | also select orphaned `/boot` files |
 
-TUI keys: arrows or `j`/`k` move, `Space` toggles an item or a whole group,
-`a` and `n` select all or none, `+`/`-` change how many kernels to keep and
+TUI keys: arrows or `j`/`k` move, `PgUp`/`PgDn` and `Home`/`End` (or
+`g`/`G`) jump, `Space` toggles an item or a whole group, `a` and `n` select
+all or none, `+`/`-` (`=` works for `+`) change how many kernels to keep and
 rescan, `r` rescans, `Enter` checks with apt and asks for confirmation, `q`
-or `Esc` quits.
+or `Esc` quits. A rescan puts the selection back to the default, so tick
+things after choosing how many to keep.
 
 The script runs without the snap too, on any Ubuntu with Python 3.8 or newer:
 
@@ -122,7 +124,7 @@ against the host, and to read the host's `/boot` and dpkg database. A
 strictly confined snap sees none of that, so classic confinement is the
 only option. The snap therefore carries no Python of its own: the launcher
 runs the script with the host's `/usr/bin/python3`, which every Ubuntu
-install has because apt depends on it.
+install has: the `ubuntu-minimal` seed depends on it.
 
 ## Layout
 

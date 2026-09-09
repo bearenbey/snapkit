@@ -1,5 +1,6 @@
 name: discord
 title: Discord
+icon: snap/gui/discord.png
 base: core24
 version: '1.0.156'
 summary: Chat for Communities and Friends

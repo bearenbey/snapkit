@@ -13,6 +13,7 @@ from . import (arch, classify, depends, github, inspect, local, net, recipe,
 from . import build as buildlib
 from .db import Snap, now
 from .net import NetworkError
+from .versions import yaml_field
 
 
 class ForgeError(Exception):
@@ -167,12 +168,12 @@ def plan_local(path, reporter, name=None, asset=None):
         if not path.is_file():
             raise ForgeError(f"no such file: {path}")
         one = local.describe(path)
+        doubt = classify.rejection(path.name)
         if one is None:
             raise ForgeError(f"{path.name} is not something this tool can "
-                             f"package: {classify.rejection(path.name) or 'unknown shape'}")
+                             f"package: {doubt or 'unknown shape'}")
         reporter.step(f"opening {path.name}")
         # A file named outright is packaged as asked, but not silently.
-        doubt = classify.rejection(path.name)
         if doubt:
             reporter.warn(f"{path.name} looks like it is {doubt}, and this "
                           f"builds {arch.host()} snaps -- packaging it anyway")
@@ -429,12 +430,33 @@ def _restore_launcher(snap, directory, reporter):
 
 def is_classic(snap):
     """Whether installing this one needs --classic, read off its own recipe."""
-    try:
-        recipe_text = (Path(snap.path) / "snap" / "snapcraft.yaml").read_text(
-            encoding="utf-8", errors="replace")
-    except OSError:
+    for name in ("overlay/meta/snap.yaml", "snap/snapcraft.yaml"):
+        if (Path(snap.path) / name).is_file():
+            return yaml_field(Path(snap.path) / name, "confinement") == "classic"
+    return False
+
+
+def builds(snap):
+    """Every .snap the project has made, oldest first; none if no project."""
+    directory = snap.path
+    if not directory.is_dir():
+        return []
+    return sorted(directory.glob(f"{snap.name}_*.snap"),
+                  key=lambda p: p.stat().st_mtime)
+
+
+def take_recipe(snap, reporter=None):
+    """Take an edited snapcraft.yaml on disk back into the record."""
+    yaml_path = snap.path / "snap" / "snapcraft.yaml"
+    if not yaml_path.is_file():
         return False
-    return "confinement: classic" in recipe_text
+    text = yaml_path.read_text(encoding="utf-8")
+    if text == snap.snapcraft_yaml:
+        return False
+    snap.snapcraft_yaml = text
+    if reporter:
+        reporter.detail("took the edited snapcraft.yaml back into the register")
+    return True
 
 
 def install_command(snap, built):
@@ -443,22 +465,9 @@ def install_command(snap, built):
             *(["--classic"] if is_classic(snap) else []), str(built)]
 
 
-def adopt(snap, reporter):
-    """Take an edited snapcraft.yaml back into the record."""
-    yaml_path = snap.path / "snap" / "snapcraft.yaml"
-    if not yaml_path.is_file():
-        return False
-    text = yaml_path.read_text(encoding="utf-8")
-    if text == snap.snapcraft_yaml:
-        return False
-    snap.snapcraft_yaml = text
-    reporter.detail("took the edited snapcraft.yaml back into the register")
-    return True
-
-
 def package(snap, reporter, build_it=True, extra=()):
     """Build a snap from its record, without going upstream for anything."""
-    adopt(snap, reporter)
+    take_recipe(snap, reporter)
     write(snap, reporter)
     if not build_it:
         how = snap.build_with or (f"snapkit build {snap.name}" if snap.pack
@@ -477,10 +486,8 @@ def _terminal(reporter):
 
 def run_reported(command, reporter, directory, shell=False):
     """Run a command, streamed to the reporter or given the terminal."""
-    if reporter.captures_output:
+    with _terminal(reporter):
         return buildlib.stream(command, reporter, cwd=directory, shell=shell)
-    with reporter.suspended():
-        return subprocess.run(command, cwd=directory, shell=shell)
 
 
 def clean_stale_parts(directory, reporter, extra=()):
@@ -502,14 +509,18 @@ def build(snap, reporter, extra=()):
     if not snap.build_with:
         clean_stale_parts(directory, reporter, extra)
 
+    built = None
     if snap.pack:
-        _run_pack(snap, directory, reporter, extra)
+        built = _run_pack(snap, directory, reporter, extra)
     else:
         _run_command(snap, directory, reporter, extra)
 
-    made = _newest(p for p in directory.glob("*.snap") if p.name not in before)
-    # A rebuild of the same version overwrites rather than adds.
-    built = made or _newest(directory.glob(f"{snap.name}_*.snap"))
+    if built is None:
+        built = _newest(p for p in directory.glob("*.snap")
+                        if p.name not in before)
+    if built is None and builds(snap):
+        # A rebuild of the same version overwrites rather than adds.
+        built = builds(snap)[-1]
     if built is None:
         raise ForgeError("snapcraft finished but produced no .snap")
     reporter.result(f"built {built.name} "
@@ -542,7 +553,9 @@ def _run_pack(snap, directory, reporter, extra):
     reporter.step(f"{snap.pack} ({directory})")
     with _terminal(reporter):
         try:
-            buildlib.run_pack(snap.name, directory, snap.pack, reporter, extra)
+            made = buildlib.run_pack(snap.name, directory, snap.pack, reporter,
+                                     extra)
+            return Path(made) if made else None
         except buildlib.BuildError as exc:
             raise ForgeError(str(exc)) from exc
         except subprocess.CalledProcessError as exc:

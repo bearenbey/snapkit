@@ -2,6 +2,7 @@ name: sublime-text
 base: core24
 adopt-info: sublime-text
 title: Sublime Text
+icon: snap/gui/sublime-text.png
 summary: Sophisticated text editor for code, markup and prose
 license: Proprietary
 website: https://www.sublimetext.com/
@@ -34,7 +35,6 @@ lint:
 apps:
   sublime-text:
     command: opt/sublime_text/sublime_text
-    common-id: sublime_text.desktop
   subl:
     command: bin/subl
 

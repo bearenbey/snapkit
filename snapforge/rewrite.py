@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 # Where a version can be spelled out, including scripts that only might.
-TEXT_FILES = ("README.md", "build.py", "diagnose.py", "update-version.py",
+TEXT_FILES = ("README.md", "pack.py", "diagnose.py",
               "snap/snapcraft.yaml", "overlay/meta/snap.yaml")
 
 
@@ -46,11 +46,13 @@ def rewrite_versions(directory, old, new, old_asset="", new_asset=""):
 
         if old_asset and old_asset != new_asset:
             after = [line.replace(old_asset, new_asset) for line in after]
-        if old:
-            after = [replace_version(
-                        replace_version(line, old, new),
-                        old.replace("-", "_"), new.replace("-", "_"))
-                     for line in after]
+        # One pass per spelling: a second pass over the same text would
+        # find the new version inside itself when it starts with the old.
+        spellings = [(old, new)] if old else []
+        if old and "-" in old:
+            spellings.append((old.replace("-", "_"), new.replace("-", "_")))
+        for was, now in spellings:
+            after = [replace_version(line, was, now) for line in after]
 
         lines = _changed(before, after)
         if lines:

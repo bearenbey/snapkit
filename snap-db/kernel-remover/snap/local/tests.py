@@ -252,5 +252,60 @@ class ArgTests(unittest.TestCase):
             kr.parse_args(["--keep", "0"])
 
 
+class PlannerEdges(unittest.TestCase):
+    """The cases that would have removed the wrong thing."""
+
+    def test_an_install_is_collateral_too(self):
+        # Purging one flavour let apt satisfy the metapackage with another.
+        transcript = "\n".join([
+            "Purg linux-image-6.8.0-40-generic [6.8.0-40.40]",
+            "Inst linux-image-6.8.0-40-lowlatency (6.8.0-40.40 Ubuntu:24.04)",
+        ])
+        self.assertEqual(kr.collateral(["linux-image-6.8.0-40-generic"], transcript),
+                         ["linux-image-6.8.0-40-lowlatency"])
+
+    def test_headers_only_version_does_not_take_a_keep_slot(self):
+        h = host(packages=[
+            pkg("linux-headers-6.9.0-1-generic"),        # no image: not bootable
+            pkg("linux-image-6.8.0-47-generic"),
+            pkg("linux-image-6.8.0-45-generic"),
+            pkg("linux-image-6.8.0-40-generic"),
+        ])
+        plan = kr.build_plan(h, keep=1)
+        self.assertEqual(plan.protected, ["6.8.0-47", "6.8.0-45"])
+        self.assertIn("6.9.0-1", plan.old, "the stray headers are removable")
+        self.assertNotIn("6.8.0-47", plan.old, "the newest bootable kernel stays")
+
+    def test_half_installed_kernel_keeps_its_boot_files(self):
+        h = host(
+            packages=[pkg("linux-image-6.8.0-47-generic"),
+                      pkg("linux-image-6.8.0-45-generic"),
+                      pkg("linux-image-6.9.0-1-generic", status="iF")],
+            boot_files={"vmlinuz-6.9.0-1-generic": 15 * K,
+                        "initrd.img-6.9.0-1-generic": 80 * K},
+            owned=lambda path: "vmlinuz" in path,
+        )
+        plan = kr.build_plan(h, keep=1)
+        self.assertEqual(plan.orphans, [], "a half-installed kernel is not an orphan")
+        self.assertNotIn("6.9.0-1", plan.versions, "and not installed either")
+
+    def test_status_shapes(self):
+        self.assertTrue(pkg("a", status="iU").present)
+        self.assertTrue(pkg("a", status="iF").present)
+        self.assertFalse(pkg("a", status="rc").present)
+        self.assertFalse(pkg("a", status="un").present)
+        self.assertFalse(pkg("a", status="iU").installed)
+
+    def test_release_and_package_patterns(self):
+        for release in ("6.8.0-1017-azure", "6.11.0-061100-generic",
+                        "6.8.0-45-generic", "6.8.0-45-lowlatency"):
+            self.assertIsNotNone(kr.RELEASE_RE.match(release), release)
+        for name in ("linux-azure-6.8-headers-6.8.0-1017",
+                     "linux-image-6.8.0-45-generic-64k",
+                     "linux-modules-extra-6.8.0-45-generic"):
+            self.assertIsNotNone(kr.PKG_RE.match(name), name)
+        self.assertIsNone(kr.PKG_RE.match("linux-firmware"))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

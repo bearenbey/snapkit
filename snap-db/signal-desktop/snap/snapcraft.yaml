@@ -1,5 +1,6 @@
 name: signal-desktop
 title: Signal
+icon: snap/gui/signal-desktop.png
 base: core24
 version: '8.26.0'
 summary: Private messaging from your desktop
@@ -15,8 +16,8 @@ description: |
   by Signal Messenger, LLC. Points worth knowing:
 
     * Signal Desktop only ships a self-updater for macOS and AppImage builds,
-      so this snap will not update itself in place from within the app. Run
-      `snapkit update signal-desktop` to move to a newer release.
+      so this snap will not update itself in place from within the app.
+      Newer releases arrive as newer builds of this snap.
 
     * The message database is encrypted with a key that Electron's safeStorage
       hands to your login keyring over D-Bus, so connect the interface:
@@ -47,9 +48,9 @@ apps:
   signal-desktop:
     command: bin/signal-launch
     extensions:
-      # gnome brings GTK and the desktop plugs; gpu brings the GL stack.
+      # gnome brings GTK, the desktop plugs and the GL stack: it is a gpu
+      # extension underneath, so naming gpu as well adds nothing.
       - gnome
-      - gpu
     desktop: usr/share/applications/signal-desktop.desktop
     common-id: org.signal.Signal
     environment:

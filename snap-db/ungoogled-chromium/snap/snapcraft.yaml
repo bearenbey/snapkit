@@ -19,6 +19,7 @@ description: |
     sudo snap connect ungoogled-chromium:browser-sandbox
 
 title: ungoogled-chromium
+icon: snap/gui/ungoogled-chromium.png
 license: BSD-3-Clause
 contact: https://github.com/ungoogled-software/ungoogled-chromium/issues
 website: https://github.com/ungoogled-software/ungoogled-chromium

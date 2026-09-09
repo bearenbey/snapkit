@@ -137,7 +137,7 @@ byte-compiled here instead, which is how it ran for decades.
 ## Updating to a new Emacs release
 
 ```sh
-`snapkit update emacs`            # or: `snapkit update emacs` --build
+snapkit update emacs            # newest release on the GNU mirror, and build it
 ```
 
 This is an `artifact` project: `snapkit update emacs` resolves the newest tarball from

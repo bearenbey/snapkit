@@ -100,15 +100,14 @@ def get_text(url, timeout=META_TIMEOUT):
 
 def head_location(url, timeout=META_TIMEOUT):
     """Where a URL redirects to, without following it. "" if it does not."""
-    try:
-        with _open(_stay, url, method="HEAD", timeout=timeout) as response:
-            return response.headers.get("Location", "")
-    except urllib.error.HTTPError as exc:
-        if 300 <= exc.code < 400:
-            return exc.headers.get("Location", "")
-        raise NetworkError(f"{url}: HTTP {exc.code}") from exc
-    except _READ_ERRORS as exc:
-        raise NetworkError(f"{url}: {exc}") from exc
+    with _guarded(url):
+        try:
+            with _open(_stay, url, method="HEAD", timeout=timeout) as response:
+                return response.headers.get("Location", "")
+        except urllib.error.HTTPError as exc:
+            if 300 <= exc.code < 400:
+                return exc.headers.get("Location", "")
+            raise
 
 
 def sha256_file(path):

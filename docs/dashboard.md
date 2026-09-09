@@ -30,6 +30,8 @@ rather than one per snap. `/` narrows the list to what you type, over the
 name, repository, summary and kind; `s` puts what needs doing at the top; and
 `l` opens the activity log full screen, so the output of a ten-minute build
 can be scrolled back through rather than watched go past six lines at a time.
+`d` forgets the selected snap, after asking, and `g` reads the shared
+database and offers to write here whatever is not registered yet.
 
 `t` opens the box that says where a snap's releases come from, seeded with
 what it tracks now, so changing one word is one word rather than all of them:

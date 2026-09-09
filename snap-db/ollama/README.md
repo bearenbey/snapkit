@@ -110,11 +110,10 @@ Models survive `snap refresh` and `snap remove --purge` is what deletes them.
 ## Updating to a new upstream release
 
 ```sh
-`snapkit update ollama`          # or `snapkit update ollama` v0.32.14
-snapcraft
+snapkit update ollama          # newest release on GitHub, and build it
 ```
 
-The script rewrites the pinned release URL and its SHA-256 in
+snapkit rewrites the pinned release URL and its SHA-256 in
 `snap/snapcraft.yaml`; the snap version itself is read out of the binary at
 build time via `adopt-info`.
 

@@ -187,13 +187,12 @@ sudo snap connect ffmpeg:hardware-observe
 ## Updating to a new release
 
 ```sh
-`snapkit update ffmpeg`          # newest release on ffmpeg.org
-`snapkit update ffmpeg` 9.0.1    # a specific version
+snapkit update ffmpeg          # newest release on ffmpeg.org, and build it
 ```
 
 This rewrites `source:` and `source-checksum:` in `snap/snapcraft.yaml`.
-FFmpeg publishes only a detached GPG signature next to each tarball, so the
-script downloads the tarball, verifies the signature when your keyring already
+FFmpeg publishes only a detached GPG signature next to each tarball, so
+snapkit downloads the tarball, verifies the signature when your keyring already
 trusts the FFmpeg release key, and computes the sha256 itself. The snap
 version is taken from the tarball's `RELEASE` file at build time via
 `adopt-info`, so it never needs editing by hand.

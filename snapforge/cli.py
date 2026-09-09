@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import adopt, classify, github, local, project, snapdb, sources, update
+from . import adopt, github, local, project, snapdb, sources, update
 from .db import Database, DatabaseError, NameTaken
 from .net import NetworkError
 from .report import PlainReporter
@@ -101,7 +101,10 @@ def parse_args(argv):
                                         "or by its number in the list")
     parser.add_argument("--repo", help="on import, the upstream repository when "
                                        "the project does not say")
-    parser.add_argument("--dir", dest="directory", help="where to write the project")
+    parser.add_argument("--dir", dest="directory",
+                        help="where to write the project; on db pull and "
+                             "install, the folder it goes under; on a bare "
+                             "create, where to look")
     parser.add_argument("--no-build", action="store_true",
                         help="write the project but do not run snapcraft")
     parser.add_argument("--yes", action="store_true",
@@ -112,7 +115,9 @@ def parse_args(argv):
                              "not resolve")
     parser.add_argument("--local", action="store_true",
                         help="on create, treat what was given as a package file "
-                             "or a folder to look in, never as a repository")
+                             "or a folder to look in, never as a repository; "
+                             "on import, track the project against its folder "
+                             "without asking")
     parser.add_argument("--plain", action="store_true",
                         help="never take over the terminal, even on a tty")
     parser.add_argument("--destructive-mode", action="store_true",
@@ -227,8 +232,7 @@ def _finish_create(db, args, reporter, made, text):
         reporter.detail(f"build it with: cd {snap.path} && "
                         f"{snap.build_with or 'snapcraft'}")
         return 0
-    project.build(snap, reporter, build_flags(args))
-    db.add(snap)
+    _build_recorded(db, snap, args, reporter)
     return 0
 
 
@@ -323,6 +327,13 @@ def cmd_package(db, args, reporter):
                     extra=build_flags(args))
     db.add(snap)
     return 0
+
+
+def _build_recorded(db, snap, args, reporter):
+    """Build a snap and put what that did into the register."""
+    built = project.build(snap, reporter, build_flags(args))
+    db.add(snap)
+    return built
 
 
 def _one_of(db, text):
@@ -426,7 +437,7 @@ def upstream_of(snap):
 def cmd_show(db, args, reporter):
     if not args.rest:
         die("show needs a name")
-    snap = db.get(args.rest[0])
+    snap = _one_of(db, args.rest[0])
     for key, value in snap.to_dict().items():
         if key == "snapcraft_yaml":
             continue
@@ -502,12 +513,11 @@ def update_one(db, args, reporter, snap):
     if not found.behind:
         reporter.detail(f"{snap.name} is already at {snap.version}")
         return 0
-    project.adopt(snap, reporter)
+    project.take_recipe(snap, reporter)
     update.update(snap, found.release, found.asset, reporter)
     db.add(snap)
     if not args.no_build:
-        project.build(snap, reporter, build_flags(args))
-        db.add(snap)
+        _build_recorded(db, snap, args, reporter)
     return 0
 
 
@@ -515,8 +525,8 @@ def update_one(db, args, reporter, snap):
 
 def cmd_track(db, args, reporter):
     """Say where a registered snap's releases come from."""
-    if args.rest and args.rest[0] in ("kinds", "shapes"):
-        return print_shapes()
+    if args.rest and args.rest[0] == "kinds":
+        return print_kinds()
     if not args.rest:
         forms = (("snapkit track <name>", "what it tracks now"),
                  ("snapkit track <name> <kind> name=value ...",
@@ -548,24 +558,13 @@ def track_repo(db, args, reporter, snap, rest):
             f"snapkit track {snap.name} repo owner/name")
     repo = github.parse_repo(rest[0])
     reporter.step(f"{snap.name}: reading the releases of {repo}")
-    release = github.release(repo, tag=args.tag)
-    candidates = classify.classify(release.assets, wanted=repo.split('/')[-1])
-    if not candidates:
-        die(f"{repo} {release.tag} publishes nothing that can be packaged "
-            f"here -- `snapkit create {repo}` says what it does publish")
-
-    # Keep the kind this snap already is, unless nothing in the release is one.
-    same_kind = [c for c in candidates if c.kind == snap.kind] or candidates
-    chosen = project.choose(same_kind, args.asset)
+    was = snap.kind
+    release, chosen, same_kind = update.track_repo(snap, repo, args.tag,
+                                                   args.asset)
     _show_runners_up(reporter, same_kind, args.asset, "this release")
-
-    if snap.kind and chosen.kind != snap.kind:
-        reporter.detail(f"{repo} publishes no {snap.kind}, so this snap is "
+    if was and chosen.kind != was:
+        reporter.detail(f"{repo} publishes no {was}, so this snap is "
                         f"built from {chosen.kind} now")
-    snap.upstream = {}
-    snap.repo, snap.url = repo, f"https://github.com/{repo}"
-    snap.kind, snap.asset = chosen.kind, chosen.name
-    snap.asset_pattern = classify.asset_pattern(chosen.name, release.version)
     return settle(db, args, reporter, snap, None, release=release)
 
 
@@ -633,7 +632,7 @@ def show_tracking(snap):
     return 0
 
 
-def print_shapes():
+def print_kinds():
     """Every kind of upstream, what it needs, and one line that works."""
     print("An upstream is a kind and some name=value settings:\n")
     print("  snapkit track <name> <kind> name=value name=value\n")
@@ -658,10 +657,9 @@ def print_shapes():
 def cmd_build(db, args, reporter):
     if not args.rest:
         die("build needs a name")
-    snap = db.get(args.rest[0])
-    project.adopt(snap, reporter)
-    project.build(snap, reporter, build_flags(args))
-    db.add(snap)
+    snap = _one_of(db, args.rest[0])
+    project.take_recipe(snap, reporter)
+    _build_recorded(db, snap, args, reporter)
     return 0
 
 
@@ -784,15 +782,13 @@ def cmd_install(db, args, reporter):
     if update.missing_artifact(snap):
         reporter.step(f"fetching the release {name} builds from")
         update_one(db, args, reporter, snap)
-        snap = db.get(name)
 
     if args.no_build:
         reporter.result(f"{name} is ready in {snap.path}")
         return 0
 
-    project.adopt(snap, reporter)
-    built = project.build(snap, reporter, build_flags(args))
-    db.add(snap)
+    project.take_recipe(snap, reporter)
+    built = _build_recorded(db, snap, args, reporter)
     if not can_ask(args):
         reporter.detail(f"install it with: sudo snap install --dangerous {built}")
         return 0
@@ -835,7 +831,7 @@ def cmd_prune(db, args, reporter):
 def cmd_remove(db, args, reporter):
     if not args.rest:
         die("remove needs a name")
-    snap = db.get(args.rest[0])
+    snap = _one_of(db, args.rest[0])
     if not args.yes:
         print(f"This forgets {snap.name} ({snap.repo}) and the snapcraft.yaml "
               f"stored with it.")

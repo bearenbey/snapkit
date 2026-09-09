@@ -112,8 +112,9 @@ compiled at all.
 
 Building from source is a different recipe: `plugin: autotools` or `meson` or
 `cmake`, and the `-dev` packages it builds against, which nothing here can
-work out on its own. `emacs`, `ffmpeg` and `irssi` in the shared database are
-that shape, written by hand and brought in with `snapkit import`.
+work out on its own. `emacs`, `ffmpeg`, `irssi`, `mpv`, `retroarch` and `transmission` in the
+shared database are that shape, written by hand and brought in with
+`snapkit import`.
 
 ## Electron, and the sandbox it cannot have
 
@@ -149,8 +150,8 @@ rather than guessed:
   build that brings its own Qt is not asked to stage one.
 - **A `.deb` is asked as well.** Its `Depends:` is the packager's own answer
   and covers things the binary never names, such as a plugin opened later.
-- **What the platform already has is subtracted.** `core24` supplies 291
-  libraries and the gnome extension another 1401. Staging those again is
+- **What the platform already has is subtracted.** `core24` supplies 287
+  libraries and the gnome extension another 1376. Staging those again is
   wasted space at best and a fight with the platform snap at worst, which is
   why no recipe here both uses the extension and stages GTK.
 - **noble renamed a hundred packages.** `libasound2` is `libasound2t64` on

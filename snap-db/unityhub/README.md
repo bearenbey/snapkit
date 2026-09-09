@@ -77,9 +77,10 @@ The deb's `postinst` is not run, by design:
 
 - **No APT repository or signing key.** The deb adds
   `/etc/apt/sources.list.d/unityhub.sources` so `apt` keeps the Hub updated.
-  A snap cannot, so updates mean downloading a newer deb and re-running
-  `pack.py`. Bump `version:` in `snap/snapcraft.yaml` to match, or the
-  build warns about the mismatch.
+  A snap cannot, so updates mean `snapkit update unityhub`, which fetches the newer deb,
+  bumps `version:` in `snap/snapcraft.yaml` to match and builds. A deb
+  dropped in by hand builds too, and the build warns if the version does
+  not match.
 - **No `/usr/bin/unityhub` alternative.** snapd provides `/snap/bin/unityhub`.
 - **No host AppArmor profile.** The deb installs
   `/etc/apparmor.d/unityhub` from `resources/apparmor-profile`; snapd manages

@@ -1,5 +1,6 @@
 """Opening the downloaded payload to see what is actually in it."""
 
+import functools
 import io
 import os
 import re
@@ -113,8 +114,11 @@ def _unpack_deb(archive, destination):
         if not shutil.which("dpkg-deb"):
             raise InspectionError(
                 f"{archive.name} is zstd-compressed and dpkg-deb is not installed")
-        done = subprocess.run(["dpkg-deb", "-x", str(archive), str(destination)],
-                              capture_output=True, text=True)
+        try:
+            done = subprocess.run(["dpkg-deb", "-x", str(archive), str(destination)],
+                                  capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired as exc:
+            raise InspectionError(f"{archive.name}: dpkg-deb took too long") from exc
         if done.returncode != 0:
             raise InspectionError(
                 f"{archive.name} would not unpack: {done.stderr.strip()[:200]}")
@@ -157,8 +161,12 @@ def _extracted_as(destination, name):
 def _unpack_appimage(archive, destination):
     """AppImages unpack themselves, and only themselves."""
     archive.chmod(archive.stat().st_mode | 0o111)
-    done = subprocess.run([str(archive.resolve()), "--appimage-extract"],
-                          cwd=destination, capture_output=True, text=True)
+    try:
+        done = subprocess.run([str(archive.resolve()), "--appimage-extract"],
+                              cwd=destination, capture_output=True, text=True,
+                              timeout=120)
+    except subprocess.TimeoutExpired as exc:
+        raise InspectionError(f"{archive.name} did not finish extracting") from exc
     extracted = destination / "squashfs-root"
     if done.returncode != 0 or not extracted.is_dir():
         raise InspectionError(
@@ -187,8 +195,11 @@ def _control_text(archive, blob):
     # Usually a zstd control.tar on a Python without a reader for it.
     if not shutil.which("dpkg-deb"):
         return None
-    done = subprocess.run(["dpkg-deb", "-f", str(archive)],
-                          capture_output=True, text=True)
+    try:
+        done = subprocess.run(["dpkg-deb", "-f", str(archive)],
+                              capture_output=True, text=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        return None
     return done.stdout if done.returncode == 0 else None
 
 
@@ -335,7 +346,7 @@ def find_icon(root, wanted="", named=""):
         return int(found.group(1)) if found else 0
 
     def not_an_app_icon(path):
-        # In hicolor, anything outside apps/ is a file type or a status glyph.
+        # In hicolor, a file-type icon (mimetypes/) is never the app's own.
         where = path.as_posix().lower()
         return "/apps/" not in where and "/mimetypes/" in where
 
@@ -398,21 +409,53 @@ def bundled_lib_dirs(root):
     return found
 
 
+@functools.lru_cache(maxsize=None)
+def host_libraries():
+    """Every soname the host's loader knows of, out of `ldconfig -p`."""
+    ldconfig = shutil.which("ldconfig") or "/sbin/ldconfig"
+    try:
+        done = subprocess.run([ldconfig, "-p"], capture_output=True,
+                              text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return frozenset()
+    # "\tlibc.so.6 (libc6,x86-64) => /lib/x86_64-linux-gnu/libc.so.6"
+    return frozenset(line.strip().split(" ", 1)[0]
+                     for line in done.stdout.splitlines()[1:] if "=>" in line)
+
+
 def missing_libraries(binary, root=None):
-    """What ldd cannot resolve, looking in the payload's own lib dirs too."""
-    if not shutil.which("ldd"):
+    """What a classic snap's binary will not find on this host.
+
+    Read out of the ELF headers rather than by running ldd, which executes
+    the binary's own interpreter: a downloaded payload is not to be run to
+    find out what it links. What the payload ships beside the binary, or in
+    its own lib directories, is followed and not counted as missing.
+    """
+    host = host_libraries()
+    if not host:
         return []
-    environment = dict(os.environ)
-    if root is not None:
-        bundled = [str(d) for d in bundled_lib_dirs(Path(root))]
-        if bundled:
-            was = environment.get("LD_LIBRARY_PATH", "")
-            environment["LD_LIBRARY_PATH"] = os.pathsep.join(
-                bundled + ([was] if was else []))
-    done = subprocess.run(["ldd", str(binary)], capture_output=True, text=True,
-                          env=environment)
-    return sorted({line.split()[0] for line in done.stdout.splitlines()
-                   if "not found" in line})
+    binary = Path(binary)
+    bundled = {}
+    places = [binary.parent] + (bundled_lib_dirs(Path(root)) if root else [])
+    for where in places:
+        for path in where.glob("*.so*"):
+            if path.is_file():
+                bundled.setdefault(path.name, path)
+    queue, seen, missing = [binary], set(), set()
+    while queue:
+        try:
+            names = elf.needed(queue.pop())
+        except elf.NotAnELF:
+            continue
+        for name in names:
+            if name in seen:
+                continue
+            seen.add(name)
+            if name in bundled:
+                queue.append(bundled[name])
+            elif name not in host:
+                missing.add(name)
+    return sorted(missing)
 
 
 def launcher_among(root, candidates):

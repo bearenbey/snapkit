@@ -3,8 +3,9 @@
 import re
 from pathlib import Path
 
-from . import classify
+from . import classify, recipe
 from .db import Snap, now
+from .versions import yaml_field_in as yaml_field
 
 # Where a recipe lives; the second is metadata for a hand-assembled tree.
 SNAPCRAFT_YAML = "snap/snapcraft.yaml"
@@ -28,14 +29,6 @@ def find_recipe(directory):
         return meta, False
     raise NotAProject(f"{directory.name} has neither {SNAPCRAFT_YAML} nor "
                       f"{META_YAML}")
-
-
-def yaml_field(text, field):
-    """One top-level scalar out of a yaml file, without a yaml parser."""
-    found = re.search(rf"(?m)^{re.escape(field)}:\s*(.*)$", text)
-    if not found:
-        return ""
-    return found.group(1).strip().strip("'\"")
 
 
 def yaml_block(text, field):
@@ -74,7 +67,7 @@ def find_repo(directory, text):
 def find_artifact(directory, text):
     """The upstream file this project builds from, and what kind it is."""
     source = source_in(text)
-    name = source.rsplit("/", 1)[-1].lstrip("./") if source else ""
+    name = source.rsplit("/", 1)[-1] if source else ""
 
     if not name or classify.kind_of(name) == "":
         # Best first, by the classifier's score: a second list only drifts.
@@ -102,9 +95,9 @@ def version_from(source, artifact):
 
 
 def source_in(text):
-    """The first `source:` in a recipe, where an adopted version hides."""
-    found = re.search(r"(?m)^\s*source:\s*(\S+)", text)
-    return found.group(1) if found else ""
+    """The first part's `source:`, where an adopted version hides."""
+    named = recipe.sources(text)
+    return named[0][1] if named else ""
 
 
 def packaged_version(directory):
@@ -140,7 +133,8 @@ def take_icon(snap, directory, store=None):
     # Named first, or the copy lands in the default home and is lost.
     if store is not None:
         snap.store_root = Path(store)
-    snap.icon = f"snap/gui/{snap.name}{icon.suffix}"
+    # Where it is, so a later write restores it there and nowhere else.
+    snap.icon = icon.relative_to(directory).as_posix()
     snap.keep_icon(icon)
     return snap.icon
 

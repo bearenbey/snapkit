@@ -72,6 +72,15 @@ class Pkg:
     def installed(self) -> bool:
         return self.status in ("ii", "hi")
 
+    @property
+    def present(self) -> bool:
+        """On disk in some state: installed, unpacked, or half-configured.
+
+        Not `rc` (only config left) and not `un`. A kernel whose install was
+        interrupted is not installed, but its files in /boot are not orphans
+        either; they belong to whatever `dpkg --configure -a` will finish."""
+        return len(self.status) > 1 and self.status[1] not in "nc"
+
 
 @dataclass(frozen=True)
 class Item:
@@ -144,8 +153,9 @@ class Refusal:
 # --------------------------------------------------------------------------- #
 # helpers
 # --------------------------------------------------------------------------- #
-def run(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, check=check, text=True, capture_output=True)
+def run(cmd: list[str]) -> subprocess.CompletedProcess:
+    """A command whose exit status the caller reads rather than trips over."""
+    return subprocess.run(cmd, check=False, text=True, capture_output=True)
 
 
 def die(msg: str, code: int = 1) -> NoReturn:
@@ -189,9 +199,9 @@ def read_host() -> Host:
     return Host(
         running=m.group("ver"),
         packages=list_packages(),
-        held=set(run(["apt-mark", "showhold"], check=False).stdout.split()),
+        held=set(run(["apt-mark", "showhold"]).stdout.split()),
         boot_files=list_boot(),
-        owned=lambda path: run(["dpkg", "-S", path], check=False).returncode == 0,
+        owned=lambda path: run(["dpkg", "-S", path]).returncode == 0,
         is_root=os.geteuid() == 0,
     )
 
@@ -199,7 +209,6 @@ def read_host() -> Host:
 def list_packages() -> list[Pkg]:
     res = run(
         ["dpkg-query", "-W", "-f=${Package}\t${db:Status-Abbrev}\t${Installed-Size}\n"],
-        check=False,
     )
     pkgs = []
     for line in res.stdout.splitlines():
@@ -253,7 +262,13 @@ def orphaned_boot_files(host: Host, installed_versions: set[str]) -> list[Item]:
 def build_plan(host: Host, keep: int) -> Plan:
     installed = [p for p in host.packages if p.installed and p.version]
     versions = sorted({p.version for p in installed}, key=version_key, reverse=True)
-    protected = set(versions[:keep]) | {host.running}
+    # Kept: the newest versions that can be booted. A headers-only version,
+    # which DKMS or a half-finished upgrade leaves behind routinely, must not
+    # take a keep slot from a kernel that has an image.
+    bootable = [v for v in versions
+                if any(p.version == v and p.name.startswith("linux-image-")
+                       for p in installed)]
+    protected = set(bootable[:keep]) | {host.running}
 
     old: dict[str, list[Item]] = {}
     held: list[str] = []
@@ -276,7 +291,9 @@ def build_plan(host: Host, keep: int) -> Plan:
         held=held,
         kernel_rc=[i for i in rc if i.name.startswith("linux-")],
         other_rc=[i for i in rc if not i.name.startswith("linux-")],
-        orphans=orphaned_boot_files(host, set(versions) | {host.running}),
+        orphans=orphaned_boot_files(
+            host, {p.version for p in host.packages if p.present and p.version}
+            | {host.running}),
         is_root=host.is_root,
     )
 
@@ -296,11 +313,13 @@ def default_selection(plan: Plan, opts: Options) -> set[Item]:
 # checks and execution, shared by the TUI and plain mode
 # --------------------------------------------------------------------------- #
 def collateral(asked: Iterable[str], simulation: str) -> list[str]:
-    """Packages an `apt-get -s` transcript removes beyond the ones asked for."""
+    """Packages an `apt-get -s` transcript removes, or installs, beyond the
+    ones asked for. An `Inst` is how apt satisfies a metapackage's alternative
+    dependency: purging one image flavour can pull in another."""
     asked = set(asked)
     extra = set()
     for line in simulation.splitlines():
-        m = re.match(r"^(?:Remv|Purg)\s+(\S+)", line)
+        m = re.match(r"^(?:Remv|Purg|Inst)\s+(\S+)", line)
         if m and m.group(1) not in asked:
             extra.add(m.group(1))
     return sorted(extra)
@@ -308,7 +327,7 @@ def collateral(asked: Iterable[str], simulation: str) -> list[str]:
 
 def simulate_purge(names: list[str]) -> tuple[list[str], str]:
     """Ask apt what purging these would do. Returns (unrequested removals, error)."""
-    res = run(["apt-get", "-s", "purge", "--", *names], check=False)
+    res = run(["apt-get", "-s", "purge", "--", *names])
     if res.returncode != 0:
         return [], (res.stderr or res.stdout).strip()
     return collateral(names, res.stdout), ""
@@ -324,8 +343,8 @@ def preflight(sel: Selection, plan: Plan, dry_run: bool) -> Refusal | None:
             return Refusal("apt error", err.splitlines())
         if extra:
             return Refusal(
-                "Refused: collateral removals",
-                ["apt would ALSO remove packages you did not select:", ""]
+                "Refused: collateral changes",
+                ["apt would ALSO remove or install packages you did not select:", ""]
                 + [f"  {x}" for x in extra]
                 + ["", "Usually a metapackage still depends on an old kernel.",
                    "Run: sudo apt update && sudo apt full-upgrade, then retry."],
@@ -357,6 +376,9 @@ def execute(sel: Selection, dry_run: bool) -> None:
                     os.remove(path)
                 except FileNotFoundError:
                     print(f"  already gone: {path}")
+                except OSError as e:
+                    # A read-only /boot, usually: say so and carry on.
+                    print(f"  could not delete {path}: {e.strerror}")
         if shutil.which("update-grub"):
             sh(["update-grub"])
 
@@ -517,13 +539,6 @@ class Tui:
                 self.cursor = j
                 return
 
-    def move(self, delta: int) -> None:
-        j = self.cursor + delta
-        while 0 <= j < len(self.rows):
-            if self.rows[j].items:
-                self.cursor = j
-                return
-            j += delta
 
     # ----- drawing -------------------------------------------------------- #
     def list_height(self) -> int:
@@ -565,6 +580,8 @@ class Tui:
             self.top = self.cursor
         elif self.cursor >= self.top + lh:
             self.top = self.cursor - lh + 1
+        # A window that grew has room above: do not leave it blank below.
+        self.top = max(0, min(self.top, len(self.rows) - lh))
         last = min(len(self.rows), self.top + lh)
         for i in range(self.top, last):
             self.draw_row(2 + i - self.top, self.rows[i], focused=i == self.cursor)
@@ -665,9 +682,9 @@ class Tui:
             if ch in (ord("q"), ord("Q"), 27):
                 return None
             elif ch in (curses.KEY_UP, ord("k")):
-                self.move(-1)
+                self.settle(self.cursor - 1, -1)
             elif ch in (curses.KEY_DOWN, ord("j")):
-                self.move(1)
+                self.settle(self.cursor + 1, 1)
             elif ch == curses.KEY_PPAGE:
                 self.settle(self.cursor - self.list_height(), -1)
             elif ch == curses.KEY_NPAGE:
@@ -749,15 +766,15 @@ def plain_mode(plan: Plan, opts: Options) -> int:
     if refusal:
         die("\n".join([refusal.title, *refusal.lines]))
     if sel.pkgs:
-        print("apt simulation OK: no collateral removals.")
+        print("apt simulation OK: nothing beyond the selection.")
     if not opts.yes and not opts.dry_run:
         try:
             if input("Proceed? [y/N] ").strip().lower() not in ("y", "yes"):
                 print("Aborted.")
-                return 0
+                return 1
         except (EOFError, KeyboardInterrupt):
             print("\nAborted.")
-            return 0
+            return 130
     execute(sel, opts.dry_run)
     return 0
 

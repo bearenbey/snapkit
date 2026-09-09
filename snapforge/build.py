@@ -12,11 +12,10 @@ import sys
 import tempfile
 from pathlib import Path
 
-from . import depends, elf, platform
+from . import depends, elf, platform, recipe
 from .inspect import control_fields, missing_libraries
-from .net import download, sha256_file
 from .report import PlainReporter
-from .versions import deb_compare, yaml_field, yaml_version
+from .versions import yaml_field, yaml_version
 
 # Where the desktop builds get their GTK and font helpers from.
 GNOME_SNAP = Path("/snap/gnome-46-2404/current")
@@ -26,35 +25,15 @@ GNOME_SNAP = Path("/snap/gnome-46-2404/current")
 PLATFORM_SNAPS = (Path("/snap/core24/current"), GNOME_SNAP,
                   Path("/snap/mesa-2404/current"))
 
-# A part name sits two spaces in, its settings deeper than that.
-PART_NAME = re.compile(r"^  ([A-Za-z0-9][\w.+-]*):\s*$")
-PART_SOURCE = re.compile(r"^\s+source:\s*(.+?)\s*$")
-
-
 def file_source_parts(yaml_path):
     """The parts fed from a file here, as (part, file) pairs."""
     yaml_path = Path(yaml_path)
     if not yaml_path.is_file():
         return []
     directory = yaml_path.parent.parent
-    found, name, in_parts = [], "", False
-    for line in yaml_path.read_text(encoding="utf-8",
-                                    errors="replace").splitlines():
-        if line.strip() and not line.startswith(" "):
-            in_parts, name = line.startswith("parts:"), ""
-            continue
-        if not in_parts:
-            continue
-        part = PART_NAME.match(line)
-        if part:
-            name = part.group(1)
-            continue
-        source = PART_SOURCE.match(line)
-        if name and source:
-            given = directory / source.group(1).strip("\'\"")
-            if given.is_file():
-                found.append((name, given))
-    return found
+    text = yaml_path.read_text(encoding="utf-8", errors="replace")
+    return [(part, directory / value) for part, value in recipe.sources(text)
+            if (directory / value).is_file()]
 
 
 def stale_parts(directory):
@@ -153,12 +132,9 @@ class Build:
         """The file a part's `source:` names, if one matches the glob."""
         if not self.snapcraft_yaml.is_file():
             return None
-        for line in self.snapcraft_yaml.read_text(encoding="utf-8",
-                                                  errors="replace").splitlines():
-            found = PART_SOURCE.match(line)
-            if found and fnmatch.fnmatch(found.group(1).strip("'\""), pattern):
-                return self.directory / found.group(1).strip("'\"")
-        return None
+        text = self.snapcraft_yaml.read_text(encoding="utf-8", errors="replace")
+        return next((self.directory / value for _, value in recipe.sources(text)
+                     if fnmatch.fnmatch(value, pattern)), None)
 
     # -- pre-flight ----------------------------------------------------------
 
@@ -206,7 +182,7 @@ class Build:
         """Refuse to pack a snap whose payload is not the version it claims."""
         expected = expected or self.version
         if found != expected:
-            die(f"version mismatch: {self.yaml.name} says {self.version}, "
+            die(f"version mismatch: {self.yaml.name} says {expected}, "
                 f"{what} ships {found}")
         return found
 
@@ -369,25 +345,6 @@ class Build:
         done = self.run(*command, capture_output=True, text=True, **kwargs)
         return done.stdout.strip()
 
-    # -- splitting a build across more than one file ---------------------------
-
-    def module(self, relative):
-        """Import another file of this project's own build, by location."""
-        return pack_module(self.directory, relative)
-
-    def deb_compare(self, a, b):
-        """dpkg's version ordering, for a project reading an apt index."""
-        return deb_compare(a, b)
-
-    # -- fetching ------------------------------------------------------------
-
-    def download(self, url, destination, sha=""):
-        """Fetch a file, checking it against a checksum if one is known."""
-        return download(url, Path(destination), sha)
-
-    def sha256(self, path):
-        return sha256_file(Path(path))
-
     # -- files ---------------------------------------------------------------
 
     def copy(self, source, destination, executable=False):
@@ -425,20 +382,23 @@ def pack_module(directory, filename="pack.py"):
     if not path.is_file():
         die(f"no {filename} in {root.name}")
     spec = importlib.util.spec_from_file_location(
-        f"snapforge._pack.{Path(directory).name}", path)
+        f"snapforge._pack.{root.name}", path)
     module = importlib.util.module_from_spec(spec)
     # Registered before running, so a pack.py can import from beside itself.
     sys.modules[spec.name] = module
-    directory = str(Path(directory).resolve())
-    sys.path.insert(0, directory)
+    sys.path.insert(0, str(root))
     # A build should leave no __pycache__ behind in somebody's project.
     was_writing = sys.dont_write_bytecode
     sys.dont_write_bytecode = True
     try:
         spec.loader.exec_module(module)
+    except BaseException:
+        # Half-run, it must not stand in for the next import of that name.
+        sys.modules.pop(spec.name, None)
+        raise
     finally:
         sys.dont_write_bytecode = was_writing
-        if sys.path and sys.path[0] == directory:
+        if sys.path and sys.path[0] == str(root):
             sys.path.pop(0)
     return module
 

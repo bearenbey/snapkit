@@ -9,7 +9,7 @@ link, which is why the package looks like it does not exist. It does, and the
 repo's pool is a plain HTTP directory:
 
 ```
-https://updates.signal.org/desktop/apt/pool/s/signal-desktop/signal-desktop_8.23.0_amd64.deb
+https://updates.signal.org/desktop/apt/pool/s/signal-desktop/signal-desktop_8.26.0_amd64.deb
 ```
 
 `snap/snapcraft.yaml` points straight at that URL with the SHA256 taken from
@@ -28,12 +28,12 @@ builds the result.
 
 Needs `snapcraft` and LXD. The `.deb` (~120 MB) is fetched during the build
 and verified against `source-checksum`. Output is
-`signal-desktop_8.23.0_amd64.snap`, ~137 MB.
+`signal-desktop_8.26.0_amd64.snap`, ~137 MB.
 
 ## Install / run
 
 ```sh
-sudo snap install --dangerous signal-desktop_8.23.0_amd64.snap
+sudo snap install --dangerous signal-desktop_8.26.0_amd64.snap
 
 # not auto-connected on a locally built snap:
 sudo snap connect signal-desktop:password-manager-service
@@ -52,12 +52,10 @@ standalone account.
 ## Updating
 
 ```sh
-`snapkit update signal-desktop`            # newest stable in Signal's apt repo
-`snapkit update signal-desktop` 8.22.0     # or pin a version
-snapcraft pack
+snapkit update signal-desktop            # newest stable in Signal's apt repo, and build it
 ```
 
-The script reads the repo's `Packages` index, rewrites `version:`, `source:`
+snapkit reads the repo's `Packages` index, rewrites `version:`, `source:`
 and `source-checksum:` in `snapcraft.yaml`, and stops early if you are already
 on the newest release.
 

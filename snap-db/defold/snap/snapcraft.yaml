@@ -76,7 +76,7 @@ parts:
     stage-packages:
       - libopenal1
       - libsndio7.0
-    # An exclusion list, not an `rm`: see the craft-parts trap in ../README.md.
+    # An exclusion list, not an `rm`: see the craft-parts trap in ../../README.md.
     prime:
       - -usr/share/doc
 

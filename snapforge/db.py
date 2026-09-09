@@ -23,11 +23,6 @@ def home():
     return Path(xdg).expanduser() / "snapkit"
 
 
-def default_path():
-    """The register directory. The name is historical: it used to be a file."""
-    return home()
-
-
 @dataclass
 class Snap:
     """One registered snap.
@@ -125,9 +120,9 @@ class Snap:
             raw.pop(kept_out, None)
         return raw
 
-    def record_build(self, version, at=None):
+    def record_build(self, version):
         """Note that this version was built, most recent last."""
-        stamp = at or now()
+        stamp = now()
         self.history.append({"version": version, "at": stamp})
         del self.history[:-HISTORY_KEPT]
         self.builds += 1
@@ -165,7 +160,7 @@ class Database:
 
     def __init__(self, path=None):
         # A path ending in .json is taken as the old single-file register.
-        given = Path(path) if path else default_path()
+        given = Path(path) if path else home()
         self.root = given.parent if given.suffix == ".json" else given
         self.load()
 
@@ -264,9 +259,8 @@ class Database:
         if not snap.name:
             raise DatabaseError("a snap needs a name")
         existing = self.snaps.get(snap.name)
-        if existing and not replace and existing.repo and snap.repo \
-                and existing.repo.lower() != snap.repo.lower():
-            raise NameTaken(snap.name, existing.repo, snap.repo)
+        if existing is not None and existing is not snap and not replace:
+            self.claim(snap.name, snap.repo)
         snap.store_root = self.root
         snap.created = existing.created if existing else (snap.created or now())
         snap.updated = now()

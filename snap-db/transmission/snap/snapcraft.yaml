@@ -156,7 +156,7 @@ parts:
       if [ -d "${CRAFT_PART_INSTALL}/usr/share/glib-2.0/schemas" ]; then
         glib-compile-schemas "${CRAFT_PART_INSTALL}/usr/share/glib-2.0/schemas"
       fi
-    # An exclusion list, not an `rm`: see the craft-parts trap in ../README.md.
+    # An exclusion list, not an `rm`: see the craft-parts trap in ../../README.md.
     prime:
       - -usr/share/man
       - -usr/share/doc

@@ -147,7 +147,7 @@ def resolve(root="", command="", gui=False, control=None):
 
     return Needs(packages=sorted(packages), bundled=sorted(bundled),
                  from_host=sorted(host), unresolved=sorted(unknown),
-                 unverified=sorted(unchecked & set(packages)))
+                 unverified=sorted(unchecked))
 
 
 def _looks_supplied(package, lowered):

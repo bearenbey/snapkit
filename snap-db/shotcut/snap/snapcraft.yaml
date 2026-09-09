@@ -12,8 +12,8 @@ description: |
   This snap is not published or endorsed by the upstream project.
 grade: stable
 confinement: strict
-license: GPL-3.0
-title: shotcut
+license: GPL-3.0-or-later
+title: Shotcut
 website: https://github.com/mltframework/shotcut
 source-code: https://github.com/mltframework/shotcut
 issues: https://github.com/mltframework/shotcut/issues

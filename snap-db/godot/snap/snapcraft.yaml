@@ -60,7 +60,7 @@ parts:
     plugin: dump
     source: Godot_v4.7.2-stable_linux.x86_64.zip
     source-type: zip
-    # A glob, not a literal: update repoints `source:` and nothing else.
+    # A glob, not a literal: snapkit update repoints `source:` and nothing else.
     organize:
       '*_linux.x86_64': bin/godot
     stage:
@@ -75,7 +75,7 @@ parts:
     stage-packages:
       - libdecor-0-0
       - libdecor-0-plugin-1-gtk
-    # An exclusion list, not an `rm`: see the craft-parts trap in ../README.md.
+    # An exclusion list, not an `rm`: see the craft-parts trap in ../../README.md.
     prime:
       - -usr/share/doc
 

@@ -19,4 +19,4 @@ This snap is not published or endorsed by the upstream project.
 
 `snapkit` checks that upstream for a newer release and rewrites
 `snap/snapcraft.yaml` for you. Anything you change in that file is kept:
-an update only moves the version, the source URL and its checksum.
+an update only moves the version and the file the recipe names.

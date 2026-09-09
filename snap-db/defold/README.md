@@ -43,9 +43,8 @@ remove: `sudo snap remove defold`.
 | `overlay/bin/launcher` | the app entry point; pins JavaFX to X11 |
 
 The icon is upstream's own `logo_blue.png`, copied out of the zip at build
-time. `snap/command-chain/desktop-launch` and `hooks-configure-fonts` are
-copied out of the installed `gnome-46-2404` snap, the same files snapcraft's
-`gnome` extension pulls from the matching SDK.
+time. The desktop launcher and the font-cache hook come from snapcraft's `gnome`
+extension, which the recipe asks for by name.
 
 ## Design notes
 
@@ -56,9 +55,10 @@ copied out of the installed `gnome-46-2404` snap, the same files snapcraft's
   `gnome-46-2404`, with libGL, libX11, libXext, libdrm, libgbm and libXxf86vm from
   `mesa-2404`. The *game engine* is the exception: `dmengine`, which the
   editor unpacks and runs on Build, links `libopenal.so.1`, which no provider
-  snap ships, and libopenal in turn links `libsndio.so.7`. `pack.py` vendors
-  those two out of the noble archive into `$SNAP/usr/lib/x86_64-linux-gnu`
-  (already on `LD_LIBRARY_PATH`) and checks the digests. Noble, not the host:
+  snap ships, and libopenal in turn links `libsndio.so.7`. The recipe stages
+  those two from the noble archive into `$SNAP/usr/lib/x86_64-linux-gnu`
+  (already on `LD_LIBRARY_PATH`), and `pack.py` checks that libopenal has not
+  grown a dependency nothing in the snap provides. Noble, not the host:
   the base is core24, so a host `.deb` would link a newer glibc than the base
   provides. Below those two, the closure is covered again: libasound from
   `gnome-46-2404`, libbsd/libmd/libstdc++/libgcc_s from `core24`. The hrtf
@@ -91,7 +91,7 @@ copied out of the installed `gnome-46-2404` snap, the same files snapcraft's
   that flow needs.
 - **Self-update will not work.** The editor updates itself by writing a new
   jar into `packages/`, which is on a read-only squashfs. Update by dropping
-  a newer zip in here and re-running `pack.py` instead.
+  a newer zip in here and running `snapkit build defold` instead.
 - **Interfaces granted:** desktop, desktop-legacy, gsettings, opengl, x11,
   wayland, unity7, network, network-bind, home, removable-media,
   audio-playback, joystick, screen-inhibit-control. `joystick` is not

@@ -5,8 +5,8 @@
 # /boot and dpkg database. None of that is reachable from strict
 # confinement, so the snap is classic. It carries no Python of its own: the
 # launcher hands the script to the host's /usr/bin/python3, which every
-# Ubuntu system has because apt itself depends on it. The script needs only
-# the standard library, 3.8 or newer.
+# Ubuntu system has: the ubuntu-minimal seed depends on it. The script needs
+# only the standard library, 3.8 or newer.
 
 name: kernel-remover
 base: core24

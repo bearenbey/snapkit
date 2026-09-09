@@ -58,7 +58,8 @@ sudo snap connect ungoogled-chromium:u2f-devices
 ```
 
 Without `browser-sandbox` Chromium refuses to start rather than running
-unsandboxed. `snapkit build ungoogled-chromium` does all three.
+unsandboxed. `snapkit build ungoogled-chromium` prints all three when it
+is done.
 
 The remaining hardware interfaces (`camera`, `audio-record`, `bluez`,
 `removable-media`, `password-manager-service`, ...) are declared but not

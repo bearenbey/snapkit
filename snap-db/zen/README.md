@@ -41,9 +41,8 @@ remove: `sudo snap remove zen`.
 
 The window icon comes out of the tarball at build time
 (`browser/chrome/icons/default/default128.png`) rather than being kept here,
-and `snap/command-chain/desktop-launch` and `hooks-configure-fonts` are copied
-out of the installed `gnome-46-2404` snap, the same files snapcraft's `gnome`
-extension pulls from the matching SDK.
+and the desktop launcher and font-cache hook come from snapcraft's `gnome`
+extension, which the recipe asks for by name.
 
 ## Design notes
 
@@ -65,8 +64,8 @@ extension pulls from the matching SDK.
 - **The in-place updater is removed** (`updater`, `updater.ini`, and the
   `precomplete` and `removed-files` manifests it works from) and
   `policies.json` sets `DisableAppUpdate`, since a squashfs is read-only and an
-  update Zen downloaded could never be applied. Rebuild with `snapkit build zen` to
-  move to a new release. `DontCheckDefaultBrowser` is set for the same kind of
+  update Zen downloaded could never be applied. `snapkit update zen` moves to a new
+  release. `DontCheckDefaultBrowser` is set for the same kind of
   reason: the check writes host settings the snap cannot reach.
 - **The profile lives in `~/snap/zen/common/.zen`,** not in the versioned
   `~/snap/zen/current/`. Gecko reads `$HOME/.zen`, and `$SNAP_USER_DATA` is

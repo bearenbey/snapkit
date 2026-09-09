@@ -108,6 +108,12 @@ parts:
     build-packages:
       - squashfs-tools
       - binutils
+    # The cleanup reads these images out of /var/lib/snapd/snaps, and the
+    # gnome extension installs only the SDK, under a different name.
+    build-snaps:
+      - core24
+      - gnome-46-2404
+      - mesa-2404
     override-prime: |
       set -eu
 

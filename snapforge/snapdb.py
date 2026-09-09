@@ -9,7 +9,7 @@ import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from . import adopt, net
+from . import adopt, net, recipe
 
 REPO = "bearenbey/snapkit"
 BRANCH = "main"
@@ -127,7 +127,7 @@ at a glance whether this folder still matches the projects it came from.
 If a recipe names a file too large to keep here, the project is marked
 `incomplete` and `snapkit db pull <name>` refuses it by name and says which
 file is missing. Pulling everything skips it and carries on rather than
-stopping. Nothing is currently in that state.
+stopping.
 
 ## Publishing
 
@@ -164,8 +164,7 @@ def _wanted(relative):
         return False
     if any(fnmatch.fnmatch(relative.name, pattern) for pattern in EXCLUDE):
         return False
-    return any(fnmatch.fnmatch(text, pattern) or text == pattern
-               for pattern in INCLUDE)
+    return any(fnmatch.fnmatch(text, pattern) for pattern in INCLUDE)
 
 
 def project_files(directory):
@@ -187,15 +186,8 @@ def project_files(directory):
 
 def local_sources(recipe_text):
     """Every `source:` in a recipe that names a path rather than a URL."""
-    found = []
-    for line in recipe_text.splitlines():
-        stripped = line.strip()
-        if not stripped.startswith("source:"):
-            continue
-        value = stripped.split(":", 1)[1].strip().strip('"\'')
-        if value and "://" not in value:
-            found.append(value.lstrip("./"))
-    return found
+    return [value.removeprefix("./") for _, value in recipe.sources(recipe_text)
+            if value and "://" not in value]
 
 
 def unmet_sources(directory, kept, artifact=""):
@@ -244,6 +236,28 @@ def local_fingerprint(directory):
 
 # -- publishing ---------------------------------------------------------------
 
+def _entry(snap, directory, kept, skipped):
+    """One snap's index entry, and what it would arrive without."""
+    files = file_map(directory, kept)
+    entry = {
+        "name": snap.name,
+        # write_version stays when false: a pulled record must say so too.
+        "record": {field: getattr(snap, field) for field in RECORD
+                   if getattr(snap, field) not in (None, "", {}, [])},
+        "version": snap.version,
+        "summary": snap.summary or "",
+        "upstream": snap.repo or (snap.upstream or {}).get("kind", ""),
+        "files": files,
+        "pack": snap.pack or "",
+        "fingerprint": fingerprint(files),
+    }
+    missing = [str(r) for r, _ in skipped] + unmet_sources(
+        directory, kept, (snap.asset, snap.local_asset, snap.asset_glob))
+    if missing:
+        entry["incomplete"] = missing
+    return entry, missing
+
+
 def publish(snaps, into, reporter=None):
     """Write the database out of the projects on this disk."""
     into = Path(into)
@@ -255,29 +269,13 @@ def publish(snaps, into, reporter=None):
         if not (directory / "snap" / "snapcraft.yaml").is_file():
             continue
         kept, skipped = project_files(directory)
-        unmet = unmet_sources(directory, kept,
-                              (snap.asset, snap.local_asset, snap.asset_glob))
-        target = into / snap.name
         for relative in kept:
-            destination = target / relative
+            destination = into / snap.name / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes((directory / relative).read_bytes())
-        entries[snap.name] = {
-            "name": snap.name,
-            # write_version stays when false: a pulled record must say so too.
-            "record": {field: getattr(snap, field) for field in RECORD
-                       if getattr(snap, field) not in (None, "", {}, [])},
-            "version": snap.version,
-            "summary": snap.summary or "",
-            "upstream": snap.repo or (snap.upstream or {}).get("kind", ""),
-            "files": file_map(directory, kept),
-            "pack": snap.pack or "",
-        }
-        entries[snap.name]["fingerprint"] = fingerprint(entries[snap.name]["files"])
-        missing = [str(r) for r, _ in skipped] + unmet
+        entries[snap.name], missing = _entry(snap, directory, kept, skipped)
         if missing:
             left_out[snap.name] = missing
-            entries[snap.name]["incomplete"] = missing
         if reporter:
             note = f"  (incomplete: {', '.join(missing)})" if missing else ""
             reporter.detail(f"{snap.name}: {len(kept)} files{note}")

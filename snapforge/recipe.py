@@ -7,6 +7,35 @@ import textwrap
 from . import arch, classify
 from .rewrite import repoint_lines
 
+# A part name sits two spaces in, its settings deeper than that.
+PART_NAME = re.compile(r"^  ([A-Za-z0-9][\w.+-]*):\s*$")
+PART_SOURCE = re.compile(r"^\s+source:\s*(.+?)\s*$")
+
+
+def sources(text):
+    """Every part's `source:`, as (part, value) pairs, in recipe order.
+
+    Quotes are stripped. A `source:` outside `parts:` is not a part's and
+    is not returned. This is the one reader of those lines: what a build
+    consumes, what an update repoints and what the database has to carry
+    are all read from here, so they cannot disagree on what counts.
+    """
+    found, name, in_parts = [], "", False
+    for line in text.splitlines():
+        if line.strip() and not line.startswith(" "):
+            in_parts, name = line.startswith("parts:"), ""
+            continue
+        if not in_parts:
+            continue
+        part = PART_NAME.match(line)
+        if part:
+            name = part.group(1)
+            continue
+        source = PART_SOURCE.match(line)
+        if name and source:
+            found.append((name, source.group(1).strip("'\"")))
+    return found
+
 BASE = "core24"
 
 # Kept short: an interface is easier to add later than to justify now.

@@ -54,8 +54,11 @@ apps:
       - upower-observe
       - u2f-devices
       - password-manager-service
+      - system-packages-doc
     slots:
       - dbus-zen
+    environment:
+      TMPDIR: $XDG_RUNTIME_DIR
 
 plugs:
   browser-sandbox:

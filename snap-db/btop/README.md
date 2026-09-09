@@ -97,8 +97,6 @@ snapkit build btop
 This packs the binary that is already here. `snapkit update btop` fetches a
 newer one first, and builds the result.
 
-Prefer `snapcraft pack` when a backend is available.
-
 ## Layout notes
 
 btop looks for its bundled themes at `../share/btop/themes` relative to its own

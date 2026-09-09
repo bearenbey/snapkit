@@ -9,7 +9,6 @@ by the upstream project.
 
 ```sh
 snapkit build spotube         # or: snapkit update spotube, to move it first
-snapkit build spotube # after editing the recipe -- see below
 ```
 
 The `cleanup` part deletes files out of the *shared* prime tree, and

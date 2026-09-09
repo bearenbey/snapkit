@@ -5,7 +5,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "c30ff2bf7b9ddac2e83765dc63775bdb7aff75ce134cf6e7a437c3e3aad6819d"
+          "sha256": "8aa4ef9b90aceb34129ce1b63c6302f090be31cf52907143705ba21f7dbcbd38"
         },
         "diagnose.py": {
           "exec": true,
@@ -20,7 +20,7 @@
           "sha256": "74aebca6efee2a627c3543951a2331d019735d500a095123ba822c7d2c3d8bae"
         }
       },
-      "fingerprint": "8637719fb321a0a152e56d23edc9e18f120c92fffdb0cec5fd5f875b88787f04",
+      "fingerprint": "e2af382adc093a5c7f5d19a3d8332ee8e01d8185ef84d5ed42f8895288e9c609",
       "name": "btop",
       "pack": "pack.py",
       "record": {
@@ -44,7 +44,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "bde3d658a0fb74ff791f82234c4f5975dc71968be155fb6e704c6a1e9ba818d8"
+          "sha256": "bfe7ff75c3ee35a6bb815c7c2a20eab2e1ed64d49c13456a21bbf61e255475da"
         },
         "pack.py": {
           "exec": false,
@@ -56,10 +56,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "cb9b7b20c849c1f465c19d94af2a24d2d9d5247240cf2c80b33455aa1e3ad395"
+          "sha256": "3fe3b98a23ad5c65bad751467d3e5879ddbd2177e0b0bbd916adf0d503b137c4"
         }
       },
-      "fingerprint": "84e0536ef395a67719f5c92ade7d5b47eb8e80399432417f0077dab1e36045cb",
+      "fingerprint": "efd6f0c8af7df699f835780be60d97d3abccf32d8ee4a9d637c19e299aa172e3",
       "name": "clamui",
       "pack": "pack.py",
       "record": {
@@ -84,7 +84,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "0383a9d2d888da68b482d9e9a12c42a0284745a6478cf8a4160c6f6be46472b3"
+          "sha256": "278233e2842bb7718bf03cd0df2472f886e598226a99f37f4582caf7f5dc75f8"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -92,7 +92,7 @@
         },
         "overlay/meta/gui/defold.desktop": {
           "exec": false,
-          "sha256": "8388d608a758d3aa7f582be3dff81d10e23f6faf8634ce10c74806b640bfce4c"
+          "sha256": "dfa81d6d396929f3226b282926e4f55bc6e45f319565c86e1f2d64053d9b735c"
         },
         "pack.py": {
           "exec": false,
@@ -100,10 +100,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "7548257b6a41610237a4c54ed9febec941a2b7be5b2e059aab763b0039f76405"
+          "sha256": "457c33b9cd50f3562dd93a8ac5239fe86f25f64d11453bae6e47f01f880eaa8c"
         }
       },
-      "fingerprint": "089d257a1d0ad68fca15777fb006147c3aba7cc240811819e3f5deba4f53bb49",
+      "fingerprint": "65f926ce4593156a888054565952297c56bb44d9917cd336b8b87bae932ecc1b",
       "name": "defold",
       "pack": "pack.py",
       "record": {
@@ -127,11 +127,11 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "c6a3421e515781e7fcef5d1b035345edd6dcc6f2dacd3f6e8a026188ad3d9360"
+          "sha256": "baabf44ba61a59a2a9ebbd11ae20c6325e8b11da7fe7a4c02f9751f05dd5704f"
         },
         "launcher/discord-launch": {
           "exec": true,
-          "sha256": "c46dfc89c9291cfdd6290082684c7c4e7c7093c5d96dc6cc734df703bb6c2500"
+          "sha256": "369df9882fc257a20604f13428e4d8b133f1a66f68b124f1b68aab424e89cc28"
         },
         "snap/gui/discord.png": {
           "exec": false,
@@ -139,10 +139,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "7a5396fed617c9be8b325d1b909ed261a109a25b63c257e66b584ee6fe91c0a4"
+          "sha256": "ea7eeac93b6bcba25a7e2e786f5d3f9cd6dfa8cdd22480cc49e96571a97ffe5f"
         }
       },
-      "fingerprint": "c745502094ca99e56c09e8dad65c16ff2465bf847e29ac42744bd224e517c0a0",
+      "fingerprint": "a30b86d396027ed8b860df7978457efafd997dfea1d034db27973a3bb86abfb9",
       "name": "discord",
       "pack": "",
       "record": {
@@ -169,7 +169,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "f6a2cdf78da497212fa6e9e17a1b2ee63fbbd6ae76f1d5e315eca7eb0676db22"
+          "sha256": "3933a09acceb9eba4ba6f14f48f845a71ecf82b17a3ab29e681a6a448863cb65"
         },
         "snap/gui/emacs.png": {
           "exec": false,
@@ -180,7 +180,7 @@
           "sha256": "6c9b679685ad2d0a6d568206555cbe79e30bd61e9341c18055216068d2810c9f"
         }
       },
-      "fingerprint": "5d67b217683e9bf15bf4a7a2f063584b9032d077346c524aeb98e3e6a213a825",
+      "fingerprint": "aa6d4b42b051e9527cd133d2e6cfbfc6805f44965b49df079637876f56b8e1b5",
       "name": "emacs",
       "pack": "",
       "record": {
@@ -210,18 +210,18 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "d8bd35f28dd20a60a381b96691612629abf93a897493dcc2b63833cf2fd99a8c"
+          "sha256": "336f4ad819ac3a8eaff67dd46bfc30a5d95e08a77ec3ffdb743ae7817f088f68"
         },
         "snap/local/ffmpeg-launch": {
           "exec": true,
-          "sha256": "5c356b595cc7cc7ab26ed7cb235287d7524d55d821513bb8506201da263dee36"
+          "sha256": "6b0b567e7dd2289d4d0c76e9c0afa29ab2248349235e323d725798c91726415d"
         },
         "snap/snapcraft.yaml": {
           "exec": false,
           "sha256": "657aec0b070b0aa072067fdf9c21e3564ff382f4cc06b78ea959adaa5c28e9a2"
         }
       },
-      "fingerprint": "3c67d45a9b3de32b5ea28164308f0084007e0ef22998ef7988f1e6e0d7eec610",
+      "fingerprint": "a62ccbd1ae669583eae5718b852f3d22c87ad70b7d32520eff21a6170063a715",
       "name": "ffmpeg",
       "pack": "",
       "record": {
@@ -259,7 +259,7 @@
         },
         "overlay/meta/gui/firefox-esr.desktop": {
           "exec": false,
-          "sha256": "9d8bc353dff9d40e1d873030f87b276a6dd7cf8c68d4a4f2cb86075b0b44cd2c"
+          "sha256": "895bdb31b1241f1bf606639ef5a101ffbe72024faa5116abc40fb7020bfa5ebd"
         },
         "overlay/usr/lib/firefox-esr/distribution/policies.json": {
           "exec": false,
@@ -274,7 +274,7 @@
           "sha256": "ac2307a133c6216fb2e6f8fba9895377517e46fb49678da66d7be79ee21c8fa7"
         }
       },
-      "fingerprint": "92b498d98049381df084eba2c6bf2617b7141734c8057b8bc110b2e350865ba9",
+      "fingerprint": "9b5291a90240bc25b8d27a757cf96d5a84bd00c2f0f1c2d41a9b017469e85876",
       "name": "firefox-esr",
       "pack": "pack.py",
       "record": {
@@ -316,7 +316,7 @@
         },
         "overlay/meta/gui/floorp.desktop": {
           "exec": false,
-          "sha256": "f2fde79fd84d878a40bda0e0040e736ce99b37c38df62d8793fc9308b3472142"
+          "sha256": "3030a1fbb20ffe66592ea27571f555012495e24c1fdab33522022fb6954a8236"
         },
         "overlay/usr/lib/floorp/distribution/policies.json": {
           "exec": false,
@@ -331,7 +331,7 @@
           "sha256": "8da2566e8fa53fc56d9d21e2f0a176949385c42524cf9c2c7ed9bb6d0d9a167d"
         }
       },
-      "fingerprint": "8cc46806196767a5f90e288abd2a37a976b096d15665f37fc15813ae2f992a9f",
+      "fingerprint": "7f281ad1169604b69af3c00b832431e40344689e32ae1243e2b327a08ebcab04",
       "name": "floorp",
       "pack": "pack.py",
       "record": {
@@ -408,7 +408,7 @@
         },
         "overlay/meta/gui/godot.desktop": {
           "exec": false,
-          "sha256": "76c198a1af4c4c6dc128207da968ce6201f0d4cdfff5f3cfd89175d3badb2734"
+          "sha256": "6af5de8aaf816afc2687773bfe8ebe97e4b24d7185ce47b5a6231481223bd4fb"
         },
         "overlay/meta/gui/godot.png": {
           "exec": false,
@@ -420,10 +420,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "418116b6916080fc104bc53c940843f42ce716321b764fc2985833cc96562a26"
+          "sha256": "97c2fbab061540130dc67f3c228f275c606847730a5a74a4b5e87f7cb72d8de9"
         }
       },
-      "fingerprint": "090b285e42533eb54880b37c85cc70cd3e41d6fe6124fe7c4c60448a0506dc86",
+      "fingerprint": "d7bff05b735c93c63c02652c6705cddeee36bf7aee55944247d60912225bfd07",
       "name": "godot",
       "pack": "pack.py",
       "record": {
@@ -448,7 +448,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "082d2c6d5da86e719df6313e1df9558ed9ba8a7f7ce026f0f61092d409bd9e07"
+          "sha256": "4c97613873299f163276f02333b9b62096893daaf732825269666ce4123a6a15"
         },
         "pack.py": {
           "exec": false,
@@ -464,14 +464,14 @@
         },
         "snap/local/helium-launch": {
           "exec": true,
-          "sha256": "6f5adeec97f7b62e2d14ea34e91aae2d809f11e8a2266b85582d3f81811a14dc"
+          "sha256": "fc4d73a805345c8c3b7223956d0d4f4a128e19a3f09734a192a586710bcdfb25"
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "0f5704762a9211c74da7353171d762c1d74418d4a9c903fd5986b6bde75146fe"
+          "sha256": "6f9ccbffe4053733492dd953c2bd67a4e5712ee8e7260430671acb52896dd3e7"
         }
       },
-      "fingerprint": "b458a0de4d7a2ce41a256846a42593bd93be957cf7d184ec95963a157a4eadb1",
+      "fingerprint": "0ea69e73eab716020fab05f215b895a6200fa0d312b6f37ac0ac8ed80f93d813",
       "name": "helium",
       "pack": "pack.py",
       "record": {
@@ -496,7 +496,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "0f5b8b10480759c8eec1e0bff17a7a3a1c2cadc602f8e92e4a1fc56e8a4aa4f0"
+          "sha256": "c729dd356d5c15331bdc97ac56734a8dc80434ca49ac8c5fd2afce91b6c03ec6"
         },
         "snap/local/irssi-launch": {
           "exec": true,
@@ -507,7 +507,7 @@
           "sha256": "2cd6de3e6171276e25e1d5841bbde0905a344246e2f33830eff9952e9dd5b20c"
         }
       },
-      "fingerprint": "42bf17bf93a723b2b2f454185c343afd0c56b9c2b5d46f4a556280ed55bb822e",
+      "fingerprint": "63b5cf3520a4bb445b14256e3c6bdf1a500a6d06889f73deb94fa14afc1a621b",
       "name": "irssi",
       "pack": "",
       "record": {
@@ -530,7 +530,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "54d3495c09aa7e3d3045d1c184c8a14574074fb5ac768af7bdebd4ae8f1591ec"
+          "sha256": "a62a316d19fe82ee384ddac38969f004effe14e9fd523646dd9779a83815fb08"
         },
         "pack.py": {
           "exec": false,
@@ -542,18 +542,18 @@
         },
         "snap/local/kernel_remover.py": {
           "exec": true,
-          "sha256": "f6764ed89aaa1a1cd6d0a55f8053a6f4b35aa9bd75c95c532a2580bfbc73cdda"
+          "sha256": "8dc36b9c6c18e22f6aea4d1d8ac5b8d5a1b93423931e06d251f2fa124f9c30fb"
         },
         "snap/local/tests.py": {
           "exec": true,
-          "sha256": "18674f8ceee96479b497dd7d22fbaebae500a3865e0fc328d8248d7db1773bcf"
+          "sha256": "30bf6ae2756440c9426077b602c7a12795b2127312eb18c1579d3bb657855481"
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "9ac0d8392dc7c50b26fe5df2b50c8ea30b965497f7577af660029847566895f9"
+          "sha256": "97777d911de6a9abadf8f13b62f3834ff9b56b694fd9bfb9389c9b5266130204"
         }
       },
-      "fingerprint": "b58225629a49f3b969d932a9effa6fdd7a98a4a631af74d77cc5492cd335335c",
+      "fingerprint": "41a2b7c16f1f7cc2e6b470e9ec8aa0a0707d64801abe668af19376349d0f269c",
       "name": "kernel-remover",
       "pack": "pack.py",
       "record": {
@@ -570,7 +570,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "efd315e4387b6f8c7b6e83e7f3319715f37363b50cef788c3b64e47517b5fa05"
+          "sha256": "a3c4992c3988d05359d4ce67c10f571c87bbfb9e103e2716deb7a5c99a2c88a2"
         },
         "pack.py": {
           "exec": false,
@@ -582,10 +582,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "b2dc3fc9956e9c7292bcd574fb7963bed2347eeba9043e516d777c77a5073930"
+          "sha256": "3757fd7e5edb35e8171fc028823dceb94bb787cd5a076e835db82fb483a3de65"
         }
       },
-      "fingerprint": "fc3041f0eb0b4302e88ac98f650595f804dce1e7aa160ddc31689a81275d8431",
+      "fingerprint": "98d03a6fd02512e176181fd7aa7e97447c888d726f1d7a83d975575f93c5bc6f",
       "name": "lutris",
       "pack": "pack.py",
       "record": {
@@ -648,18 +648,18 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "1eb54f76cf12691d8d771b4ced8ffe47e288b71354b3e2bdaf7ef586c4cbcaf7"
+          "sha256": "ea8a99fb98decf0f2476e315d9507e0fa0b5f5a8077d2796b7e8cf60725151db"
         },
         "snap/local/mpv-launch": {
           "exec": true,
-          "sha256": "0c5e4dbb58362c22067b7720c186e171c6525fd05073073722c6f39a87aba021"
+          "sha256": "e99a5c4d74118e914e541f51c8e2442fe6db6e33fa849eb304d14364547d466e"
         },
         "snap/snapcraft.yaml": {
           "exec": false,
           "sha256": "61d3c2b2c9d41d282703d719dd9b4c1224f356ab91ae2fef51add996ee28a13b"
         }
       },
-      "fingerprint": "73b041910a39f91bea1bf009dd19b855b8d5d3ef30c108d2b16b6a825c5ff8d2",
+      "fingerprint": "6db7634ceed537b7975218061dfc0babd5b9f75df757af2e063c1216b2759433",
       "name": "mpv",
       "pack": "",
       "record": {
@@ -692,7 +692,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "f2244af6abb41fff28d45fbd56266cb012de998b54f1760d953ceeb3aaa68d73"
+          "sha256": "dafa4d6a3ad55ed5a1bf13700712fb1538a3f64aaef943ed769ef8338786ffa4"
         },
         "pack.py": {
           "exec": false,
@@ -703,7 +703,7 @@
           "sha256": "297d7806c2cbe3a98c6e443f414549f408d47c1052611825073d5e146e1a1e1c"
         }
       },
-      "fingerprint": "101a54c131496c0171a3ec7723fc8a2995edae9a274f045d7ff3532bd34a9acf",
+      "fingerprint": "0cc46df4fcf94a086e3f25ef3ebf5b5afefcef4a32ec2181fbe0a62a971e2b7a",
       "name": "nvim",
       "pack": "pack.py",
       "record": {
@@ -727,7 +727,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "6346fd83dfc6da2ead0b2d230c64f323874e05add96107b537041c8bbdea1944"
+          "sha256": "3db5370e6ad4aba571dc12afda252c6ec1827a7080232bd702e52b4805134d1a"
         },
         "snap/hooks/configure": {
           "exec": true,
@@ -742,7 +742,7 @@
           "sha256": "3842f00243fa6d2498c3162d2bd45338e4c624e147574aacc0bed4fd261f992d"
         }
       },
-      "fingerprint": "f10bcca9951aae052045d92ae04c38465c5261d54f7073fa5765cd232d9371b4",
+      "fingerprint": "e9bd4c807a6e5c5d482d73808a78d84273472ae20f4c22397058d29bc8ce7ec2",
       "name": "ollama",
       "pack": "",
       "record": {
@@ -807,7 +807,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "b0236b7c0f92ecc7d6a434262b56d28f65ee8b81b36d2a61d9f9784c0815035a"
+          "sha256": "b7123d4bc715875a6411dd224c8c2c037199719e3a768991b4fd08b607a40f71"
         },
         "snap/gui/retroarch.svg": {
           "exec": false,
@@ -826,7 +826,7 @@
           "sha256": "7d02c249a5c2324a4561d10f9b2e5c307a7f5c8b1dba98ec9ceba1e290d85d3b"
         }
       },
-      "fingerprint": "7424a1ff8dd64adc886b836e27eff3f3dcf13de673341a67705628da38d6d1ae",
+      "fingerprint": "08041e1f279b0daac4735b574e901ba440d255506dc972a2f225053512718d9d",
       "name": "retroarch",
       "pack": "",
       "record": {
@@ -859,7 +859,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "9749b492a903719d6e5f21bc4d615171001ca470cae07eb9eb52a5e07a168bac"
+          "sha256": "1da199cb933247f2f189534224d111a62939d6520692186f5dab085453e96399"
         },
         "pack.py": {
           "exec": false,
@@ -871,10 +871,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "9b6307962328249f10d7ce10d2b88eb19868b4a1d98ce1cff8f95f243992c398"
+          "sha256": "46059b6f4a92fb474a9a90749891bbaaf3e647f585d876e0be98bc8d2600609f"
         }
       },
-      "fingerprint": "1bd94b379417d5b59244eafd253476d1f36e7ba661a5c5d7993de747724b41bb",
+      "fingerprint": "b45606d2de0e0a5296ceece8a1878d5ab7e312493fe270d9ee635562ffdadfbf",
       "name": "shotcut",
       "pack": "pack.py",
       "record": {
@@ -899,7 +899,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "7ba253f1a19cf321d8e137ddd89842c514d610b31c559dca528270bf0ff4be10"
+          "sha256": "623a4ae356b3148e8f7cb146469f85fb4782ace3f2d69a1e3ab893262dded1cd"
         },
         "snap/gui/signal-desktop.png": {
           "exec": false,
@@ -907,14 +907,14 @@
         },
         "snap/local/signal-launch": {
           "exec": true,
-          "sha256": "051410f36df94eb619f2dbdd8dbdf69154a1b31f628e9ac85506809cb03a2d2b"
+          "sha256": "28af9439be857e6d4a6b933c3ee98852ffaff50aa2e084d2b6155ce5ae74b0a0"
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "c6f48f2e554fb52129874377c9773229dc6f4748b19acbf7868468036bdb2717"
+          "sha256": "97f975a1f5e1045f22bc0bdb8ffb05e5311850a16df09ebf561504a682e75466"
         }
       },
-      "fingerprint": "ffe592a46ff932e6ef4a692c478af163acfcf0cd9af7a22e424b18f1821d1593",
+      "fingerprint": "ba3339cdfb43c8aa57dd8167363f9b1322c25bb1efd2489068ba0990a449babe",
       "name": "signal-desktop",
       "pack": "",
       "record": {
@@ -942,14 +942,14 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "7162d6070b5a398aeddb74f57982512aa1f9f4feacd19b6112cf280f245ae972"
+          "sha256": "9dcd4da9d86e5f1570a395380aae83b366a19760b96edfa01cddfa779fa29e1b"
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "e87461f150e10e86f1dc1d93208983cf6a587065be2dc49a86245fac77053179"
+          "sha256": "5a4040498c0f464e30dc728f7861b901866b22af297b211288a7a4562b011d63"
         }
       },
-      "fingerprint": "1050e53755604979c6b63a4090fee45c233bfe3249c1a75e12406f7b076115a5",
+      "fingerprint": "59f0436d878bf0aa1fab766ff1207e85d5572a28b3f4342d04d00dc58fc9b90a",
       "name": "spotube",
       "pack": "",
       "record": {
@@ -976,7 +976,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "ebb1454c5c60b4f11d0fd005f17669d10d32d443d68e36e50b9006b1c91031f5"
+          "sha256": "e25154ef6950d736a2f3d917427ccc79eee6cb20cfff0e2ba9939ee47896e33f"
         },
         "snap/gui/sublime-text.desktop": {
           "exec": false,
@@ -988,10 +988,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "6fbbd85886deb64f95bf28c3df67e86222062183b50d88121c0dfaf6b2f38c3f"
+          "sha256": "69435b4d65ae351bf01edccb3c025797f2db72b4267cded631866cb6fdce424a"
         }
       },
-      "fingerprint": "fa0bada2c526a92983f34b09537e4c4188ff3e6e94a8fbc2eb9aa3f874ec210c",
+      "fingerprint": "f8256d1035e49c3a27bd624f38bdbe5565311d6e5954e9eb8c647d427d5eef7c",
       "name": "sublime-text",
       "pack": "",
       "record": {
@@ -1025,7 +1025,7 @@
         },
         "overlay/meta/gui/transmission.desktop": {
           "exec": false,
-          "sha256": "2f3fd92ab8a576163800cb6d39e2ef698a0cb1bc0e82257d84b8a171ff475866"
+          "sha256": "87b972cd1319b7715e5d42375e3a11d7982f36549f5da8882e93a7718ce29072"
         },
         "pack.py": {
           "exec": false,
@@ -1033,10 +1033,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "2331b5a08ffe3e1501b84e730fc82327d14a5246f7d342bfcee1cb56d2a8619f"
+          "sha256": "efe50443c238816e533780cfedd6b1c304c5f665fd688df63c2737ae75e30da5"
         }
       },
-      "fingerprint": "ea5cf236514ab6c74293280d92f66580b36217b83d6d8c95704e74cee542eda8",
+      "fingerprint": "a63f19d970aeb1d4abe2063ddef3f0906e1d83cc24bdda03bd742b1e59577cd3",
       "name": "transmission",
       "pack": "pack.py",
       "record": {
@@ -1060,7 +1060,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "724831bdfab6225ecedd7189895bf5a9693f93662b98e8b544560b5b742fd8fd"
+          "sha256": "f6b8ffd1f4a1d800cf629f73c421f1d0782fd92b1014ce55d85c0e55c2356173"
         },
         "pack.py": {
           "exec": false,
@@ -1080,10 +1080,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "4fa969f76db3466806dcd204e8d1d9a77e8a5a11c5f48c2c405f8a231b7956c8"
+          "sha256": "f08c39ca11b60d5f8c7e0359755c16718592d267fc65300ae6cf548ca30b1b9d"
         }
       },
-      "fingerprint": "993dd8a2288e6f1fe4ad64c203dfc0adddf6f215385c45d98d56b0e8cfabddf5",
+      "fingerprint": "e45c749b0ec390389ca4cfccde921d0973e9245d3da7bb2ff844dd258317dbd6",
       "name": "ungoogled-chromium",
       "pack": "pack.py",
       "record": {
@@ -1108,7 +1108,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "388b3f481350aeae1171ccb2446aebc79ada041a2b5849cd01195f16066b1efa"
+          "sha256": "55e64d2c430dcbb71191d8ba7805cb3ed522e31d7c855a952a52191291606604"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -1123,7 +1123,7 @@
           "sha256": "c8844f25d9b3a86090074d55afcf019d68641a9d379ec7e49c7a120b76c3eb49"
         }
       },
-      "fingerprint": "53328d084f369454ad74fc151b9acf40cf7ea6f5b845f57fc6f0145a30add47a",
+      "fingerprint": "25ef886a68bde2262fb5134494f4e0af68923ca1c6640d93dfc5d965c786b747",
       "name": "unityhub",
       "pack": "pack.py",
       "record": {
@@ -1155,14 +1155,14 @@
         },
         "launcher/yt-dlp": {
           "exec": true,
-          "sha256": "9177c173ffa55d7d90451757b09e6fe7ddebde9dc2665c30b56260ef529004b9"
+          "sha256": "a7af1fa2ba267beff5c71904c0913003c37717f91f4a9f73c2c783af16742ed0"
         },
         "snap/snapcraft.yaml": {
           "exec": false,
           "sha256": "1970cbf30f5086ab1d2e50a41ef5539abd070417ae5d33132bd5bdbeababf8f9"
         }
       },
-      "fingerprint": "fe2a33462f54979cdea0caadbb87fe6a0b6af20dfec518b57962cddea795c9a1",
+      "fingerprint": "ab596554a0c131b8f7cc4242ae9cbe32599e411c4ebd03f3d1f9caba01a11692",
       "name": "yt-dlp",
       "pack": "",
       "record": {
@@ -1189,7 +1189,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "c00e40837aa60d9308dc40d4a6fa3fc38daeffa1ce8b04123237bd71fab8764d"
+          "sha256": "338deaea8b4674875957153b67b18161d9fa7f2ec0e59d9f8c6a291fbbad6e61"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -1197,7 +1197,7 @@
         },
         "overlay/meta/gui/zen.desktop": {
           "exec": false,
-          "sha256": "b987619c3b70e7c4de72ea8117e0d650a7f18bf4a17861b85f9de7c97057b536"
+          "sha256": "adad35f4f028dea499cece5acd184d3becd4c90ba01f41a1715436ccb3d33639"
         },
         "overlay/opt/zen/distribution/policies.json": {
           "exec": false,
@@ -1209,10 +1209,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "8a168d2a516ffd58206253e5313c0b49002372c325a4f34bb51f0feaf492e70b"
+          "sha256": "b341890db0cd879919e80343e327c2bdf889988551b0309a1345475dc4eb9656"
         }
       },
-      "fingerprint": "c341fdbc5216ad62f6a15fa43d4421c4e52a6ee105adda26694bc476068df32c",
+      "fingerprint": "65bcaeaf74ab145642f60dfc35cb3c012399dbc612e3c9c38208c5734474b26e",
       "name": "zen",
       "pack": "pack.py",
       "record": {

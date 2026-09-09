@@ -15,8 +15,8 @@ description: |
   This snap is not published or endorsed by the upstream project.
 grade: stable
 confinement: strict
-license: GPL-3.0
-title: lutris
+license: GPL-3.0-or-later
+title: Lutris
 website: https://github.com/lutris/lutris
 source-code: https://github.com/lutris/lutris
 issues: https://github.com/lutris/lutris/issues
@@ -52,19 +52,9 @@ apps:
       - audio-playback
       - opengl
       - removable-media
+      # evdev is staged for controllers, and /dev/input is behind this.
+      - joystick
 
-  # --- the 32-bit runtime -------------------------------------------------
-  #
-  # Proton and wine run 32-bit windows binaries in a 32-bit process, and that
-  # process needs a 32-bit copy of everything it links: GL, X11, gnutls,
-  # alsa, the lot. core24 ships an i386 glibc and nothing else, so lutris
-  # reported "i386 libGL.so.1 missing (needed by opengl)" and umu exited
-  # during prefix creation with nothing to build against.
-  #
-  # snapcraft's stage-packages cannot ask for :i386 on an amd64 build, so
-  # this part adds the architecture itself, lets apt resolve the closure,
-  # and takes only the library directories out of the debs. The named
-  # packages are libwine:i386's own Depends -- upstream's list of what
 slots:
   dbus-lutris:
     interface: dbus
@@ -97,7 +87,8 @@ parts:
       - gir1.2-gtk-3.0
       - gir1.2-webkit2-4.1
       - gir1.2-notify-0.7
-      # what lutris shells out to while installing and running a game
+      # what lutris shells out to while installing and running a game;
+      # lspci, out of pciutils, is how it works out which GPU is present
       - pciutils
       # lsblk, which lutris runs to enumerate drives
       - util-linux
@@ -109,8 +100,6 @@ parts:
       - x11-xserver-utils
       - mesa-utils
       - vulkan-tools
-      # lutris shells out to lspci to work out which GPU is present
-      - pciutils
       # No libvulkan1 and no mesa-vulkan-drivers here on purpose. The loader,
       # the drivers and their ICD manifests all arrive from the mesa-2404
       # content snap, which the gnome extension puts on LD_LIBRARY_PATH and
@@ -126,8 +115,7 @@ parts:
       - mangohud
       # Recommends, not Depends, but each one is a feature that stays dark
       # without it: battle.net needs protobuf, controllers need evdev, and
-      # reading a windows executable needs pefile.
-      - python3-protobuf
+      # reading a windows executable needs pefile. protobuf is above.
       - python3-evdev
       - python3-pefile
       # winetricks, which lutris shells out to by name. Not wine itself:
@@ -137,7 +125,20 @@ parts:
 
 # The icon snapd shows in the launcher. `icon:` is resolved against
 # this project directory, not against the payload, so the one found
-# inside the release was copied here next to the recipe.  # 32-bit wine needs -- plus the GL, vulkan and gnutls that lutris named.
+# inside the release was copied here next to the recipe.
+  # --- the 32-bit runtime -------------------------------------------------
+  #
+  # Proton and wine run 32-bit windows binaries in a 32-bit process, and that
+  # process needs a 32-bit copy of everything it links: GL, X11, gnutls,
+  # alsa, the lot. core24 ships an i386 glibc and nothing else, so lutris
+  # reported "i386 libGL.so.1 missing (needed by opengl)" and umu exited
+  # during prefix creation with nothing to build against.
+  #
+  # snapcraft's stage-packages cannot ask for :i386 on an amd64 build, so
+  # this part adds the architecture itself, lets apt resolve the closure,
+  # and takes only the library directories out of the debs. The named
+  # packages are libwine:i386's own Depends -- upstream's list of what
+  # 32-bit wine needs -- plus the GL, vulkan and gnutls that lutris named.
   i386-runtime:
     plugin: nil
     build-packages:

@@ -16,7 +16,7 @@ from .db import NameTaken
 from .keys import Keyboard
 from .net import NetworkError
 from .report import Reporter
-from .screen import Screen
+from .screen import MATCHES_SHOWN, Screen
 
 REFRESH = 12
 
@@ -200,7 +200,7 @@ class Dashboard:
                 function(*args)
             except Cancelled:
                 self.say("cancelled", "yellow")
-            except Exception as exc:                      # noqa: BLE001
+            except Exception as exc:
                 # A silent death leaves the dashboard looking fine and idle.
                 self.say(f"{type(exc).__name__}: {exc}", "bold red")
                 self.status = "something went wrong -- see the log"
@@ -219,7 +219,7 @@ class Dashboard:
         try:
             # Skipping on `repo` missed every non-GitHub upstream.
             found = update.situation(row.snap)
-        except Exception as exc:                          # noqa: BLE001
+        except Exception as exc:
             # One unreadable record must not take the other twenty-four down.
             self.put(row, state="error", note=f"{type(exc).__name__}: {exc}")
             self.say(f"{row.name}: {row.note}", "red")
@@ -295,6 +295,7 @@ class Dashboard:
             if row:
                 row.state, row.latest = "current", snap.version
             self._build(snap, reporter, row)
+            self.idle()
 
         self.run_job("creating", work)
 
@@ -325,6 +326,7 @@ class Dashboard:
             return made.candidates[self.pick_cursor]
         finally:
             self.put(self, picking=None)
+            self.idle()
 
     def pull_database(self):
         """Offer to write every snap the database has and this does not."""
@@ -337,6 +339,7 @@ class Dashboard:
             if not new:
                 self.say(f"the database has {len(snaps)} snaps, all registered "
                          f"here already", "dim")
+                self.idle()
                 return
 
             self.say(f"the database has {len(new)} not registered here: "
@@ -386,11 +389,21 @@ class Dashboard:
                     self.put(row, state="untracked", latest="", note="")
                 return
 
-            wanted = sources.configure(words[0], sources.parse_pairs(words[1:]))
-            self.status = f"resolving {sources.summarise(wanted)}"
             try:
-                release = update.retrack(snap, wanted)
-            except (NetworkError, project.ForgeError) as exc:
+                if words[0] in ("repo", "github"):
+                    if len(words) != 2:
+                        raise sources.BadUpstream(
+                            f"{words[0]} needs one thing after it: owner/name")
+                    repo = github.parse_repo(words[1])
+                    self.status = f"reading the releases of {repo}"
+                    release, _chosen, _others = update.track_repo(snap, repo)
+                else:
+                    wanted = sources.configure(words[0],
+                                               sources.parse_pairs(words[1:]))
+                    self.status = f"resolving {sources.summarise(wanted)}"
+                    release = update.retrack(snap, wanted)
+            except (NetworkError, project.ForgeError,
+                    sources.BadUpstream) as exc:
                 # Written down untried, a wrong setting reads as up to date.
                 self.say(f"{name} was left as it was: {exc}", "red")
                 self.idle()
@@ -462,10 +475,9 @@ class Dashboard:
 
         def work():
             self.status = f"updating {row.name}"
-            try:
-                self._onto_release(row, DashboardReporter(self, row))
-            finally:
-                self.status = "done -- press r to check again"
+            made = self._onto_release(row, DashboardReporter(self, row))
+            self.status = ("done -- press r to check again" if made
+                           else f"{row.name} was not updated")
 
         self.run_job("updating", work)
 
@@ -485,16 +497,21 @@ class Dashboard:
             for row in behind:
                 row.state = "queued"
             built = []
-            for index, row in enumerate(behind, 1):
-                if self.cancel.is_set():
-                    row.state = "behind"
-                    continue
-                self.select(row.name)
-                self.status = f"updating {row.name} ({index} of {len(behind)})"
-                made = self._onto_release(row, DashboardReporter(self, row),
-                                          ask_install=False)
-                if made is not None:
-                    built.append((row.snap, made))
+            try:
+                for index, row in enumerate(behind, 1):
+                    if self.cancel.is_set():
+                        break
+                    self.select(row.name)
+                    self.status = f"updating {row.name} ({index} of {len(behind)})"
+                    made = self._onto_release(row, DashboardReporter(self, row),
+                                              ask_install=False)
+                    if made is not None:
+                        built.append((row.snap, made))
+            finally:
+                # Cancelled, or one of them raised: nothing stays "queued".
+                for row in behind:
+                    if row.state == "queued":
+                        row.state = "behind"
 
             self.status = f"built {len(built)} of {len(behind)}"
             # One question for the run, rather than one for every snap in it.
@@ -513,7 +530,7 @@ class Dashboard:
         """Move one row onto the release its last check found, and build it."""
         row.state = "working"
         try:
-            project.adopt(row.snap, reporter)
+            project.take_recipe(row.snap, reporter)
             update.update(row.snap, row.release, row.asset, reporter)
             self.db.add(row.snap)
             row.latest = row.snap.version
@@ -539,7 +556,7 @@ class Dashboard:
             reporter = DashboardReporter(self, row)
             row.state = "working"
             self.status = f"building {row.name}"
-            project.adopt(row.snap, reporter)
+            project.take_recipe(row.snap, reporter)
             self._build(row.snap, reporter, row)
             self.idle()
 
@@ -689,7 +706,7 @@ class Dashboard:
             if typed is None:
                 return
             self.prompt = typed
-            self.matches = self.db.search(self.prompt)
+            self.matches = self.db.search(self.prompt)[:MATCHES_SHOWN]
             self.match_cursor = 0
 
     def _typing_track(self, key):
@@ -705,43 +722,37 @@ class Dashboard:
             if typed is not None:
                 self.prompt = typed
 
+    def _scroll(self, key, downward):
+        """Move through what is on the page, no further than the drawer can show.
+
+        `downward` says which way `down` moves the offset: into a record,
+        whose top is home, or back through the log, whose newest line is.
+        """
+        page = max(1, self.screen.window)
+        last = max(0, self.screen.page_max)
+        steps = {"k": -1, "up": -1, "j": 1, "down": 1,
+                 "pageup": -page, "pagedown": page}
+        if key in steps:
+            move = steps[key] if downward else -steps[key]
+            self.page_offset = min(max(self.page_offset + move, 0), last)
+        elif key == "home":
+            self.page_offset = 0 if downward else last
+        elif key in ("end", "G"):
+            self.page_offset = last if downward else 0
+
     def _reading(self, key):
         """The activity log, where the newest line is home and up goes back."""
-        page = max(1, self.screen.window)
-        oldest = max(0, self.screen.page_lines - 1)
         if key in ("escape", "q", "l"):
             self.reading_log = False
-        elif key in ("k", "up"):
-            self.page_offset = min(self.page_offset + 1, oldest)
-        elif key in ("j", "down"):
-            self.page_offset = max(self.page_offset - 1, 0)
-        elif key == "pageup":
-            self.page_offset = min(self.page_offset + page, oldest)
-        elif key == "pagedown":
-            self.page_offset = max(self.page_offset - page, 0)
-        elif key == "home":
-            self.page_offset = oldest
-        elif key in ("end", "G"):
-            self.page_offset = 0
+        else:
+            self._scroll(key, downward=False)
 
     def _paging(self, key):
         """A record, where the top is home and down goes further into it."""
-        page = max(1, self.screen.window)
-        last = max(0, self.screen.page_lines - 1)
         if key in ("escape", "q", "enter"):
             self.detail = None
-        elif key in ("k", "up"):
-            self.page_offset = max(self.page_offset - 1, 0)
-        elif key in ("j", "down"):
-            self.page_offset = min(self.page_offset + 1, last)
-        elif key == "pageup":
-            self.page_offset = max(self.page_offset - page, 0)
-        elif key == "pagedown":
-            self.page_offset = min(self.page_offset + page, last)
-        elif key == "home":
-            self.page_offset = 0
-        elif key in ("end", "G"):
-            self.page_offset = last
+        else:
+            self._scroll(key, downward=True)
 
     def _typing_filter(self, key):
         """Narrowing the list as it is typed, over name, repo, summary, kind."""

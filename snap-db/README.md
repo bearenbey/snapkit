@@ -82,7 +82,7 @@ at a glance whether this folder still matches the projects it came from.
 If a recipe names a file too large to keep here, the project is marked
 `incomplete` and `snapkit db pull <name>` refuses it by name and says which
 file is missing. Pulling everything skips it and carries on rather than
-stopping. Nothing is currently in that state.
+stopping.
 
 ## Publishing
 

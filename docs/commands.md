@@ -25,6 +25,7 @@
 | `snapkit prune [name ...]` | delete superseded builds and files, keeping the newest |
 | `snapkit db` | what the shared recipe database holds |
 | `snapkit db pull [name ...]` | write those projects here, or all of them |
+| `snapkit db <name>` | the same as `db pull <name>` |
 | `snapkit db publish <dir>` | write the database out of the projects here |
 | `snapkit install <name>` | fetch it, build it, and offer to install it |
 
@@ -39,13 +40,20 @@ the newest, and, for a snap built from a file in its own folder, every file
 the folder's glob matches other than the one the recipe names. Nothing
 else in a project is touched.
 
+`rm`, `find` and `adopt` are accepted for `remove`, `search` and `import`.
+
+`show`, `build` and `remove` take a name the way `package` does: exactly,
+or as something to search for when nothing is called that.
+
 A repository can be given any way you have it: `owner/name`, the browser URL,
 the clone URL, or a link to a release page.
 
 Useful flags: `--no-build` to write the project without building it, `--tag`
-to pin a release, `--asset` to build from a different file in it, `--name` to
+to pin a release, `--asset` to build from a different file in it (both also
+apply to `track <name> repo`), `--name` to
 call the snap something other than the repository, `--dir` to put the project
-somewhere specific, `--local` to take what `create` was given as a file or a
+somewhere specific (`db pull` and `install` write there too), `--yes` to
+skip the questions `prune` and `install` ask, `--local` to take what `create` was given as a file or a
 folder and never a repository, `--repo owner/name` to confirm an upstream on
 `import`, `--plain` to keep the dashboard from opening, and
 `--destructive-mode` to let snapcraft build on this host rather than in a

@@ -12,41 +12,30 @@ from rich.text import Text
 from . import local, sources, update
 
 # Keyed by name, so a new state fails loudly instead of taking a wrong colour.
-UPSTREAM_COLOUR = {"current": "green", "behind": "bold yellow",
-                   "untracked": "dim", "error": "red"}
+# What each state looks like: the inspector's words, the list column's
+# shorter ones, the style, and the glyph. The upstream findings take their
+# words from update.STATES, so the terminal and the inspector agree; the
+# rest are the dashboard's own.
+STATES = {
+    "unknown": ("not checked", "not checked", "dim", "·"),
+    "checking": ("checking upstream", "checking", "dim", "◌"),
+    "queued": ("queued", "queued", "cyan", "◌"),
+    "working": ("working", "working", "bold cyan", "◐"),
+    "done": ("updated", "updated", "bold green", "✔"),
+    "built": ("built", "built", "bold green", "✔"),
+    "failed": ("failed", "failed", "bold red", "✕"),
+    "current": (update.STATES["current"], "up to date", "green", "●"),
+    "behind": (update.STATES["behind"], "update", "bold yellow", "▲"),
+    "untracked": (update.STATES["untracked"], "untracked", "dim", "·"),
+    "error": (update.STATES["error"], "unreachable", "red", "✕"),
+}
 
-# The upstream findings live in update.STATES; the rest are the dashboard's.
-STATE_STYLE = {
-    "unknown": ("not checked", "dim"),
-    "checking": ("checking upstream", "dim"),
-    "queued": ("queued", "cyan"),
-    "working": ("working", "bold cyan"),
-    "done": ("updated", "bold green"),
-    "built": ("built", "bold green"),
-    "failed": ("failed", "bold red"),
-    **{state: (words, UPSTREAM_COLOUR[state])
-       for state, words in update.STATES.items()},
-}
-STATE_GLYPH = {
-    "unknown": "·",
-    "untracked": "·",
-    "checking": "◌",
-    "current": "●",
-    "behind": "▲",
-    "error": "✕",
-    "queued": "◌",
-    "working": "◐",
-    "done": "✔",
-    "built": "✔",
-    "failed": "✕",
-}
-# The list has one column for this. update.STATES stays as the terminal's.
-SHORT_STATE = {
-    "current": "up to date", "behind": "update", "untracked": "untracked",
-    "error": "unreachable", "unknown": "not checked", "checking": "checking",
-    "queued": "queued", "working": "working", "done": "updated",
-    "built": "built", "failed": "failed",
-}
+
+def look_of(state):
+    """(long label, short label, style, glyph) for a state, known or not."""
+    return STATES.get(state, (state, state, "", "·"))
+# How many of the find box's matches are drawn, and so can be chosen.
+MATCHES_SHOWN = 5
 # What a record shows above its recipe, and how tall that makes the head.
 RECORD_FIELDS = ("repo", "kind", "version", "tag", "asset", "asset_pattern",
                  "command", "icon", "license", "directory", "created",
@@ -159,11 +148,13 @@ class Screen:
 
     def _header_height(self):
         """Tall enough for what the header has to say."""
+        if self.board.asking or self.board.confirm:
+            return 3
         if self.board.tracking:
             return 2 + 1 + len(_TRACK_HINTS)
         if not self.board.prompting:
             return 3
-        return 2 + 1 + min(len(self.board.matches), 5) + 1
+        return 2 + 1 + min(len(self.board.matches), MATCHES_SHOWN) + 1
 
     def _header(self, width=100):
         if self.board.asking:
@@ -270,7 +261,7 @@ class Screen:
         body = Text.assemble(("▸ ", ACCENT), ("find or add  ", "dim"),
                              (self.board.prompt, "bold " + ACCENT), (caret, ACCENT))
         lines = [body]
-        for index, snap in enumerate(self.board.matches[:5]):
+        for index, snap in enumerate(self.board.matches[:MATCHES_SHOWN]):
             here = index == self.board.match_cursor
             line = Text("  ")
             line.append("▸ " if here else "  ", style=ACCENT if here else "")
@@ -347,9 +338,7 @@ class Screen:
             bar = _gradient(_smooth_bar(share, 12), bold=False)
             bar.append(f" {share * 100:3.0f}%", style="dim")
             return bar
-        _, style = STATE_STYLE.get(row.state, (row.state, ""))
-        label = SHORT_STATE.get(row.state, row.state)
-        glyph = STATE_GLYPH.get(row.state, "·")
+        _, label, style, glyph = look_of(row.state)
         if row.state in ("working", "queued", "checking"):
             glyph = _spinner(self.frame)
         return Text.assemble((glyph + " ", style), (label, style))
@@ -376,8 +365,7 @@ class Screen:
                          title="inspector", box=box.ROUNDED, title_align="left",
                          border_style=EDGE, padding=(0, 1))
         snap = row.snap
-        label, style = STATE_STYLE.get(row.state, (row.state, ""))
-        glyph = STATE_GLYPH.get(row.state, "·")
+        label, _, style, glyph = look_of(row.state)
 
         lines = [_gradient(snap.name),
                  Text.assemble((glyph + " ", style), (label, style)),
@@ -427,6 +415,8 @@ class Screen:
         lines = list(self.board.log)
         room = max(1, self.height - 4)
         self.page_lines = len(lines)
+        # As far back as scrolling can usefully go: the oldest screenful.
+        self.page_max = max(0, len(lines) - room)
         end = len(lines) - self.board.page_offset
         shown = lines[max(0, end - room):end]
         where = ("newest" if not self.board.page_offset
@@ -509,7 +499,8 @@ class Screen:
         self.page_lines = len(recipe)
         # The name, a blank line, and one row per field, all of it kept.
         room = max(1, self.height - 4 - len(RECORD_FIELDS) - 4)
-        start = min(self.board.page_offset, max(0, len(recipe) - room))
+        self.page_max = max(0, len(recipe) - room)
+        start = min(self.board.page_offset, self.page_max)
         seen = f"{start + 1}-{min(start + room, len(recipe))} of {len(recipe)}"
         return Panel(
             Group(_gradient(snap.name), rows, Text(""),
@@ -648,7 +639,7 @@ def _source_of(snap):
 
 def _rail(row, here):
     """The colour down the left: where the cursor is, and how each row is."""
-    style = STATE_STYLE.get(row.state, ("", "dim"))[1]
+    style = look_of(row.state)[2] or "dim"
     if here:
         return Text("▌", style="bold " + ACCENT)
     return Text("▏", style=style)

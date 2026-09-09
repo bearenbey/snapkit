@@ -32,8 +32,8 @@ automatically on install.
 
 ## What this tracks
 
-This project is registered in `../snapkit/projects.py` as a `yaml-source`
-project, so `snapkit update` bumps it like any other:
+This project is registered in `snapkit-snap/seed.py` as a `recipe` project
+with a `tag-archive` upstream, so `snapkit update` bumps it like any other:
 
 ```
 snapkit check retroarch        # is retroarch behind?
@@ -58,7 +58,7 @@ follow their default branches instead. So:
   reproduces a specific Flatpak build
 
 Restore the old behaviour by putting `source-commit:` back on each part and
-dropping the registry entry; the commits the Flatpak used are in the manifest.
+dropping the `seed.py` entry; the commits the Flatpak used are in the manifest.
 
 ## Module mapping
 

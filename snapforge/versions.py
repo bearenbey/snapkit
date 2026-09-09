@@ -115,17 +115,19 @@ def deb_compare(a, b):
 deb_key = functools.cmp_to_key(deb_compare)
 
 
+def yaml_field_in(text, name):
+    """One top-level scalar out of recipe text, without a yaml parser."""
+    found = re.search(rf"(?m)^{re.escape(name)}:\s*(.*)$", text)
+    return found.group(1).strip().strip("'\"") if found else ""
+
+
 def yaml_field(path, name):
-    """A top-level field of a snapcraft.yaml or meta/snap.yaml, bare."""
+    """The same, read off a snapcraft.yaml or meta/snap.yaml on disk."""
     try:
         with open(path, encoding="utf-8", errors="replace") as handle:
-            lines = handle.read().splitlines()
+            return yaml_field_in(handle.read(), name)
     except FileNotFoundError:
         return ""
-    for line in lines:
-        if line.startswith(name + ":"):
-            return line.split(":", 1)[1].strip().strip("'\"")
-    return ""
 
 
 def yaml_version(path):
