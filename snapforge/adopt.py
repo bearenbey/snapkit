@@ -3,13 +3,9 @@
 import re
 from pathlib import Path
 
-from . import classify, recipe
+from . import classify, recipe, versions
 from .db import Snap, now
-from .versions import yaml_field_in as yaml_field
-
-# Where a recipe lives; the second is metadata for a hand-assembled tree.
-SNAPCRAFT_YAML = "snap/snapcraft.yaml"
-META_YAML = "overlay/meta/snap.yaml"
+from .recipe import META_YAML, SNAPCRAFT_YAML
 
 ICON_DIRS = ("snap/gui", "overlay/meta/gui", "meta/gui")
 ICON_SUFFIXES = (".png", ".svg")
@@ -29,17 +25,6 @@ def find_recipe(directory):
         return meta, False
     raise NotAProject(f"{directory.name} has neither {SNAPCRAFT_YAML} nor "
                       f"{META_YAML}")
-
-
-def yaml_block(text, field):
-    """A `field: |` block, dedented."""
-    found = re.search(rf"(?ms)^{re.escape(field)}:\s*\|\s*\n(.*?)(?=^\S|\Z)", text)
-    if not found:
-        return yaml_field(text, field)
-    lines = found.group(1).splitlines()
-    pad = min((len(line) - len(line.lstrip()) for line in lines if line.strip()),
-              default=0)
-    return "\n".join(line[pad:] for line in lines).strip()
 
 
 def find_repo(directory, text):
@@ -78,22 +63,6 @@ def find_artifact(directory, text):
     return name, classify.kind_of(name) if name else ""
 
 
-def version_from(source, artifact):
-    """The version a project is on, when its recipe does not carry one."""
-    for text in (source or "", artifact or ""):
-        found = re.search(r"/(?:download|tags)/v?([0-9][^/]*?)/", text)
-        if found:
-            return found.group(1).removesuffix("-stable")
-        # A tag can end at the file name: .../tags/v0.41.0.tar.gz
-        found = re.search(r"[/\-_]v?([0-9]+(?:\.[0-9]+)+)", text)
-        if found:
-            return found.group(1)
-        found = re.search(r"[-_]([0-9]{3,})[-_.]", text)
-        if found:                  # a bare build number, as sublime-text
-            return found.group(1)
-    return ""
-
-
 def source_in(text):
     """The first part's `source:`, where an adopted version hides."""
     named = recipe.sources(text)
@@ -104,12 +73,13 @@ def packaged_version(directory):
     """The version the project on disk is on now, or "" if it cannot be read."""
     directory = Path(directory)
     try:
-        recipe, _ = find_recipe(directory)
-        text = recipe.read_text(encoding="utf-8", errors="replace")
+        found, _ = find_recipe(directory)
+        text = found.read_text(encoding="utf-8", errors="replace")
     except (NotAProject, OSError):
         return ""
     artifact, _kind = find_artifact(directory, text)
-    return yaml_field(text, "version") or version_from(source_in(text), artifact)
+    return (recipe.field(text, "version")
+            or versions.from_name(source_in(text), artifact))
 
 
 def find_icon(directory):
@@ -142,13 +112,13 @@ def take_icon(snap, directory, store=None):
 def read(directory, repo=None):
     """Everything that can be read off an existing project, as a record."""
     directory = Path(directory).resolve()
-    recipe, is_snapcraft = find_recipe(directory)
-    text = recipe.read_text(encoding="utf-8", errors="replace")
+    found, is_snapcraft = find_recipe(directory)
+    text = found.read_text(encoding="utf-8", errors="replace")
 
-    name = yaml_field(text, "name") or directory.name.removesuffix("-snap")
+    name = recipe.field(text, "name") or directory.name.removesuffix("-snap")
     artifact, kind = find_artifact(directory, text)
     source = source_in(text)
-    version = yaml_field(text, "version") or version_from(source, artifact)
+    version = recipe.field(text, "version") or versions.from_name(source, artifact)
     has_pack = (directory / "pack.py").is_file()
 
     # An inferred repository is recorded but left inert.
@@ -164,13 +134,13 @@ def read(directory, repo=None):
         asset=artifact,
         asset_pattern=(classify.asset_pattern(artifact, version)
                        if confirmed and artifact and version and kind else ""),
-        summary=yaml_field(text, "summary"),
-        description=yaml_block(text, "description")[:400],
-        license=yaml_field(text, "license"),
-        confinement=yaml_field(text, "confinement") or "strict",
-        grade=yaml_field(text, "grade") or "stable",
-        base=yaml_field(text, "base") or "core24",
-        command=_first_command(text),
+        summary=recipe.field(text, "summary"),
+        description=recipe.block(text, "description")[:400],
+        license=recipe.field(text, "license"),
+        confinement=recipe.field(text, "confinement") or "strict",
+        grade=recipe.field(text, "grade") or "stable",
+        base=recipe.field(text, "base") or recipe.BASE,
+        command=recipe.first_command(text),
         # pack.py takes a Build; build.py is older and run as a program.
         pack="pack.py" if has_pack else "",
         build_with=("./build.py" if (directory / "build.py").is_file()
@@ -179,12 +149,7 @@ def read(directory, repo=None):
         recipe_text=text if is_snapcraft else "",
         created=now(),
     )
-    return snap, recipe, is_snapcraft, confirmed
-
-
-def _first_command(text):
-    found = re.search(r"(?m)^\s{4}command:\s*(\S+)", text)
-    return found.group(1) if found else ""
+    return snap, found, is_snapcraft, confirmed
 
 
 def reasons(snap, is_snapcraft, confirmed=False):

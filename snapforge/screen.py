@@ -31,9 +31,6 @@ STATES = {
 }
 
 
-def look_of(state):
-    """(long label, short label, style, glyph) for a state, known or not."""
-    return STATES.get(state, (state, state, "", "·"))
 # How many of the find box's matches are drawn, and so can be chosen.
 MATCHES_SHOWN = 5
 # What a record shows above its recipe, and how tall that makes the head.
@@ -84,15 +81,6 @@ HELP = (
 )
 
 
-def advertised():
-    """Every key the dashboard tells a person about, footer and keys page."""
-    keys = {key for key, _ in KEYS} | {key for key, _ in SHORT_KEYS}
-    for _, pairs in HELP:
-        for key, _ in pairs:
-            keys.update(key.split())
-    return keys
-
-
 ACCENT = "#4ce0ff"          # the one colour that means "this, here"
 EDGE = "grey42"             # panel borders, which should be seen and not read
 CURSOR_ROW = "on grey15"
@@ -102,6 +90,25 @@ PARTIAL = ("", "▏", "▎", "▍", "▌", "▋", "▊", "▉")
 LOG_HEIGHT = 8
 INSPECTOR = 40              # columns the inspector takes when there is room
 SPLIT_AT = 108              # ... and the width below which there is not
+
+# The columns every width gets, as rich is told them; the rail comes first.
+COLUMNS = (("NAME", 18), ("BUILT", 15), ("UPSTREAM", 15), ("STATUS", 22))
+# And the ones that go in while there is room; squeezed is worse than absent.
+OPTIONAL = (("KIND", 9), ("AGE", 5), ("REPOSITORY", 24))
+
+
+def look_of(state):
+    """(long label, short label, style, glyph) for a state, known or not."""
+    return STATES.get(state, (state, state, "", "·"))
+
+
+def advertised():
+    """Every key the dashboard tells a person about, footer and keys page."""
+    keys = {key for key, _ in KEYS} | {key for key, _ in SHORT_KEYS}
+    for _, pairs in HELP:
+        for key, _ in pairs:
+            keys.update(key.split())
+    return keys
 
 
 class Screen:
@@ -510,6 +517,7 @@ class Screen:
             subtitle=f"recipe {seen}   ↑↓ PgUp PgDn   q closes",
             box=box.ROUNDED, border_style=ACCENT, padding=(0, 1))
 
+
 # The modes that take the whole screen, by the name tui.MODES gives them.
 FULL_SCREEN = {
     "detail": Screen._details,
@@ -589,12 +597,6 @@ def _highlight(text, needle, base):
     out.append(text[where:where + len(needle)], style="bold " + ACCENT)
     out.append(text[where + len(needle):], style=base)
     return out
-
-
-# The columns every width gets, as rich is told them; the rail comes first.
-COLUMNS = (("NAME", 18), ("BUILT", 15), ("UPSTREAM", 15), ("STATUS", 22))
-# And the ones that go in while there is room; squeezed is worse than absent.
-OPTIONAL = (("KIND", 9), ("AGE", 5), ("REPOSITORY", 24))
 
 
 def _columns(table, width, compact):

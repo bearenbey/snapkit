@@ -1,4 +1,4 @@
-"""Version ordering, apt Packages indexes, and reading a packaged version."""
+"""Version ordering, versions spelled in file names, and apt Packages indexes."""
 
 import functools
 import re
@@ -115,24 +115,20 @@ def deb_compare(a, b):
 deb_key = functools.cmp_to_key(deb_compare)
 
 
-def yaml_field_in(text, name):
-    """One top-level scalar out of recipe text, without a yaml parser."""
-    found = re.search(rf"(?m)^{re.escape(name)}:\s*(.*)$", text)
-    return found.group(1).strip().strip("'\"") if found else ""
-
-
-def yaml_field(path, name):
-    """The same, read off a snapcraft.yaml or meta/snap.yaml on disk."""
-    try:
-        with open(path, encoding="utf-8", errors="replace") as handle:
-            return yaml_field_in(handle.read(), name)
-    except FileNotFoundError:
-        return ""
-
-
-def yaml_version(path):
-    """The `version:` field of a snapcraft.yaml or meta/snap.yaml."""
-    return yaml_field(path, "version")
+def from_name(source, artifact):
+    """The version spelled in a source url or a file name, or "" if neither."""
+    for text in (source or "", artifact or ""):
+        found = re.search(r"/(?:download|tags)/v?([0-9][^/]*?)/", text)
+        if found:
+            return found.group(1).removesuffix("-stable")
+        # A tag can end at the file name: .../tags/v0.41.0.tar.gz
+        found = re.search(r"[/\-_]v?([0-9]+(?:\.[0-9]+)+)", text)
+        if found:
+            return found.group(1)
+        found = re.search(r"[-_]([0-9]{3,})[-_.]", text)
+        if found:                  # a bare build number, as sublime-text
+            return found.group(1)
+    return ""
 
 
 def apt_stanza(index_url, package, want="", want_arch=""):

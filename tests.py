@@ -551,6 +551,40 @@ def recipes():
                                 description="b", license_id="", kind="archive",
                                 url="u", command="bin/d", traits={"terminal"})
             assert want in text, f"{summary!r}: {text.splitlines()[5]}"
+    @check("the readers take a field, a block and a command off recipe text")
+    def _():
+        text = ("name: demo\nversion: '1.2'\nsummary: \"a: thing\"\n"
+                "description: |\n  first line\n\n  third line\nconfinement: classic\n"
+                "apps:\n  demo:\n    command: bin/demo\n"
+                "parts:\n  demo:\n    source: https://h/demo.deb\n")
+        same(recipe.field(text, "version"), "1.2")
+        same(recipe.field(text, "summary"), "a: thing", "quotes are stripped")
+        same(recipe.field(text, "grade"), "", "an absent field is empty")
+        same(recipe.block(text, "description"), "first line\n\nthird line")
+        same(recipe.block(text, "summary"), "a: thing", "a one-line value")
+        same(recipe.first_command(text), "bin/demo")
+        same(recipe.sources(text), [("demo", "https://h/demo.deb")])
+        # `source:` only counts inside parts:, and only under a part name.
+        same(recipe.sources("source: x\nparts:\n  source: y\n"), [])
+
+    @check("metadata_file prefers the overlay's snap.yaml, and is_classic reads it")
+    def _():
+        with tempfile.TemporaryDirectory() as home:
+            here = Path(home)
+            same(recipe.metadata_file(here), None, "nothing there yet")
+            assert not recipe.is_classic(here)
+            (here / "snap").mkdir()
+            (here / "snap" / "snapcraft.yaml").write_text("confinement: strict\n")
+            same(recipe.metadata_file(here), here / recipe.SNAPCRAFT_YAML)
+            assert not recipe.is_classic(here)
+            (here / "overlay" / "meta").mkdir(parents=True)
+            (here / recipe.META_YAML).write_text("confinement: classic\n")
+            same(recipe.metadata_file(here), here / recipe.META_YAML,
+                 "the assembled tree's own metadata wins")
+            assert recipe.is_classic(here)
+            same(recipe.field_of(here / "nowhere.yaml", "name"), "",
+                 "a missing file reads as empty, not as an error")
+
     @check("a recipe with no url to repoint is left alone, not shredded")
     def _():
         # "" is in every string, so every source: line was rewritten around it.
@@ -1233,16 +1267,16 @@ def projects():
             same((directory / "snap/snapcraft.yaml").read_text(), edited,
                  "the edit was written over")
             same(snap.snapcraft_yaml, edited, "the register did not learn it")
-    @check("version_from reads a version out of a source url")
+    @check("from_name reads a version out of a source url")
     def _():
-        from snapforge.adopt import version_from
+        from snapforge.versions import from_name
         for source, want in (
                 ("https://github.com/mpv-player/mpv/archive/refs/tags/v0.41.0.tar.gz", "0.41.0"),
                 ("https://ffmpeg.org/releases/ffmpeg-9.0.1.tar.xz", "9.0.1"),
                 ("https://github.com/o/o/releases/download/v0.32.15/o-linux.tar.zst", "0.32.15"),
                 ("https://github.com/irssi/irssi/releases/download/1.4.5/irssi-1.4.5.tar.xz", "1.4.5"),
                 ("./sublime-text_build-4200_amd64.deb", "4200")):
-            same(version_from(source, ""), want, source)
+            same(from_name(source, ""), want, source)
 
 
 def checking():

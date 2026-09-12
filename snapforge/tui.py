@@ -44,6 +44,11 @@ class Row:
     def behind(self):
         return self.state == "behind"
 
+    def take(self, found):
+        """What a check found, onto this row, as one change."""
+        return dict(state=found.state, release=found.release, asset=found.asset,
+                    latest=found.latest, note=found.note or found.problem)
+
     def matches(self, needle):
         """Whether this row is one a filter of `needle` keeps."""
         if not needle:
@@ -224,9 +229,7 @@ class Dashboard:
             self.put(row, state="error", note=f"{type(exc).__name__}: {exc}")
             self.say(f"{row.name}: {row.note}", "red")
             return
-        self.put(row, state=found.state, release=found.release,
-                 asset=found.asset, latest=found.latest,
-                 note=found.note or found.problem)
+        self.put(row, **row.take(found))
         if found.note:
             self.say(f"{row.name}: {found.note}", "yellow")
         if found.state == "error":
@@ -416,10 +419,7 @@ class Dashboard:
                      f"{sources.label(snap, folder='its own folder')} -- "
                      f"upstream has {release.version}", "bold green")
             if row:
-                found = update.situation(snap)
-                self.put(row, state=found.state, latest=found.latest,
-                         release=found.release, asset=found.asset,
-                         note=found.note or found.problem)
+                self.put(row, **row.take(update.situation(snap)))
             self.idle()
 
         self.run_job("tracking", work)

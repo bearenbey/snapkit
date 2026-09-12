@@ -119,16 +119,6 @@ def _local(config, want, directory):
                     path=str(found.path))
 
 
-def resolve(config, want=None, directory=None):
-    """What this upstream offers now. Raises NetworkError if it cannot say."""
-    kind = ALIASES.get(config.get("kind", ""), config.get("kind", ""))
-    shape = RESOLVERS.get(kind)
-    if shape is None:
-        raise BadUpstream(f"no such upstream kind: {kind or '(none)'} "
-                          f"(try: {', '.join(sorted(RESOLVERS))})")
-    return shape(config, want, directory)
-
-
 # --- saying which shape, and what it needs to be told ------------------------
 
 class BadUpstream(ValueError):
@@ -250,13 +240,26 @@ def parse_pairs(words):
 ALIASES = {"folder": "local"}
 
 
-def configure(kind, values):
-    """A checked upstream config, or a refusal that says what is missing."""
+def shape_of(kind):
+    """The shape a kind names, alias or not, or a refusal listing the kinds."""
     kind = ALIASES.get(kind, kind)
     shape = SPEC.get(kind)
     if shape is None:
         raise BadUpstream(f"no such upstream kind: {kind or '(none)'} "
                           f"(try: {', '.join(sorted(SPEC))})")
+    return shape
+
+
+def resolve(config, want=None, directory=None):
+    """What this upstream offers now. Raises NetworkError if it cannot say."""
+    shape = shape_of(config.get("kind", ""))
+    return shape.resolve(config, want, directory)
+
+
+def configure(kind, values):
+    """A checked upstream config, or a refusal that says what is missing."""
+    shape = shape_of(kind)
+    kind = shape.kind
     known = {**shape.keys, **COMMON}
     for key in values:
         if key not in known:

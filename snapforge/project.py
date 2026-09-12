@@ -13,7 +13,6 @@ from . import (arch, classify, depends, github, inspect, local, net, recipe,
 from . import build as buildlib
 from .db import Snap, now
 from .net import NetworkError
-from .versions import yaml_field
 
 
 class ForgeError(Exception):
@@ -387,8 +386,8 @@ def write(snap, reporter):
         reporter.detail(f"{snap.name} keeps its own build; nothing to write")
         return directory
 
-    (directory / "snap").mkdir(parents=True, exist_ok=True)
-    yaml_path = directory / "snap" / "snapcraft.yaml"
+    yaml_path = snap.project_recipe
+    yaml_path.parent.mkdir(parents=True, exist_ok=True)
     yaml_path.write_text(snap.snapcraft_yaml, encoding="utf-8")
 
     # Written once and left alone: a README is a thing people rewrite.
@@ -428,14 +427,6 @@ def _restore_launcher(snap, directory, reporter):
     return True
 
 
-def is_classic(snap):
-    """Whether installing this one needs --classic, read off its own recipe."""
-    for name in ("overlay/meta/snap.yaml", "snap/snapcraft.yaml"):
-        if (Path(snap.path) / name).is_file():
-            return yaml_field(Path(snap.path) / name, "confinement") == "classic"
-    return False
-
-
 def builds(snap):
     """Every .snap the project has made, oldest first; none if no project."""
     directory = snap.path
@@ -447,7 +438,7 @@ def builds(snap):
 
 def take_recipe(snap, reporter=None):
     """Take an edited snapcraft.yaml on disk back into the record."""
-    yaml_path = snap.path / "snap" / "snapcraft.yaml"
+    yaml_path = snap.project_recipe
     if not yaml_path.is_file():
         return False
     text = yaml_path.read_text(encoding="utf-8")
@@ -462,7 +453,7 @@ def take_recipe(snap, reporter=None):
 def install_command(snap, built):
     """What to run to install a snap that was just built here."""
     return ["sudo", "snap", "install", "--dangerous",
-            *(["--classic"] if is_classic(snap) else []), str(built)]
+            *(["--classic"] if recipe.is_classic(snap.path) else []), str(built)]
 
 
 def package(snap, reporter, build_it=True, extra=()):
@@ -571,8 +562,8 @@ def _run_command(snap, directory, reporter, extra):
         command, shell = snap.build_with, True
         reporter.step(f"{snap.build_with} ({directory})")
     else:
-        if not (directory / "snap" / "snapcraft.yaml").is_file():
-            raise ForgeError(f"no snap/snapcraft.yaml at {directory} -- "
+        if not snap.project_recipe.is_file():
+            raise ForgeError(f"no {recipe.SNAPCRAFT_YAML} at {directory} -- "
                              f"write it out first")
         try:
             buildlib.snapcraft_preflight("--destructive-mode" in extra, reporter)

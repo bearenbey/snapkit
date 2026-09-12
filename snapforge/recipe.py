@@ -1,24 +1,82 @@
-"""Writing the snapcraft.yaml."""
+"""The snapcraft.yaml: writing one, and reading one back without a parser."""
 
 import json
 import re
 import textwrap
+from pathlib import Path
 
 from . import arch, classify
 from .rewrite import repoint_lines
 
+BASE = "core24"
+
+# Where a recipe lives; the second is metadata for a hand-assembled tree.
+SNAPCRAFT_YAML = "snap/snapcraft.yaml"
+META_YAML = "overlay/meta/snap.yaml"
+
+# Kept short: an interface is easier to add later than to justify now.
+PLUGS = {
+    "cli": ["home", "network", "removable-media"],
+    "gui": ["home", "network", "audio-playback", "opengl", "removable-media"],
+    "electron": ["browser-support", "audio-record", "camera",
+                 "password-manager-service"],
+}
+
+MAX_NAME = 40
+
+_YAML_WORDS = frozenset(("true", "false", "yes", "no", "on", "off", "null", "~"))
+
 # A part name sits two spaces in, its settings deeper than that.
 PART_NAME = re.compile(r"^  ([A-Za-z0-9][\w.+-]*):\s*$")
 PART_SOURCE = re.compile(r"^\s+source:\s*(.+?)\s*$")
+
+# snapcraft knows fewer extensions than the classifier accepts, so say which.
+SOURCE_TYPES = ((".zip", "zip"), (".7z", "7z"))
+
+
+# -- reading one back ---------------------------------------------------------
+#
+# The only readers of recipe text in the package. What a build consumes,
+# what an update repoints, what an import takes over and what the database
+# carries are all read here, so they cannot disagree on what a line means.
+
+def field(text, name):
+    """One top-level scalar out of recipe text, quotes stripped."""
+    found = re.search(rf"(?m)^{re.escape(name)}:\s*(.*)$", text)
+    return found.group(1).strip().strip("'\"") if found else ""
+
+
+def field_of(path, name):
+    """The same, read off a snapcraft.yaml or meta/snap.yaml on disk."""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as handle:
+            return field(handle.read(), name)
+    except FileNotFoundError:
+        return ""
+
+
+def block(text, name):
+    """A `name: |` block, dedented; a one-line value where it is not one."""
+    found = re.search(rf"(?ms)^{re.escape(name)}:\s*\|\s*\n(.*?)(?=^\S|\Z)", text)
+    if not found:
+        return field(text, name)
+    lines = found.group(1).splitlines()
+    pad = min((len(line) - len(line.lstrip()) for line in lines if line.strip()),
+              default=0)
+    return "\n".join(line[pad:] for line in lines).strip()
+
+
+def first_command(text):
+    """The first app's `command:`, which is the program the snap runs."""
+    found = re.search(r"(?m)^\s{4}command:\s*(\S+)", text)
+    return found.group(1) if found else ""
 
 
 def sources(text):
     """Every part's `source:`, as (part, value) pairs, in recipe order.
 
     Quotes are stripped. A `source:` outside `parts:` is not a part's and
-    is not returned. This is the one reader of those lines: what a build
-    consumes, what an update repoints and what the database has to carry
-    are all read from here, so they cannot disagree on what counts.
+    is not returned.
     """
     found, name, in_parts = [], "", False
     for line in text.splitlines():
@@ -36,21 +94,27 @@ def sources(text):
             found.append((name, source.group(1).strip("'\"")))
     return found
 
-BASE = "core24"
 
-# Kept short: an interface is easier to add later than to justify now.
-PLUGS = {
-    "cli": ["home", "network", "removable-media"],
-    "gui": ["home", "network", "audio-playback", "opengl", "removable-media"],
-    "electron": ["browser-support", "audio-record", "camera",
-                 "password-manager-service"],
-}
+def metadata_file(directory):
+    """The file that says what a project builds, or None when neither is there.
 
-MAX_NAME = 40
+    A project that assembles its own tree keeps its metadata in the overlay,
+    and that is the one snapcraft packs, so it wins over the recipe.
+    """
+    for name in (META_YAML, SNAPCRAFT_YAML):
+        path = Path(directory) / name
+        if path.is_file():
+            return path
+    return None
 
 
-_YAML_WORDS = frozenset(("true", "false", "yes", "no", "on", "off", "null", "~"))
+def is_classic(directory):
+    """Whether the project asks for classic confinement, off its own metadata."""
+    found = metadata_file(directory)
+    return found is not None and field_of(found, "confinement") == "classic"
 
+
+# -- writing one --------------------------------------------------------------
 
 def snap_name(text):
     """A snap name out of a repository name."""
@@ -106,10 +170,6 @@ def plugs_for(traits):
             if plug not in chosen:
                 chosen.append(plug)
     return chosen
-
-
-# snapcraft knows fewer extensions than the classifier accepts, so say which.
-SOURCE_TYPES = ((".zip", "zip"), (".7z", "7z"))
 
 
 def source_type_for(url):

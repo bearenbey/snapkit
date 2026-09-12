@@ -15,7 +15,6 @@ from pathlib import Path
 from . import depends, elf, platform, recipe
 from .inspect import control_fields, missing_libraries
 from .report import PlainReporter
-from .versions import yaml_field, yaml_version
 
 # The oldest snapkit whose Build a pack.py written against this one runs on.
 # A project with a pack.py is published with this as what it needs, and a
@@ -31,6 +30,7 @@ GNOME_SNAP = Path("/snap/gnome-46-2404/current")
 # installed here: the base, the extension's platform snap, and mesa.
 PLATFORM_SNAPS = (Path("/snap/core24/current"), GNOME_SNAP,
                   Path("/snap/mesa-2404/current"))
+
 
 def file_source_parts(yaml_path):
     """The parts fed from a file here, as (part, file) pairs."""
@@ -50,7 +50,7 @@ def stale_parts(directory):
     if not packed:
         return []
     return [name for name, source
-            in file_source_parts(directory / "snap" / "snapcraft.yaml")
+            in file_source_parts(directory / recipe.SNAPCRAFT_YAML)
             if source.stat().st_mtime > max(packed)]
 
 
@@ -111,21 +111,21 @@ class Build:
 
     @property
     def meta_yaml(self):
-        return self.directory / "overlay" / "meta" / "snap.yaml"
+        return self.directory / recipe.META_YAML
 
     @property
     def snapcraft_yaml(self):
-        return self.directory / "snap" / "snapcraft.yaml"
+        return self.directory / recipe.SNAPCRAFT_YAML
 
     @property
     def yaml(self):
         """Whichever of the two carries this project's metadata."""
-        return self.meta_yaml if self.meta_yaml.is_file() else self.snapcraft_yaml
+        return recipe.metadata_file(self.directory) or self.snapcraft_yaml
 
     @property
     def version(self):
         """The version the packaging currently spells out."""
-        version = yaml_version(self.yaml)
+        version = recipe.field_of(self.yaml, "version")
         if not version:
             die(f"could not read version: from {self.yaml}")
         return version
@@ -133,7 +133,7 @@ class Build:
     @property
     def classic(self):
         """Whether the recipe asks for classic confinement."""
-        return yaml_field(self.yaml, "confinement") == "classic"
+        return recipe.is_classic(self.directory)
 
     def recipe_source(self, pattern):
         """The file a part's `source:` names, if one matches the glob."""

@@ -33,7 +33,7 @@ RECORD = ("repo", "url", "kind", "version", "tag", "asset", "asset_pattern",
 AT_ONCE = 8
 
 # A project's own source, as opposed to a download or something a build made.
-INCLUDE = ("snap/snapcraft.yaml", "snap/hooks/**", "snap/local/**",
+INCLUDE = (recipe.SNAPCRAFT_YAML, "snap/hooks/**", "snap/local/**",
            "snap/gui/**", "overlay/**", "launcher/**", "vendor/**",
            "pack.py", "diagnose.py", "launcher", "README.md")
 
@@ -207,7 +207,7 @@ def unmet_sources(directory, kept, artifact=""):
     names = {artifact} if isinstance(artifact, str) else set(artifact)
     names |= {".", ""}
     unmet = []
-    for source in local_sources((directory / "snap" / "snapcraft.yaml").read_text()):
+    for source in local_sources((directory / recipe.SNAPCRAFT_YAML).read_text()):
         if source in names:
             continue
         if source in published:
@@ -278,7 +278,7 @@ def publish(snaps, into, reporter=None):
 
     for snap in snaps:
         directory = Path(snap.path)
-        if not (directory / "snap" / "snapcraft.yaml").is_file():
+        if not (directory / recipe.SNAPCRAFT_YAML).is_file():
             continue
         kept, skipped = project_files(directory)
         for relative in kept:

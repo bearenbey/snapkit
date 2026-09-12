@@ -285,7 +285,7 @@ def _update_recipe(snap, release, asset, reporter):
 
     if snap.source_anchor:
         # Anchored: a recipe can name more than one source.
-        yaml_path = snap.path / "snap" / "snapcraft.yaml"
+        yaml_path = snap.project_recipe
         if not yaml_path.is_file():
             raise ForgeError(f"no recipe at {yaml_path} -- {snap.name} is anchored "
                              f"to a line in it, so there has to be one")

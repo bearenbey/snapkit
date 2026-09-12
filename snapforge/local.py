@@ -6,8 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import classify, inspect
-from .adopt import version_from
-from .versions import deb_key, version_key
+from .versions import deb_key, from_name, version_key
 
 
 @dataclass
@@ -38,7 +37,7 @@ def _declared(path, field, kind=""):
 def version_of(path, kind=""):
     """The version this file is of, read from it where that is possible."""
     path = Path(path)
-    return _declared(path, "Version", kind) or version_from("", path.name)
+    return _declared(path, "Version", kind) or from_name("", path.name)
 
 
 @functools.lru_cache(maxsize=None)

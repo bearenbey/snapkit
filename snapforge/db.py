@@ -9,9 +9,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .github import parse_repo
+from .recipe import SNAPCRAFT_YAML
 
 # How many builds of one snap to keep the detail of.
 HISTORY_KEPT = 20
+
 
 def home():
     """Where the register and the generated projects live."""
@@ -101,7 +103,13 @@ class Snap:
 
     @property
     def recipe_path(self):
+        """The register's copy of the recipe, which survives the project."""
         return self.store / "recipes" / f"{self.name}.yaml"
+
+    @property
+    def project_recipe(self):
+        """The recipe as the project on disk has it, which snapcraft reads."""
+        return self.path / SNAPCRAFT_YAML
 
     @classmethod
     def from_dict(cls, data):
