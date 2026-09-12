@@ -246,7 +246,7 @@ def main(argv):
 
     if not dry:
         print()
-        print(f"{len(found)} registered in {db.path}")
+        print(f"{len(found)} registered in {db.root}")
     return 0
 
 

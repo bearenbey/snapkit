@@ -353,17 +353,12 @@ class Dashboard:
                 return
 
             # Beside the projects already here, not wherever this was started.
-            where = Path(next(iter(self.db.all())).path).parent \
-                if self.db.snaps else Path.cwd()
+            where = self.db.all()[0].path.parent if self.db.snaps else Path.cwd()
             taken = 0
             for name in new:
-                target = where / f"{name}-snap"
                 self.status = f"fetching {name}"
                 try:
-                    snap, _, _ = snapdb.install(name, target, found,
-                                                reporter=reporter,
-                                                store=self.db.root)
-                    self.db.add(snap, replace=True)
+                    snapdb.pull(self.db, name, where, found, reporter=reporter)
                     taken += 1
                 except (snapdb.DatabaseError, adopt.NotAProject) as exc:
                     self.say(f"{name}: {exc}", "yellow")
@@ -383,40 +378,28 @@ class Dashboard:
 
         def work():
             row = self.row_for(name)
-            if words[0] in ("none", "off"):
-                update.untrack(snap)
-                self.db.add(snap, replace=True)
-                self.say(f"{name} is not tracked against anything now",
-                         "yellow")
-                if row:
-                    self.put(row, state="untracked", latest="", note="")
-                return
-
+            self.status = f"tracking {name}"
             try:
-                if words[0] in ("repo", "github"):
-                    if len(words) != 2:
-                        raise sources.BadUpstream(
-                            f"{words[0]} needs one thing after it: owner/name")
-                    repo = github.parse_repo(words[1])
-                    self.status = f"reading the releases of {repo}"
-                    release, _chosen, _others = update.track_repo(snap, repo)
-                else:
-                    wanted = sources.configure(words[0],
-                                               sources.parse_pairs(words[1:]))
-                    self.status = f"resolving {sources.summarise(wanted)}"
-                    release = update.retrack(snap, wanted)
-            except (NetworkError, project.ForgeError,
-                    sources.BadUpstream) as exc:
+                tracked = update.track(snap, words, DashboardReporter(self, row))
+            except (NetworkError, project.ForgeError, ValueError) as exc:
                 # Written down untried, a wrong setting reads as up to date.
                 self.say(f"{name} was left as it was: {exc}", "red")
                 self.idle()
                 return
 
             self.db.add(snap, replace=True)
+            if tracked.untracked:
+                self.say(f"{name} is not tracked against anything now",
+                         "yellow")
+                if row:
+                    self.put(row, state="untracked", latest="", note="")
+                self.idle()
+                return
+            release = tracked.release
             for note in update.fitting(snap, release):
                 self.say(f"{name}: {note}", "yellow")
             self.say(f"{name} is tracked against "
-                     f"{sources.label(snap, folder='its own folder')} -- "
+                     f"{sources.label(snap)} -- "
                      f"upstream has {release.version}", "bold green")
             if row:
                 self.put(row, **row.take(update.situation(snap)))
@@ -530,7 +513,6 @@ class Dashboard:
         """Move one row onto the release its last check found, and build it."""
         row.state = "working"
         try:
-            project.take_recipe(row.snap, reporter)
             update.update(row.snap, row.release, row.asset, reporter)
             self.db.add(row.snap)
             row.latest = row.snap.version
@@ -556,7 +538,6 @@ class Dashboard:
             reporter = DashboardReporter(self, row)
             row.state = "working"
             self.status = f"building {row.name}"
-            project.take_recipe(row.snap, reporter)
             self._build(row.snap, reporter, row)
             self.idle()
 

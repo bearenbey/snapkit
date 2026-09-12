@@ -127,6 +127,27 @@ def soname_of(path):
     return read(path)[1]
 
 
+def reach(binary, bundled):
+    """Every soname reached from a binary, following what ships beside it.
+
+    `bundled` maps a soname to a file on disk; one of those is read in turn,
+    so what a library the payload brings needs itself is counted too.
+    """
+    seen, queue = set(), [Path(binary)]
+    while queue:
+        try:
+            names = needed(queue.pop())
+        except NotAnELF:
+            continue
+        for name in names:
+            if name in seen:
+                continue
+            seen.add(name)
+            if name in bundled:
+                queue.append(bundled[name])
+    return seen
+
+
 def is_elf(path):
     """Whether this file is an ELF object at all, without reading the rest."""
     try:

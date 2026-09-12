@@ -3,7 +3,7 @@
 import shutil
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import classify, github, local, net, recipe, rewrite, sources
@@ -148,6 +148,44 @@ def track_repo(snap, repo, tag=None, asset=None):
     return release, chosen, same_kind
 
 
+@dataclass
+class Tracked:
+    """What `track` did to a record, for a front end to say."""
+
+    release: object = None        # what the upstream has now; None if unresolved
+    untracked: bool = False
+    chosen: object = None         # repo: the file this snap is built from now
+    candidates: list = field(default_factory=list)   # repo: what it was chosen among
+    was_kind: str = ""            # repo: the kind before, when that changed
+
+
+def track(snap, words, reporter, tag=None, asset=None, force=False):
+    """Point a snap where `words` say, spelled the same on both front ends.
+
+    `none` stops checking it, `repo owner/name` goes back to GitHub releases,
+    and `kind name=value ...` is any other upstream, resolved before it is
+    written down or, with `force`, written down unresolved. The snap is
+    changed and not saved; that is the caller's.
+    """
+    kind, rest = words[0], words[1:]
+    if kind in ("none", "off"):
+        untrack(snap)
+        return Tracked(untracked=True)
+    if kind in ("repo", "github"):
+        if len(rest) != 1:
+            raise sources.BadUpstream(f"{kind} needs one thing after it: "
+                                      f"owner/name")
+        repo = github.parse_repo(rest[0])
+        reporter.step(f"{snap.name}: reading the releases of {repo}")
+        was = snap.kind
+        release, chosen, candidates = track_repo(snap, repo, tag, asset)
+        return Tracked(release, chosen=chosen, candidates=candidates,
+                       was_kind=was if was and chosen.kind != was else "")
+    wanted = sources.configure(kind, sources.parse_pairs(rest))
+    reporter.step(f"{snap.name}: {sources.summarise(wanted)}")
+    return Tracked(retrack(snap, wanted, force))
+
+
 def retrack(snap, upstream, force=False):
     """Point a snap at another upstream, resolved first or not written."""
     was = dict(snap.upstream)
@@ -247,6 +285,8 @@ def _dressed(snap, release, asset):
 
 def update(snap, release, asset, reporter):
     """Move a registered snap onto a newer release."""
+    # An edit on disk is what gets moved, not the register's older copy.
+    take_recipe(snap, reporter)
     if snap.style == "artifact":
         _update_artifact(snap, release, asset, reporter)
     else:

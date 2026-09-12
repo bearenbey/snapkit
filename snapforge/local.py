@@ -40,7 +40,7 @@ def version_of(path, kind=""):
     return _declared(path, "Version", kind) or from_name("", path.name)
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _ends_the_name(spelled, missed):
     """Where the name stops and the download's description starts."""
     return re.compile(

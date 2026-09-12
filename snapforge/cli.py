@@ -170,7 +170,7 @@ def main(argv=None):
 def cmd_create(db, args, reporter):
     text = " ".join(args.rest).strip()
     if not text:
-        text = ask_what_to_package(db, args)
+        text = ask_what_to_package(args)
     if args.local or local.looks_like_path(text):
         return create_from_file(db, args, reporter, text)
     known = db.find_repo(github.parse_repo(text))
@@ -239,7 +239,7 @@ def _finish_create(db, args, reporter, made, text):
     return 0
 
 
-def ask_what_to_package(db, args):
+def ask_what_to_package(args):
     """With nothing named: what is in this folder, or a repository."""
     here = Path(args.directory).expanduser() if args.directory else Path.cwd()
     found = local.find(here)
@@ -434,7 +434,7 @@ def print_table(snaps):
 
 def upstream_of(snap):
     """Where this snap's releases come from, for the listing."""
-    return sources.label(snap, folder="its own folder") or "-- not tracked"
+    return sources.label(snap) or "-- not tracked"
 
 
 def cmd_show(db, args, reporter):
@@ -516,7 +516,6 @@ def update_one(db, args, reporter, snap):
     if not found.behind:
         reporter.detail(f"{snap.name} is already at {snap.version}")
         return 0
-    project.take_recipe(snap, reporter)
     update.update(snap, found.release, found.asset, reporter)
     db.add(snap)
     if not args.no_build:
@@ -544,67 +543,41 @@ def cmd_track(db, args, reporter):
     words = args.rest[1:]
     if not words:
         return show_tracking(snap)
-
-    kind, rest = words[0], words[1:]
-    if kind in ("none", "off"):
-        return untrack(db, snap, reporter)
-    if kind in ("repo", "github"):
-        return track_repo(db, args, reporter, snap, rest)
-    wanted = sources.configure(kind, sources.parse_pairs(rest))
-    return settle(db, args, reporter, snap, wanted)
-
-
-def track_repo(db, args, reporter, snap, rest):
-    """Point a snap back at GitHub releases, and relearn which file to take."""
-    if not rest:
-        die(f"track ... repo needs a repository: "
-            f"snapkit track {snap.name} repo owner/name")
-    repo = github.parse_repo(rest[0])
-    reporter.step(f"{snap.name}: reading the releases of {repo}")
-    was = snap.kind
-    release, chosen, same_kind = update.track_repo(snap, repo, args.tag,
-                                                   args.asset)
-    _show_runners_up(reporter, same_kind, args.asset, "this release")
-    if was and chosen.kind != was:
-        reporter.detail(f"{repo} publishes no {was}, so this snap is "
-                        f"built from {chosen.kind} now")
-    return settle(db, args, reporter, snap, None, release=release)
+    try:
+        tracked = update.track(snap, words, reporter, tag=args.tag,
+                               asset=args.asset, force=args.force)
+    except (NetworkError, project.ForgeError) as exc:
+        die(f"{snap.name} was left as it was, because that upstream did "
+            f"not resolve:\n           {exc}\n\n"
+            f"           `snapkit track kinds` says what {words[0]} takes; "
+            f"--force writes an upstream down unresolved")
+    return settle(db, args, reporter, snap, tracked)
 
 
-def untrack(db, snap, reporter):
-    """Stop checking a snap against anything at all."""
-    update.untrack(snap)
+def settle(db, args, reporter, snap, tracked):
+    """Write down what `track` did, and say what the record still needs."""
     db.add(snap, replace=True)
-    reporter.result(f"{snap.name} is not tracked against anything now")
-    reporter.detail(f"`snapkit check` will leave it alone until "
-                    f"`snapkit track {snap.name} ...` says where to look")
-    return 0
+    if tracked.untracked:
+        reporter.result(f"{snap.name} is not tracked against anything now")
+        reporter.detail(f"`snapkit check` will leave it alone until "
+                        f"`snapkit track {snap.name} ...` says where to look")
+        return 0
 
-
-def settle(db, args, reporter, snap, wanted, release=None):
-    """Resolve what was just set, then write it down -- or put it back."""
-    if wanted is not None:
-        reporter.step(f"{snap.name}: {sources.summarise(wanted)}")
-        try:
-            release = update.retrack(snap, wanted, args.force)
-        except (NetworkError, project.ForgeError) as exc:
-            die(f"{snap.name} was left as it was, because that upstream did "
-                f"not resolve:\n           {exc}\n\n"
-                f"           `snapkit track kinds` says what "
-                f"{wanted.get('kind', '')} takes; --force writes it down "
-                f"unresolved")
-        if release is None:
-            reporter.warn("written down without resolving it")
-
-    if release is not None:
+    _show_runners_up(reporter, tracked.candidates, args.asset, "this release")
+    if tracked.was_kind:
+        reporter.detail(f"{snap.repo} publishes no {tracked.was_kind}, so "
+                        f"this snap is built from {tracked.chosen.kind} now")
+    release = tracked.release
+    if release is None:
+        reporter.warn("written down without resolving it")
+    else:
         reporter.detail(f"upstream has {release.version}")
-        asset = getattr(release, "asset", "") or getattr(snap, "asset", "")
+        asset = getattr(release, "asset", "") or snap.asset
         if asset:
             reporter.detail(f"which it publishes as {asset}")
         for note in update.fitting(snap, release):
             reporter.warn(note)
 
-    db.add(snap, replace=True)
     reporter.result(f"{snap.name} is tracked against {upstream_of(snap)}")
     if snap.upstream and snap.repo:
         reporter.detail(f"{snap.repo} is left on the record but is no longer "
@@ -661,7 +634,6 @@ def cmd_build(db, args, reporter):
     if not args.rest:
         die("build needs a name")
     snap = _one_of(db, args.rest[0])
-    project.take_recipe(snap, reporter)
     _build_recorded(db, snap, args, reporter)
     return 0
 
@@ -736,7 +708,7 @@ def _drift_mark(here, published):
     """Whether this snap is registered here, and whether it has moved on."""
     if here is None:
         return " "
-    if not Path(here.path).is_dir():
+    if not here.path.is_dir():
         return "*"
     if snapdb.local_fingerprint(here.path) != published.get("fingerprint"):
         return "~"
@@ -744,20 +716,14 @@ def _drift_mark(here, published):
 
 
 def db_pull(db, args, rest, found, reporter):
-    """Write the named projects here, or all of them, and register them.
-
-    Registered, so what was pulled can be checked, updated and built by
-    name; a project directory the register does not know is only files.
-    """
+    """Write the named projects here, or all of them, and register them."""
     wanted = rest or sorted(found["snaps"])
     where = Path(args.directory) if args.directory else Path.cwd()
     done, failed = 0, []
     for name in wanted:
-        target = where / f"{name}-snap"
-        reporter.step(f"{name} -> {target}")
+        reporter.step(f"{name} -> {snapdb.project_dir(where, name)}")
         try:
-            snap, _recipe, _is_snapcraft = snapdb.install(
-                name, target, found, store=db.root)
+            snapdb.pull(db, name, where, found)
         except (snapdb.DatabaseError, adopt.NotAProject) as exc:
             # One bad snap should not stop the rest; named outright, it does.
             if rest:
@@ -765,7 +731,6 @@ def db_pull(db, args, rest, found, reporter):
             reporter.warn(str(exc))
             failed.append(name)
             continue
-        db.add(snap, replace=True)
         done += 1
     reporter.result(f"pulled and registered {done} of {len(wanted)}")
     if failed:
@@ -782,15 +747,13 @@ def cmd_install(db, args, reporter):
     snap = db.snaps.get(name)
     if snap is None:
         where = Path(args.directory) if args.directory else Path.cwd()
-        target = where / f"{name}-snap"
         reporter.step(f"fetching {name} from the database")
         try:
-            snap, recipe, _is_snapcraft = snapdb.install(
-                name, target, reporter=reporter, store=db.root)
+            snap, recipe, _is_snapcraft = snapdb.pull(db, name, where,
+                                                      reporter=reporter)
         except adopt.NotAProject as exc:
             die(f"{name} was fetched but does not read as a project: {exc}")
         reporter.detail(f"{snap.name} {snap.version}  ({recipe})")
-        db.add(snap, replace=True)
     else:
         reporter.detail(f"{name} is already registered here")
 
@@ -803,7 +766,6 @@ def cmd_install(db, args, reporter):
         reporter.result(f"{name} is ready in {snap.path}")
         return 0
 
-    project.take_recipe(snap, reporter)
     built = _build_recorded(db, snap, args, reporter)
     if not can_ask(args):
         reporter.detail(f"install it with: sudo snap install --dangerous {built}")

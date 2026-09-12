@@ -174,10 +174,6 @@ class Database:
 
     # -- where things are ----------------------------------------------------
 
-    @property
-    def path(self):
-        return self.root
-
     def record_path(self, name):
         return self.root / "snaps" / f"{name}.json"
 

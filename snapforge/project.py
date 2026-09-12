@@ -458,6 +458,7 @@ def install_command(snap, built):
 
 def package(snap, reporter, build_it=True, extra=()):
     """Build a snap from its record, without going upstream for anything."""
+    # Before the write, or the write would put the register's copy back.
     take_recipe(snap, reporter)
     write(snap, reporter)
     if not build_it:
@@ -496,6 +497,8 @@ def build(snap, reporter, extra=()):
     directory = snap.path
     if not directory.is_dir():
         raise ForgeError(f"no project at {directory} -- write it out first")
+    # The register should say what was built, edits and all.
+    take_recipe(snap, reporter)
     before = {p.name for p in directory.glob("*.snap")}
     if not snap.build_with:
         clean_stale_parts(directory, reporter, extra)

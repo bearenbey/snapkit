@@ -7,6 +7,7 @@
 ./tests.py                    everything that needs no network
 ./tests.py recipes dashboard  only those groups, by name
 ./tests.py --online           everything, and the ones that talk to GitHub
+python3 -m tests              the same, as the package it is
 ```
 
 CI also runs `ruff check`, with the rule set in `pyproject.toml`: pyflakes,
@@ -18,10 +19,12 @@ the tool does. The offline tests build their own `.deb` rather than
 downloading one, so the archive reader is checked against bytes the test file
 made and knows the shape of.
 
-One function per subject: upstreams, architectures, recipes, register,
-payloads, reading_payloads, projects, checking, dashboard, updater, packing,
-from_a_file, database, tracking, dependencies, imports. A failure names the
-area before it names the case.
+The suite is the `tests` package: one module per subject (upstreams,
+architectures, recipes, register, payloads, reading_payloads, projects,
+checking, dashboard, updater, packing, from_a_file, database, tracking,
+dependencies, imports), and importing one runs its checks. What every module
+shares, the `check` decorator, the fakes and the `.deb` and ELF makers, is in
+`tests/harness.py`. A failure names the area before it names the case.
 
 Several exist because of bugs that were in here:
 
@@ -65,8 +68,8 @@ Several exist because of bugs that were in here:
   architectures without eight machines
 - the terminal and the dashboard each had their own copy of the rule that an
   upstream which resolves to nothing must not be written down, which is the
-  one rule here that cannot be got wrong quietly: it now lives in
-  `update.retrack` and both are tested against it
+  one rule here that cannot be got wrong quietly: the whole of `track` now
+  lives in `update.track`, and both front ends go through it
 - `select()` watches a file descriptor and `sys.stdin` is buffered, so
   reading one character of an arrow key pulled the rest into Python's buffer
   where `select` could not see it; the sequence read as a lone Escape, and

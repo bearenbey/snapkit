@@ -3,7 +3,7 @@
 import re
 from pathlib import Path
 
-from . import classify, recipe, versions
+from . import classify, recipe, sources, versions
 from .db import Snap, now
 from .recipe import META_YAML, SNAPCRAFT_YAML
 
@@ -159,9 +159,7 @@ def reasons(snap, is_snapcraft, confirmed=False):
         notes.append(f"tracked against its own folder: a newer "
                      f"{snap.upstream.get('glob')} put there reads as an update")
     elif snap.upstream:
-        where = snap.upstream.get("package") or snap.upstream.get("url") or ""
-        notes.append(f"tracked against {snap.upstream.get('kind')}"
-                     + (f" ({where})" if where else ""))
+        notes.append(f"tracked against {sources.label(snap)}")
     elif not snap.repo:
         notes.append("no upstream repository found -- it will not be checked "
                      "for new releases")

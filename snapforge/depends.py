@@ -88,22 +88,7 @@ def wanted(root, command):
     if start is None or not start.is_file():
         return set(), {}
     inside = bundled_libraries(root)
-    seen, queue, asked = set(), [start], set()
-    while queue:
-        binary = queue.pop()
-        try:
-            names = elf.needed(binary)
-        except elf.NotAnELF:
-            continue
-        for soname in names:
-            if soname in seen:
-                continue
-            seen.add(soname)
-            asked.add(soname)
-            # Brought with it, but what that needs is still ours to find.
-            if soname in inside:
-                queue.append(inside[soname])
-    return asked, inside
+    return elf.reach(start, inside), inside
 
 
 def resolve(root="", command="", gui=False, control=None):

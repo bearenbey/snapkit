@@ -91,13 +91,13 @@ def canonical(name):
     return spellings(name)[0]
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def wanted(name):
     """Matches the spellings of the architecture being built for."""
     return _alternation(spellings(name))
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def other(name):
     """Matches every architecture that is not the one being built for."""
     mine = set(spellings(name))

@@ -334,7 +334,7 @@ def summarise(config):
     return f"{kind} {rest}".strip() or "(none)"
 
 
-def label(snap, folder="this folder"):
+def label(snap, folder="its own folder"):
     """Where a snap's releases come from, in a few words."""
     kind = snap.upstream.get("kind", "")
     if kind == "local":

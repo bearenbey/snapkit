@@ -277,7 +277,7 @@ def publish(snaps, into, reporter=None):
     entries, left_out = {}, {}
 
     for snap in snaps:
-        directory = Path(snap.path)
+        directory = snap.path
         if not (directory / recipe.SNAPCRAFT_YAML).is_file():
             continue
         kept, skipped = project_files(directory)
@@ -395,6 +395,24 @@ def fetch(name, into, found=None, url=None, reporter=None):
                 reporter.detail(relative)
 
     return into
+
+
+def project_dir(where, name):
+    """Where a pulled project goes: a `-snap` directory under `where`."""
+    return Path(where) / f"{name}-snap"
+
+
+def pull(db, name, where, found=None, reporter=None):
+    """Write one project under `where` and register it, so it can be built.
+
+    Registered, so what was pulled can be checked, updated and built by
+    name; a project directory the register does not know is only files.
+    Returns what `install` does.
+    """
+    pulled = install(name, project_dir(where, name), found, reporter=reporter,
+                     store=db.root)
+    db.add(pulled[0], replace=True)
+    return pulled
 
 
 def install(name, into, found=None, url=None, reporter=None, store=None):

@@ -409,7 +409,7 @@ def bundled_lib_dirs(root):
     return found
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def host_libraries():
     """Every soname the host's loader knows of, out of `ldconfig -p`."""
     ldconfig = shutil.which("ldconfig") or "/sbin/ldconfig"
@@ -441,21 +441,8 @@ def missing_libraries(binary, root=None):
         for path in where.glob("*.so*"):
             if path.is_file():
                 bundled.setdefault(path.name, path)
-    queue, seen, missing = [binary], set(), set()
-    while queue:
-        try:
-            names = elf.needed(queue.pop())
-        except elf.NotAnELF:
-            continue
-        for name in names:
-            if name in seen:
-                continue
-            seen.add(name)
-            if name in bundled:
-                queue.append(bundled[name])
-            elif name not in host:
-                missing.add(name)
-    return sorted(missing)
+    return sorted(name for name in elf.reach(binary, bundled)
+                  if name not in bundled and name not in host)
 
 
 def launcher_among(root, candidates):
