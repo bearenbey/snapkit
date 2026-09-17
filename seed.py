@@ -34,6 +34,9 @@ GITHUB = {
 SIGNAL_APT = "https://updates.signal.org/desktop/apt"
 SUBLIME_APT = "https://download.sublimetext.com"
 UNITY_APT = "https://hub.unity3d.com/linux/repos/deb"
+# The openSUSE Build Service, where BrowserWorks publishes its .deb.
+WATERFOX_APT = ("https://download.opensuse.org/repositories/"
+                "isv:/BrowserWorks/xUbuntu_26.04")
 
 CONFIG = {
     "btop": dict(
@@ -170,6 +173,12 @@ CONFIG = {
         upstream=dict(kind="apt", base=UNITY_APT, package="unityhub",
                       index=f"{UNITY_APT}/dists/stable/main/binary-{{arch}}/"
                             f"Packages")),
+
+    # A flat OBS repository: the index is at the root, the .deb under amd64/.
+    "waterfox": dict(
+        style="artifact", asset_glob="waterfox_*_amd64.deb", pack="pack.py",
+        upstream=dict(kind="apt", base=WATERFOX_APT, package="waterfox",
+                      index=f"{WATERFOX_APT}/Packages")),
 
     # Upstream publishes SHA2-256SUMS beside every asset of a release.
     "yt-dlp": dict(

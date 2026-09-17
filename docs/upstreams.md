@@ -5,8 +5,9 @@
 
 A folder is the honest answer when a file was handed to you, but it is the
 wrong one when the version really is published somewhere, just not as a
-GitHub release. Nine of the projects packaged here are like that. Signal,
-Sublime Text and Unity Hub publish into apt repositories of their own. Emacs
+GitHub release. Ten of the projects packaged here are like that. Signal,
+Sublime Text, Unity Hub and Waterfox publish into apt repositories of their
+own. Emacs
 and ffmpeg publish a directory listing of every release there has ever been.
 Discord and Mozilla, for Firefox ESR, answer a download endpoint with a
 redirect and put the version in the path it redirects to. mpv and RetroArch do use GitHub, but attach no

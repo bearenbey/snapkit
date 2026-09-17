@@ -130,7 +130,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "baabf44ba61a59a2a9ebbd11ae20c6325e8b11da7fe7a4c02f9751f05dd5704f"
+          "sha256": "6b1812e7453a26d9f530fa39d4b67f480bdda62252f36a72f9f2db49767971d4"
         },
         "launcher/discord-launch": {
           "exec": true,
@@ -140,16 +140,20 @@
           "exec": false,
           "sha256": "40160b15802f2798447b80807108845507be88663128f9d1c7593139e2b05e15"
         },
+        "snap/local/discord-launch": {
+          "exec": true,
+          "sha256": "42993276ccdd0c821efcc920f1d2932de0ce9e55d58623da283011a813a42fbc"
+        },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "ea7eeac93b6bcba25a7e2e786f5d3f9cd6dfa8cdd22480cc49e96571a97ffe5f"
+          "sha256": "74f3e736ef126034eebf9c420173126c57c694e5d5789449d81c9122ddd38193"
         }
       },
-      "fingerprint": "a30b86d396027ed8b860df7978457efafd997dfea1d034db27973a3bb86abfb9",
+      "fingerprint": "da74fc33237c524efd7b86715b4cbb04f8ef709f7afae433fd80448df1217dac",
       "name": "discord",
       "pack": "",
       "record": {
-        "asset": "discord-1.0.156.deb",
+        "asset": "discord-1.0.158.deb",
         "asset_glob": "discord-*.deb",
         "kind": "deb",
         "style": "artifact",
@@ -161,12 +165,12 @@
           "pattern": "/apps/linux/([^/]+)/",
           "url": "https://discord.com/api/download?platform=linux&format=deb"
         },
-        "version": "1.0.156",
+        "version": "1.0.158",
         "write_version": false
       },
       "summary": "Chat for Communities and Friends",
       "upstream": "redirect",
-      "version": "1.0.156"
+      "version": "1.0.158"
     },
     "emacs": {
       "files": {
@@ -455,7 +459,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "4c97613873299f163276f02333b9b62096893daaf732825269666ce4123a6a15"
+          "sha256": "1a778ec1c6ed989dbf99ad8365b1b583ed8c02121310e8e5070ca2b75acff5ef"
         },
         "pack.py": {
           "exec": false,
@@ -475,15 +479,15 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "6f9ccbffe4053733492dd953c2bd67a4e5712ee8e7260430671acb52896dd3e7"
+          "sha256": "da33e03cfe6834faee6729e713101d83ebdbbabbf51eea9fafbf7f21ddf0c282"
         }
       },
-      "fingerprint": "0ea69e73eab716020fab05f215b895a6200fa0d312b6f37ac0ac8ed80f93d813",
+      "fingerprint": "ff881293ea8d41de8c2ca008cc6d3bb62c9d3957252100fa30b4a7e135f0cdef",
       "name": "helium",
       "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
-        "asset": "helium-bin_0.16.5.1-1_amd64.deb",
+        "asset": "helium-bin_0.17.0.1-1_amd64.deb",
         "asset_glob": "helium-bin_*_amd64.deb",
         "asset_pattern": "^helium\\-bin_[0-9][0-9A-Za-z.+~_-]*\\-1_amd64\\.deb$",
         "kind": "deb",
@@ -491,14 +495,14 @@
         "repo": "imputnet/helium-linux",
         "style": "artifact",
         "summary": "Private, fast, and honest web browser",
-        "tag": "0.16.5.1",
+        "tag": "0.17.0.1",
         "url": "https://github.com/imputnet/helium-linux",
-        "version": "0.16.5.1",
+        "version": "0.17.0.1",
         "write_version": false
       },
       "summary": "Private, fast, and honest web browser",
       "upstream": "imputnet/helium-linux",
-      "version": "0.16.5.1"
+      "version": "0.17.0.1"
     },
     "irssi": {
       "files": {
@@ -750,10 +754,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "3842f00243fa6d2498c3162d2bd45338e4c624e147574aacc0bed4fd261f992d"
+          "sha256": "7f192c03e1dfb6224d572b2e52e813a465e8200d1cda71588cba3a69517adaf6"
         }
       },
-      "fingerprint": "e9bd4c807a6e5c5d482d73808a78d84273472ae20f4c22397058d29bc8ce7ec2",
+      "fingerprint": "a3889a4681c12d27463fa8f9e6e0b361f017a0aed63f95abfbd30e869889684d",
       "name": "ollama",
       "pack": "",
       "record": {
@@ -767,14 +771,14 @@
         "source_anchor": "^(\\s*source:\\s*).*/ollama-linux-amd64\\.tar\\.zst\\s*$",
         "style": "recipe",
         "summary": "Get up and running with large language models",
-        "tag": "v0.33.3",
+        "tag": "v0.34.1",
         "url": "https://github.com/ollama/ollama",
-        "version": "0.33.3",
+        "version": "0.34.1",
         "write_version": false
       },
       "summary": "Get up and running with large language models",
       "upstream": "ollama/ollama",
-      "version": "0.33.3"
+      "version": "0.34.1"
     },
     "pear": {
       "files": {
@@ -923,14 +927,14 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "97f975a1f5e1045f22bc0bdb8ffb05e5311850a16df09ebf561504a682e75466"
+          "sha256": "d75e8df1ed865cc675667abbc4ed952b0894300d7903be661a7f239a2b0ce1d8"
         }
       },
-      "fingerprint": "ba3339cdfb43c8aa57dd8167363f9b1322c25bb1efd2489068ba0990a449babe",
+      "fingerprint": "8ab5fdf9517d3978f67178d90c89fff141bde2d352070b1e09c5a702bd0c6c7b",
       "name": "signal-desktop",
       "pack": "",
       "record": {
-        "asset": "signal-desktop_8.26.0_amd64.deb",
+        "asset": "signal-desktop_8.27.0_amd64.deb",
         "kind": "deb",
         "repo": "signalapp/Signal-Desktop",
         "source_anchor": "^(\\s*source:\\s*).*/signal-desktop_.*\\.deb\\s*$",
@@ -943,12 +947,12 @@
           "package": "signal-desktop"
         },
         "url": "https://github.com/signalapp/Signal-Desktop",
-        "version": "8.26.0",
+        "version": "8.27.0",
         "write_version": true
       },
       "summary": "Private messaging from your desktop",
       "upstream": "signalapp/Signal-Desktop",
-      "version": "8.26.0"
+      "version": "8.27.0"
     },
     "spotube": {
       "files": {
@@ -1122,7 +1126,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "55e64d2c430dcbb71191d8ba7805cb3ed522e31d7c855a952a52191291606604"
+          "sha256": "681773b45f882045b3dd95661f87d6b38d90d67803d0d1d2ab31884f541d06ff"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -1134,15 +1138,15 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "c8844f25d9b3a86090074d55afcf019d68641a9d379ec7e49c7a120b76c3eb49"
+          "sha256": "99b1934b185d84c1f933501ae1eff695c28fa6d33c3671a25a044ae5c198bc33"
         }
       },
-      "fingerprint": "25ef886a68bde2262fb5134494f4e0af68923ca1c6640d93dfc5d965c786b747",
+      "fingerprint": "1226e7fa5489712920d531a54d5d406044c5d951513dfb5edfe88cba7df347de",
       "name": "unityhub",
       "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
-        "asset": "unityhub_3.21.1_amd64.deb",
+        "asset": "UnityHubSetup-3.21.2-amd64.deb",
         "asset_glob": "UnityHubSetup-amd64.deb",
         "kind": "deb",
         "local_asset": "UnityHubSetup-amd64.deb",
@@ -1155,12 +1159,61 @@
           "kind": "apt",
           "package": "unityhub"
         },
-        "version": "3.21.1",
+        "version": "3.21.2",
         "write_version": false
       },
       "summary": "The official Unity Hub",
       "upstream": "apt",
-      "version": "3.21.1"
+      "version": "3.21.2"
+    },
+    "waterfox": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "62150a9dbe8506b32f5f383174e16b608d9a421e1a8a20caf77f0fa364633a7a"
+        },
+        "overlay/bin/launcher": {
+          "exec": true,
+          "sha256": "13ef690f3ddabc3b3f2fa01c5c9e2dd29b7f0e609dd27600735fc78fceee26a6"
+        },
+        "overlay/usr/lib/waterfox/distribution/policies.json": {
+          "exec": false,
+          "sha256": "e977c3d690224dd727d8761d2c0a66ba41bfd02ae0fd7850c4545d06b5a8e63c"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "f30736767423acef946b84da7687e4c3978fb30e71fce83a6e73753ca7b8a243"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "a02c7b726413cd7752f8d66a0983afbbe3c41511aa2fc7d2e0419b32974e6e1b"
+        }
+      },
+      "fingerprint": "f74818b7d29f4a2c9b2cd0b9442d26917f77b64f940ba46a4927ea5fe2649513",
+      "name": "waterfox",
+      "needs": "0.3.0",
+      "pack": "pack.py",
+      "record": {
+        "asset": "waterfox_6.7.3-0_amd64.deb",
+        "asset_glob": "waterfox_*_amd64.deb",
+        "kind": "deb",
+        "pack": "pack.py",
+        "repo": "BrowserWorks/Waterfox",
+        "style": "artifact",
+        "summary": "A privacy conscious web browser built on Firefox",
+        "upstream": {
+          "base": "https://download.opensuse.org/repositories/isv:/BrowserWorks/xUbuntu_26.04",
+          "index": "https://download.opensuse.org/repositories/isv:/BrowserWorks/xUbuntu_26.04/Packages",
+          "kind": "apt",
+          "package": "waterfox"
+        },
+        "url": "https://github.com/BrowserWorks/Waterfox",
+        "version": "6.7.3-0",
+        "write_version": false
+      },
+      "summary": "A privacy conscious web browser built on Firefox",
+      "upstream": "BrowserWorks/Waterfox",
+      "version": "6.7.3-0"
     },
     "yt-dlp": {
       "files": {

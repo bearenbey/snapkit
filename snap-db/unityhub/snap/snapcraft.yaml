@@ -1,7 +1,7 @@
 name: unityhub
 title: Unity Hub
 base: core24
-version: '3.21.1'
+version: '3.21.2'
 summary: The official Unity Hub
 description: |
   Unity Hub is the launcher and version manager for the Unity engine. It

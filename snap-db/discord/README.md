@@ -2,7 +2,7 @@
 
 Chat for Communities and Friends
 
-Packaged by snapkit from the release asset `discord-1.0.156.deb`,
+Packaged by snapkit from the release asset `discord-1.0.158.deb`,
 tracked against `redirect: https://discord.com/api/download?platform=linux&format=deb`.
 This snap is not published or endorsed by the upstream project.
 
@@ -13,7 +13,7 @@ This snap is not published or endorsed by the upstream project.
 
 ## Installing what you built
 
-    sudo snap install --dangerous discord_1.0.156_amd64.snap
+    sudo snap install --dangerous discord_1.0.158_amd64.snap
 
 ## Updating
 

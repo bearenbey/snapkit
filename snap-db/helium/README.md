@@ -10,7 +10,7 @@ endorsed by the upstream project.
 ```
 pack.py                           assembles and builds the snap
                                   (`snapkit update helium` fetches the release)
-helium-bin_0.16.5.1-1_amd64.deb   upstream .deb (the source for the snap)
+helium-bin_0.17.0.1-1_amd64.deb   upstream .deb (the source for the snap)
 snap/snapcraft.yaml               snap recipe
 snap/gui/helium.desktop           desktop entry (taken from the .deb, Icon= repointed)
 snap/gui/helium.png               256x256 icon (taken from the .deb)
@@ -42,7 +42,7 @@ Chromium's namespace sandbox), which is not auto-connected, so connect it
 manually:
 
 ```sh
-sudo snap install --dangerous helium_0.16.5.1_amd64.snap
+sudo snap install --dangerous helium_0.17.0.1_amd64.snap
 sudo snap connect helium:browser-sandbox
 sudo snap connect helium:u2f-devices
 snap connections helium          # check what else is unconnected

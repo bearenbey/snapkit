@@ -1,0 +1,109 @@
+name: waterfox
+title: Waterfox
+base: core24
+version: '6.7.3-0'
+summary: A privacy conscious web browser built on Firefox
+description: |
+  Waterfox is a customizable, privacy conscious web browser from BrowserWorks,
+  built on Firefox. It keeps the features people rely on while putting control
+  and privacy first: Mozilla's telemetry is out, a content blocker is built
+  in, and it keeps a profile of its own rather than borrowing Firefox's.
+
+  This snap is a repack of the official upstream .deb
+  (waterfox_6.7.3-0_amd64.deb), which BrowserWorks publishes through the
+  openSUSE Build Service, and is not published or endorsed by BrowserWorks.
+
+license: MPL-2.0
+source-code: https://github.com/BrowserWorks/Waterfox
+issues: https://github.com/BrowserWorks/Waterfox/issues
+website: https://www.waterfox.net/
+contact: https://github.com/BrowserWorks/Waterfox/issues
+
+# 256px is the largest in the .deb; its hicolor tree stops at 128.
+icon: usr/lib/waterfox/browser/chrome/icons/default/default256.png
+
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+apps:
+  waterfox:
+    command: bin/launcher
+    common-id: net.waterfox.waterfox
+    # The .deb's own entry; override-build below repoints its icon.
+    desktop: usr/share/applications/waterfox.desktop
+    # The extension brings the command chain, desktop plugs and hooks.
+    extensions: [gnome]
+    plugs:
+      - unity7
+      - browser-sandbox
+      - network
+      - network-bind
+      - home
+      - removable-media
+      - audio-playback
+      - audio-record
+      - camera
+      - cups-control
+      - hardware-observe
+      - joystick
+      - mount-observe
+      - screen-inhibit-control
+      - password-manager-service
+      - system-packages-doc
+      - u2f-devices
+      - upower-observe
+    slots:
+      - dbus-waterfox
+    environment:
+      TMPDIR: $XDG_RUNTIME_DIR
+
+plugs:
+  browser-sandbox:
+    interface: browser-support
+    # Gecko's sandbox needs user namespaces, and this does not auto-connect.
+    allow-sandbox: true
+
+slots:
+  dbus-waterfox:
+    interface: dbus
+    bus: session
+    # application.ini says RemotingName=waterfox; Gecko's remoting owns
+    # org.mozilla.waterfox plus a per-profile suffix.
+    name: org.mozilla.waterfox
+
+layout:
+  # Gecko's spell checker reads its dictionaries from this path and no other.
+  /usr/share/hunspell:
+    bind: $SNAP/gnome-platform/usr/share/hunspell
+
+parts:
+  waterfox:
+    plugin: dump
+    source: waterfox_6.7.3-0_amd64.deb
+    source-type: deb
+    override-build: |
+      craftctl default
+      # The icon is a bare theme name, and a snap installs into no theme.
+      sed -i 's|^Icon=.*|Icon=${SNAP}/meta/gui/icon.png|' \
+        "${CRAFT_PART_INSTALL}/usr/share/applications/waterfox.desktop"
+    # The updater cannot write a squashfs; policies.json turns the offer off.
+    # The AppArmor profile is dpkg's to load, and snapd writes its own.
+    prime:
+      - -usr/lib/waterfox/updater
+      - -usr/lib/waterfox/updater.ini
+      - -usr/lib/waterfox/precomplete
+      - -usr/lib/waterfox/removed-files
+      - -etc/apparmor.d
+      - -usr/share/doc
+
+  overlay:
+    plugin: dump
+    source: overlay
+    stage:
+      - bin/launcher
+      - usr/lib/waterfox/distribution/policies.json
