@@ -154,7 +154,7 @@ checkout on disk.
 """
 
 
-class DatabaseError(Exception):
+class SnapDbError(Exception):
     """The database could not be read, or does not hold what was asked for."""
 
 
@@ -307,26 +307,26 @@ def index(url=None):
     try:
         text = net.get_text(url)
     except net.NetworkError as exc:
-        raise DatabaseError(f"could not read the database index: {exc}") from exc
+        raise SnapDbError(f"could not read the database index: {exc}") from exc
     try:
         found = json.loads(text)
     except ValueError as exc:
-        raise DatabaseError(f"{url} is not the index: {exc}") from exc
+        raise SnapDbError(f"{url} is not the index: {exc}") from exc
     if found.get("schema") != SCHEMA:
-        raise DatabaseError(f"the database is schema {found.get('schema')} and "
+        raise SnapDbError(f"the database is schema {found.get('schema')} and "
                             f"this snapkit reads {SCHEMA} -- upgrade snapkit")
     return found
 
 
 def entry(name, found=None, url=None):
-    """One snap's index entry, or a DatabaseError naming what is there."""
+    """One snap's index entry, or a SnapDbError naming what is there."""
     found = found or index(url)
     snaps = found.get("snaps", {})
     if name in snaps:
         return snaps[name]
     near = [k for k in sorted(snaps) if name in k]
     hint = f" -- did you mean {', '.join(near)}?" if near else ""
-    raise DatabaseError(f"the database has no snap called {name}{hint}")
+    raise SnapDbError(f"the database has no snap called {name}{hint}")
 
 
 def within(into, relative):
@@ -334,7 +334,7 @@ def within(into, relative):
     root = Path(into).resolve()
     target = (root / relative).resolve()
     if target != root and root not in target.parents:
-        raise DatabaseError(f"the database names a file outside the project it "
+        raise SnapDbError(f"the database names a file outside the project it "
                             f"belongs to: {relative!r} -- refusing to write it")
     return target
 
@@ -345,7 +345,7 @@ def _fetch_one(url, name, relative, about, target):
         net.download(f"{url}/{name}/{urllib.parse.quote(relative)}", target,
                      about.get("sha256", ""))
     except (net.NetworkError, OSError) as exc:
-        raise DatabaseError(f"{name}: could not fetch {relative}: {exc}") from exc
+        raise SnapDbError(f"{name}: could not fetch {relative}: {exc}") from exc
     if about.get("exec"):
         target.chmod(0o755)
 
@@ -361,18 +361,18 @@ def needs_newer(record):
 def fetch(name, into, found=None, url=None, reporter=None):
     """Download one snap's project files. Returns the directory written."""
     if not SNAP_NAME.fullmatch(name):
-        raise DatabaseError(f"{name!r} is not a snap name -- refusing to write "
+        raise SnapDbError(f"{name!r} is not a snap name -- refusing to write "
                             f"a project directory called that")
     url = url or base_url()
     record = entry(name, found, url)
     # Before anything is written: a project this cannot build helps nobody.
     needed = needs_newer(record)
     if needed:
-        raise DatabaseError(f"{name}'s pack.py needs snapkit {needed}, and this "
+        raise SnapDbError(f"{name}'s pack.py needs snapkit {needed}, and this "
                             f"is {__version__} -- upgrade snapkit to pull it")
     if record.get("incomplete"):
         missing = ", ".join(record["incomplete"])
-        raise DatabaseError(f"{name} is published without {missing}, which its "
+        raise SnapDbError(f"{name} is published without {missing}, which its "
                             f"build needs -- it cannot be built from the "
                             f"database")
 
@@ -413,6 +413,27 @@ def pull(db, name, where, found=None, reporter=None):
                      store=db.root)
     db.add(pulled[0], replace=True)
     return pulled
+
+
+def pull_all(db, names, where, found, reporter=None, before=None, skip=None):
+    """Pull each of these in turn, and return the names that arrived.
+
+    `before(name)` runs ahead of each one. `skip(name, why)` hears of one
+    that would not pull; without it the first failure is raised.
+    """
+    arrived = []
+    for name in names:
+        if before:
+            before(name)
+        try:
+            pull(db, name, where, found, reporter=reporter)
+        except (SnapDbError, adopt.NotAProject) as exc:
+            if skip is None:
+                raise
+            skip(name, exc)
+        else:
+            arrived.append(name)
+    return arrived
 
 
 def install(name, into, found=None, url=None, reporter=None, store=None):

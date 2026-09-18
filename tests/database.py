@@ -33,7 +33,7 @@ def _():
     with tempfile.TemporaryDirectory() as home:
         root = Path(home)
         found = {"snaps": {"../escape": {"files": {}}}}
-        with raises(snapdb.DatabaseError, "it was written"):
+        with raises(snapdb.SnapDbError, "it was written"):
             snapdb.fetch("../escape", root / "here", found, url="file:///x")
         assert not (root / "escape").exists()
 
@@ -201,7 +201,7 @@ def _():
         try:
             snapdb.fetch("demo", target, url=published.resolve().as_uri())
             assert False, "a path outside the project was accepted"
-        except snapdb.DatabaseError as exc:
+        except snapdb.SnapDbError as exc:
             assert "outside the project" in str(exc), str(exc)
         assert not (root / "pull" / "pwned").exists(), "it escaped anyway"
         assert not (root / "pwned").exists(), "it escaped anyway"
@@ -275,21 +275,21 @@ def _():
             try:
                 snapdb.fetch("packed", root / "old", index, url)
                 assert False, "an old snapkit pulled a new pack.py"
-            except snapdb.DatabaseError as exc:
+            except snapdb.SnapDbError as exc:
                 assert "upgrade snapkit" in str(exc) and buildlib.NEEDS in str(exc), str(exc)
             assert not (root / "old").exists(), "something was written first"
             # and the recipe-only project still comes through
             snapdb.fetch("plain", root / "old-plain", index, url)
 
 
-@check("the version is spelled the same in the package, pyproject and the recipe")
+@check("the version is spelled the same in the package and the recipe")
 def _():
     import snapforge
     # The project root: this package sits one level under it.
     here = Path(__file__).resolve().parent.parent
     pyproject = (here / "pyproject.toml").read_text()
     recipe = (here / "snap" / "snapcraft.yaml").read_text()
-    assert f'version = "{snapforge.__version__}"' in pyproject, snapforge.__version__
+    assert 'attr = "snapforge.__version__"' in pyproject, "pyproject spells its own"
     assert f"version: '{snapforge.__version__}'" in recipe, snapforge.__version__
     from snapforge import build as buildlib, versions
     assert versions.version_key(buildlib.NEEDS) <= versions.version_key(snapforge.__version__), (
@@ -308,7 +308,7 @@ def _():
         try:
             snapdb.fetch("freetub", root / "back", url=url)
             assert False, "should have raised"
-        except snapdb.DatabaseError as exc:
+        except snapdb.SnapDbError as exc:
             assert "freetube" in str(exc), str(exc)
 
 
@@ -356,5 +356,5 @@ def _():
         try:
             snapdb.index(published.resolve().as_uri())
             assert False, "should have raised"
-        except snapdb.DatabaseError as exc:
+        except snapdb.SnapDbError as exc:
             assert "upgrade snapkit" in str(exc), str(exc)

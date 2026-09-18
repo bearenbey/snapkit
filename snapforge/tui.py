@@ -11,7 +11,7 @@ from pathlib import Path
 from rich.live import Live
 from rich.text import Text
 
-from . import adopt, github, local, project, snapdb, sources, update
+from . import local, project, snapdb, sources, update
 from .db import NameTaken
 from .keys import Keyboard
 from .net import NetworkError
@@ -264,33 +264,28 @@ class Dashboard:
         def work():
             reporter = DashboardReporter(self, None)
             self.status = f"creating from {text}"
-            if local.looks_like_path(text):
-                made = self._plan_local(text, reporter)
-                if made is None:
-                    return
-            else:
-                repo = github.parse_repo(text)
-                known = self.db.find_repo(repo)
-                if known:
-                    self.say(f"{repo} is already registered as {known.name} -- "
-                             f"select it and press u to update it", "yellow")
-                    self.select(known.name)
-                    self.idle()
-                    return
-                made = project.plan(text, reporter)
+            is_file = local.looks_like_path(text)
+            known, where = project.registered(self.db, text, is_file)
+            if known:
+                self.say(f"{where} is {known.name} -- select it and press u "
+                         f"to pick up what is in there" if is_file else
+                         f"{where} is already registered as {known.name} -- "
+                         f"select it and press u to update it", "yellow")
+                self.select(known.name)
+                self.idle()
+                return
+            made = project.plan_for(text, reporter, is_file)
             if len(made.candidates) > 1:
                 made.chosen = self._ask_which(made)
                 reporter.detail(f"building from {made.chosen.name}")
             try:
-                self.db.claim(made.name, made.origin.repo)
+                snap = project.register(self.db, made, reporter)
             except NameTaken as exc:
                 # Renamed before it is written, or it lands on the other one.
-                free = self.db.free_name(made.name)
+                made.name = self.db.free_name(made.name)
                 self.say(str(exc), "red")
-                self.say(f"registering it as {free} instead", "yellow")
-                made.name = free
-            snap = project.create(made, reporter)
-            self.db.add(snap)
+                self.say(f"registering it as {made.name} instead", "yellow")
+                snap = project.register(self.db, made, reporter)
             self.reload()
             self.select(snap.name)
             self.say(f"registered {snap.name} {snap.version}", "bold green")
@@ -301,19 +296,6 @@ class Dashboard:
             self.idle()
 
         self.run_job("creating", work)
-
-    def _plan_local(self, text, reporter):
-        """A file or a folder that was typed into the box instead of a repo."""
-        directory = Path(text).expanduser()
-        directory = directory if directory.is_dir() else directory.parent
-        snap = self.db.at_directory(directory)
-        if snap is not None:
-            self.say(f"{directory} is {snap.name} -- select it and press u "
-                     f"to pick up what is in there", "yellow")
-            self.select(snap.name)
-            self.idle()
-            return None
-        return project.plan_local(text, reporter)
 
     def _ask_which(self, made):
         """Put the ranking on screen and wait for a person to pick one."""
@@ -354,16 +336,13 @@ class Dashboard:
 
             # Beside the projects already here, not wherever this was started.
             where = self.db.all()[0].path.parent if self.db.snaps else Path.cwd()
-            taken = 0
-            for name in new:
-                self.status = f"fetching {name}"
-                try:
-                    snapdb.pull(self.db, name, where, found, reporter=reporter)
-                    taken += 1
-                except (snapdb.DatabaseError, adopt.NotAProject) as exc:
-                    self.say(f"{name}: {exc}", "yellow")
+            taken = snapdb.pull_all(
+                self.db, new, where, found, reporter=reporter,
+                before=lambda name: self.put(self, status=f"fetching {name}"),
+                skip=lambda name, why: self.say(f"{name}: {why}", "yellow"))
             self.reload()
-            self.say(f"wrote {taken} of {len(new)} into {where}", "bold green")
+            self.say(f"wrote {len(taken)} of {len(new)} into {where}",
+                     "bold green")
             self.idle()
 
         self.run_job("pulling", work)
@@ -546,8 +525,7 @@ class Dashboard:
     def _build(self, snap, reporter, row=None, ask_install=True):
         """Build, and turn a failure into a red line rather than a crash."""
         try:
-            built = project.build(snap, reporter)
-            self.db.add(snap)
+            built = project.build_recorded(self.db, snap, reporter)
             if row:
                 row.state = "built"
             self.say(f"built {built.name}", "bold green")

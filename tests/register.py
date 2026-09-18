@@ -277,5 +277,5 @@ def _():
     with tempfile.TemporaryDirectory() as home:
         path = Path(home) / "snapkit.json"
         path.write_text("{not json")
-        with raises(db.DatabaseError, "should have raised"):
+        with raises(db.RegisterError, "should have raised"):
             db.Database(path)

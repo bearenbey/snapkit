@@ -8,7 +8,7 @@ from pathlib import Path
 from snapforge import __version__
 
 from . import adopt, github, local, project, snapdb, sources, update
-from .db import Database, DatabaseError, NameTaken
+from .db import Database, NameTaken, RegisterError
 from .net import NetworkError
 from .report import PlainReporter
 
@@ -86,6 +86,11 @@ def die(message):
     raise SystemExit(1)
 
 
+def directory_of(args):
+    """The folder --dir names, or this one."""
+    return Path(args.directory).expanduser() if args.directory else Path.cwd()
+
+
 def build_flags(args):
     """What to hand snapcraft, out of the flags snapkit takes itself."""
     return ["--destructive-mode"] if args.destructive_mode else []
@@ -137,7 +142,7 @@ def main(argv=None):
     try:
         # Every command starts here, so an unreadable register is a sentence.
         db = Database()
-    except (DatabaseError, OSError) as exc:
+    except (RegisterError, OSError) as exc:
         die(str(exc))
     for record, why in db.problems:
         # Loud and on every command: one record short beats failing to open.
@@ -159,7 +164,7 @@ def main(argv=None):
     try:
         return handler(db, args, reporter)
     except (project.ForgeError, NetworkError, github.NotFound,
-            snapdb.DatabaseError, DatabaseError, ValueError) as exc:
+            snapdb.SnapDbError, RegisterError, ValueError) as exc:
         die(str(exc))
     except KeyError as exc:
         die(exc.args[0])
@@ -171,40 +176,35 @@ def cmd_create(db, args, reporter):
     text = " ".join(args.rest).strip()
     if not text:
         text = ask_what_to_package(args)
-    if args.local or local.looks_like_path(text):
-        return create_from_file(db, args, reporter, text)
-    known = db.find_repo(github.parse_repo(text))
+    is_file = args.local or local.looks_like_path(text)
+    known, where = project.registered(db, text, is_file)
     if known and not args.name:
-        # Been here before, so build it from the record rather than the URL.
-        reporter.detail(f"{known.repo} is already registered as {known.name} "
-                        f"({known.version}) -- building it from the register")
-        reporter.detail(f"(--name makes a second one; `snapkit update "
-                        f"{known.name}` looks for a newer release)")
-        project.package(known, reporter, build_it=not args.no_build,
-                        extra=build_flags(args))
-        db.add(known)
-        return 0
+        return _create_again(db, args, reporter, known, where, is_file)
 
-    made = project.plan(text, reporter, tag=args.tag, name=args.name,
-                        asset=args.asset)
-    _show_runners_up(reporter, made.candidates, args.asset, "this release")
+    made = project.plan_for(text, reporter, is_file, tag=args.tag,
+                            name=args.name, asset=args.asset)
+    _show_runners_up(reporter, made.candidates, args.asset,
+                     "what is in there" if is_file else "this release")
     return _finish_create(db, args, reporter, made, text)
 
 
-def create_from_file(db, args, reporter, text):
-    """Make a snap out of a package file, rather than out of a release."""
-    path = Path(text).expanduser()
-    known = db.at_directory(path if path.is_dir() else path.parent)
-    if known and not args.name:
-        reporter.detail(f"{path if path.is_dir() else path.parent} is already "
+def _create_again(db, args, reporter, known, where, is_file):
+    """Asked to create what is registered: update or rebuild it instead."""
+    if is_file:
+        reporter.detail(f"{where} is already "
                         f"registered as {known.name} ({known.version})")
         reporter.detail("treating this as an update; `--name` would make a "
                         "second snap from it instead")
         return update_one(db, args, reporter, known)
-
-    made = project.plan_local(path, reporter, name=args.name, asset=args.asset)
-    _show_runners_up(reporter, made.candidates, args.asset, "what is in there")
-    return _finish_create(db, args, reporter, made, text)
+    # Been here before, so build it from the record rather than the URL.
+    reporter.detail(f"{known.repo} is already registered as {known.name} "
+                    f"({known.version}) -- building it from the register")
+    reporter.detail(f"(--name makes a second one; `snapkit update "
+                    f"{known.name}` looks for a newer release)")
+    project.package(known, reporter, build_it=not args.no_build,
+                    extra=build_flags(args))
+    db.add(known)
+    return 0
 
 
 def _show_runners_up(reporter, candidates, asset, where):
@@ -219,14 +219,11 @@ def _show_runners_up(reporter, candidates, asset, where):
 
 def _finish_create(db, args, reporter, made, text):
     """Register what a plan produced, and build it unless told not to."""
-    # Before the project is written: it would land on the one already there.
     try:
-        db.claim(made.name, made.origin.repo)
+        snap = project.register(db, made, reporter, directory=args.directory)
     except NameTaken as exc:
         die(f"{exc}\n           try: snapkit create {text} "
             f"--name {db.free_name(made.name)}")
-    snap = project.create(made, reporter, directory=args.directory)
-    db.add(snap)
     reporter.result(f"registered {snap.name} {snap.version}")
     if snap.upstream.get("kind") == "local":
         reporter.detail(f"tracked against {snap.path}: drop a newer "
@@ -235,13 +232,13 @@ def _finish_create(db, args, reporter, made, text):
         reporter.detail(f"build it with: cd {snap.path} && "
                         f"{snap.build_with or 'snapcraft'}")
         return 0
-    _build_recorded(db, snap, args, reporter)
+    project.build_recorded(db, snap, reporter, build_flags(args))
     return 0
 
 
 def ask_what_to_package(args):
     """With nothing named: what is in this folder, or a repository."""
-    here = Path(args.directory).expanduser() if args.directory else Path.cwd()
+    here = directory_of(args)
     found = local.find(here)
     if not can_ask(args):
         _no_prompt_help(here, found)
@@ -330,13 +327,6 @@ def cmd_package(db, args, reporter):
                     extra=build_flags(args))
     db.add(snap)
     return 0
-
-
-def _build_recorded(db, snap, args, reporter):
-    """Build a snap and put what that did into the register."""
-    built = project.build(snap, reporter, build_flags(args))
-    db.add(snap)
-    return built
 
 
 def _one_of(db, text):
@@ -519,7 +509,7 @@ def update_one(db, args, reporter, snap):
     update.update(snap, found.release, found.asset, reporter)
     db.add(snap)
     if not args.no_build:
-        _build_recorded(db, snap, args, reporter)
+        project.build_recorded(db, snap, reporter, build_flags(args))
     return 0
 
 
@@ -634,7 +624,7 @@ def cmd_build(db, args, reporter):
     if not args.rest:
         die("build needs a name")
     snap = _one_of(db, args.rest[0])
-    _build_recorded(db, snap, args, reporter)
+    project.build_recorded(db, snap, reporter, build_flags(args))
     return 0
 
 
@@ -718,21 +708,20 @@ def _drift_mark(here, published):
 def db_pull(db, args, rest, found, reporter):
     """Write the named projects here, or all of them, and register them."""
     wanted = rest or sorted(found["snaps"])
-    where = Path(args.directory) if args.directory else Path.cwd()
-    done, failed = 0, []
-    for name in wanted:
+    where = directory_of(args)
+    failed = []
+
+    def starting(name):
         reporter.step(f"{name} -> {snapdb.project_dir(where, name)}")
-        try:
-            snapdb.pull(db, name, where, found)
-        except (snapdb.DatabaseError, adopt.NotAProject) as exc:
-            # One bad snap should not stop the rest; named outright, it does.
-            if rest:
-                raise
-            reporter.warn(str(exc))
-            failed.append(name)
-            continue
-        done += 1
-    reporter.result(f"pulled and registered {done} of {len(wanted)}")
+
+    def skip(name, why):
+        reporter.warn(str(why))
+        failed.append(name)
+
+    # One bad snap should not stop the rest; named outright, it does.
+    done = snapdb.pull_all(db, wanted, where, found, before=starting,
+                           skip=None if rest else skip)
+    reporter.result(f"pulled and registered {len(done)} of {len(wanted)}")
     if failed:
         reporter.detail(f"not pulled: {', '.join(failed)}")
     return 0
@@ -746,7 +735,7 @@ def cmd_install(db, args, reporter):
 
     snap = db.snaps.get(name)
     if snap is None:
-        where = Path(args.directory) if args.directory else Path.cwd()
+        where = directory_of(args)
         reporter.step(f"fetching {name} from the database")
         try:
             snap, recipe, _is_snapcraft = snapdb.pull(db, name, where,
@@ -766,7 +755,7 @@ def cmd_install(db, args, reporter):
         reporter.result(f"{name} is ready in {snap.path}")
         return 0
 
-    built = _build_recorded(db, snap, args, reporter)
+    built = project.build_recorded(db, snap, reporter, build_flags(args))
     if not can_ask(args):
         reporter.detail(f"install it with: sudo snap install --dangerous {built}")
         return 0

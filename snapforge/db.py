@@ -229,7 +229,7 @@ class Database:
         try:
             raw = json.loads(legacy.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
-            raise DatabaseError(f"{legacy} is not valid JSON: {exc}") from exc
+            raise RegisterError(f"{legacy} is not valid JSON: {exc}") from exc
 
         for name, record in (raw.get("snaps") or {}).items():
             snap = Snap.from_dict(record)
@@ -261,7 +261,7 @@ class Database:
     def add(self, snap, replace=False):
         """Register a snap, or update the record of one already registered."""
         if not snap.name:
-            raise DatabaseError("a snap needs a name")
+            raise RegisterError("a snap needs a name")
         existing = self.snaps.get(snap.name)
         if existing is not None and existing is not snap and not replace:
             self.claim(snap.name, snap.repo)
@@ -293,7 +293,7 @@ class Database:
             candidate = f"{wanted}-{suffix}"
             if candidate not in self.snaps:
                 return candidate
-        raise DatabaseError(f"no free name like {wanted}")
+        raise RegisterError(f"no free name like {wanted}")
 
     def get(self, name):
         snap = self.snaps.get(name)
@@ -394,11 +394,11 @@ def _atomic_write(path, text):
         raise
 
 
-class DatabaseError(Exception):
+class RegisterError(Exception):
     """The register could not be read or written."""
 
 
-class NameTaken(DatabaseError):
+class NameTaken(RegisterError):
     """A different repository is already registered under this name."""
 
     def __init__(self, name, held_by, wanted_by):

@@ -125,6 +125,32 @@ class File:
         snap.upstream = {"kind": "local", "glob": snap.asset_glob}
 
 
+def registered(db, text, is_file):
+    """The snap already made from this, if any, and the repo or folder it is."""
+    if is_file:
+        path = Path(text).expanduser()
+        where = path if path.is_dir() else path.parent
+        return db.at_directory(where), where
+    repo = github.parse_repo(text)
+    return db.find_repo(repo), repo
+
+
+def plan_for(text, reporter, is_file, tag=None, name=None, asset=None):
+    """A plan for a file or folder on disk, or for a repository's release."""
+    if is_file:
+        return plan_local(text, reporter, name=name, asset=asset)
+    return plan(text, reporter, tag=tag, name=name, asset=asset)
+
+
+def register(db, plan_, reporter, directory=None):
+    """Carry a plan out and register what it made."""
+    # Before the project is written: it would land on the one already there.
+    db.claim(plan_.name, plan_.origin.repo)
+    snap = create(plan_, reporter, directory=directory)
+    db.add(snap)
+    return snap
+
+
 def plan(repo_text, reporter, tag=None, name=None, asset=None):
     """Work out what would be built, without building it."""
     repo = github.parse_repo(repo_text)
@@ -521,6 +547,13 @@ def build(snap, reporter, extra=()):
                     f"({built.stat().st_size / 1e6:.0f} MB)")
     _say_lint(reporter)
     snap.record_build(snap.version)
+    return built
+
+
+def build_recorded(db, snap, reporter, extra=()):
+    """Build a snap and put what that did into the register."""
+    built = build(snap, reporter, extra)
+    db.add(snap)
     return built
 
 

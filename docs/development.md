@@ -97,8 +97,8 @@ Several exist because of bugs that were in here:
 sudo snap install --dangerous --classic snapkit_0.3.1_amd64.snap
 ```
 
-The version is spelled in `pyproject.toml`, `snap/snapcraft.yaml` and
-`snapforge/__init__.py`, and a test holds the three together. `NEEDS` in
+The version is spelled in `snap/snapcraft.yaml` and `snapforge/__init__.py`,
+and a test holds the two together; `pyproject.toml` reads the package's. `NEEDS` in
 `snapforge/build.py` is separate: it is the oldest snapkit a `pack.py`
 written against today's `Build` runs on, and every published project with a
 `pack.py` carries it. Raise it with the version whenever `Build` gains a
