@@ -1,0 +1,27 @@
+[Desktop Entry]
+Version=1.0
+Name=LibreWolf
+GenericName=Web Browser
+Comment=A fork of Firefox, focused on privacy, security and freedom.
+Exec=librewolf %u
+Icon=${SNAP}/meta/gui/icon.png
+Terminal=false
+Type=Application
+StartupNotify=true
+StartupWMClass=librewolf
+Categories=Network;WebBrowser;
+Keywords=Internet;WWW;Browser;Web;Explorer;Gecko;Firefox;Privacy;
+MimeType=text/html;text/xml;application/xhtml+xml;application/vnd.mozilla.xul+xml;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;application/pdf;application/json;
+Actions=new-window;new-private-window;profile-manager;
+
+[Desktop Action new-window]
+Name=Open a New Window
+Exec=librewolf --new-window %u
+
+[Desktop Action new-private-window]
+Name=Open a New Private Window
+Exec=librewolf --private-window %u
+
+[Desktop Action profile-manager]
+Name=Open the Profile Manager
+Exec=librewolf --ProfileManager

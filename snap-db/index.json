@@ -579,6 +579,58 @@
       "upstream": "",
       "version": "1.1.0"
     },
+    "librewolf": {
+      "files": {
+        "README.md": {
+          "exec": false,
+          "sha256": "4ca6a0ff55a629bb9ce772af3bc5486af7e1204e134a588abd6e5b244a713250"
+        },
+        "overlay/bin/launcher": {
+          "exec": true,
+          "sha256": "3fdc3fdf3839fc9c5768cd0e9281f9d1f743de07798b3864d253d291c3761df9"
+        },
+        "overlay/meta/gui/librewolf.desktop": {
+          "exec": false,
+          "sha256": "0f6c72a6d91498e6314256c027947329ce8f2658cd4bffbbd08a0686b68f7f2a"
+        },
+        "pack.py": {
+          "exec": false,
+          "sha256": "61fd8d83f8d545d893e0e15df953fa9d8bb32641ca72d8f5174af570c00ddb4b"
+        },
+        "snap/snapcraft.yaml": {
+          "exec": false,
+          "sha256": "291a1323575738451e513744bffbeae6e9adaef77d0bb40238a88c351375b1f2"
+        }
+      },
+      "fingerprint": "ceca649c7f5ce5957fc5235032654353c4203e6843624a6ec47e8d4fd05b5f11",
+      "name": "librewolf",
+      "needs": "0.3.0",
+      "pack": "pack.py",
+      "record": {
+        "asset": "librewolf-156.0-1-linux-x86_64-package.tar.xz",
+        "asset_glob": "librewolf-*-linux-x86_64-package.tar.xz",
+        "kind": "archive",
+        "pack": "pack.py",
+        "style": "artifact",
+        "summary": "A fork of Firefox, focused on privacy, security and freedom",
+        "upstream": {
+          "asset": "librewolf-{version}-linux-x86_64-package.tar.xz",
+          "download": "https://dl.librewolf.net/librewolf/{version}/{asset}",
+          "kind": "index",
+          "pattern": "\"tag_name\":\\s*\"([^\"]+)\"",
+          "url": "https://librewolf.dev/api/v1/repos/librewolf/bsys6/releases/latest"
+        },
+        "verify": {
+          "kind": "gpg",
+          "suffix": ".sig"
+        },
+        "version": "156.0-1",
+        "write_version": false
+      },
+      "summary": "A fork of Firefox, focused on privacy, security and freedom",
+      "upstream": "index",
+      "version": "156.0-1"
+    },
     "lutris": {
       "files": {
         "README.md": {

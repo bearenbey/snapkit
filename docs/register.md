@@ -91,8 +91,8 @@ so they are named once and not repeated inside `upstream`. The exception is
 the `local` shape, where the glob is also how the file is found in the first
 place.
 
-A project registered this way keeps its own build. All thirty hand their
-recipe to snapcraft, but seventeen of them wrap it in a `pack.py` that does the
+A project registered this way keeps its own build. All thirty-one hand their
+recipe to snapcraft, but eighteen of them wrap it in a `pack.py` that does the
 work a recipe cannot express, and `snapkit build` imports that and calls its
 `build(project)` with a `Build`:
 
@@ -136,11 +136,12 @@ lines on `sys.path` before it could say anything about itself. A `pack.py`
 imports nothing: everything it can use is on the `project` it is handed,
 `say`, `note`, `warn` and `die` included.
 
-Ten of them are not a GitHub release at all: the download redirects Discord
+Eleven of them are not a GitHub release at all: the download redirects Discord
 and Mozilla's Firefox ESR answer, Emacs on a GNU mirror, ffmpeg.org, the apt
-repositories Signal, Sublime Text, Unity and Waterfox publish through, and mpv and
-RetroArch, which build from the archive GitHub rolls out of a tag rather
-than from anything attached to the release. Those
+repositories Signal, Sublime Text, Unity and Waterfox publish through, the
+release API of LibreWolf's own Gitea, and mpv and RetroArch, which build
+from the archive GitHub rolls out of a tag rather than from anything
+attached to the release. Those
 are shapes rather than exceptions, and the shape is in the record:
 
 ```json

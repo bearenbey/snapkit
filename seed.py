@@ -110,6 +110,21 @@ CONFIG = {
     # Nothing to fetch and nothing to check; pack.py runs its tests first.
     "kernel-remover": dict(pack="pack.py"),
 
+    # LibreWolf's own Gitea names the release, the way Flathub's checker reads
+    # it; the tarball is on dl.librewolf.net under that version, signed
+    # beside itself by the LibreWolf Maintainers key (librewolf.dev/librewolf.gpg).
+    "librewolf": dict(
+        style="artifact", pack="pack.py",
+        asset_glob="librewolf-*-linux-x86_64-package.tar.xz",
+        upstream=dict(kind="index",
+                      url="https://librewolf.dev/api/v1/repos/librewolf/bsys6/"
+                          "releases/latest",
+                      pattern=r'"tag_name":\s*"([^"]+)"',
+                      asset="librewolf-{version}-linux-x86_64-package.tar.xz",
+                      download="https://dl.librewolf.net/librewolf/{version}/"
+                               "{asset}"),
+        verify=dict(kind="gpg", suffix=".sig")),
+
     # No source tarball: the release is the tag and GitHub rolls the archive.
     "mpv": dict(
         style="recipe",
