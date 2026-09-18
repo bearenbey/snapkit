@@ -94,7 +94,7 @@ Several exist because of bugs that were in here:
 
 ```console
 ./build.py
-sudo snap install --dangerous --classic snapkit_0.3.1_amd64.snap
+sudo snap install --dangerous --classic snapkit_1.0.0_amd64.snap
 ```
 
 The version is spelled in `snap/snapcraft.yaml` and `snapforge/__init__.py`,
