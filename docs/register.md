@@ -33,9 +33,7 @@ writes one small file however many there are. The recipe is read only when
 something asks for it, so listing a thousand snaps reads none of them.
 
 Each piece stays a thing you can open: the record is legible JSON, the recipe
-is a yaml file your editor already understands. A register from before this
-changed is migrated on first use, and the old file is kept beside it as
-`snapkit.json.migrated` rather than deleted.
+is a yaml file your editor already understands.
 
 Because it is meant to be edited, a record that cannot be read is set aside
 rather than taken as the end of the register. One typo costs that record and

@@ -1,6 +1,5 @@
-"""The register: one file per snap, the recipe beside it, and migration."""
+"""The register: one file per snap, and the recipe beside it."""
 
-import json
 import tempfile
 import time
 from pathlib import Path
@@ -147,37 +146,6 @@ def _():
     same(snap.version, "1.0.299")
 
 
-@check("a register from the single-file days is migrated, not lost")
-def _():
-    with tempfile.TemporaryDirectory() as home:
-        root = Path(home)
-        (root / "snapkit.json").write_text(json.dumps({
-            "schema": 1,
-            "snaps": {
-                "btop": {"name": "btop", "repo": "aristocratos/btop",
-                         "version": "1.4.7", "kind": "archive",
-                         "snapcraft_yaml": "name: btop\nversion: '1.4.7'\n"},
-                "bat": {"name": "bat", "repo": "sharkdp/bat",
-                        "version": "0.26.1", "snapcraft_yaml": "name: bat\n"},
-            }}, indent=2))
-
-        store = db.Database(root)
-        same(store.names(), ["bat", "btop"], "the snaps did not come across")
-        same(store.get("btop").snapcraft_yaml, "name: btop\nversion: '1.4.7'\n",
-             "the recipe did not come across")
-        same(store.get("btop").repo, "aristocratos/btop")
-        assert (root / "snaps" / "btop.json").is_file()
-        assert (root / "recipes" / "btop.yaml").is_file()
-
-        # the old file is kept, renamed, so a bad migration can be undone
-        assert not (root / "snapkit.json").exists()
-        assert (root / "snapkit.json.migrated").is_file(), \
-            "the old register was deleted rather than set aside"
-
-        # and it does not run twice
-        same(db.Database(root).names(), ["bat", "btop"])
-
-
 @check("a thousand snaps stay quick to read and cheap to change")
 def _():
     with tempfile.TemporaryDirectory() as home:
@@ -270,12 +238,3 @@ def _():
         # Short queries skip prose: "b" is in nvim's "extensibility".
         same(sorted(names("b")), ["bat", "btop"], "short query hit a summary")
         same(names("ext"), ["nvim"], "three characters do search summaries")
-
-
-@check("a broken register is reported, not silently emptied")
-def _():
-    with tempfile.TemporaryDirectory() as home:
-        path = Path(home) / "snapkit.json"
-        path.write_text("{not json")
-        with raises(db.RegisterError, "should have raised"):
-            db.Database(path)

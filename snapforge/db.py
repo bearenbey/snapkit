@@ -181,7 +181,6 @@ class Database:
 
     def load(self):
         """Read every record. Recipes are left on disk until wanted."""
-        self.migrate()
         self.snaps = {}
         self.problems = []        # records that could not be read
         self.resynced = []        # [(name, was, now)] corrected by this load
@@ -219,24 +218,6 @@ class Database:
         snap.updated = now()
         self.resynced.append((snap.name, was, live))
         self._write(snap)
-        return True
-
-    def migrate(self):
-        """Split the old single-file register into this one, once."""
-        legacy = self.root / "snapkit.json"
-        if not legacy.is_file() or (self.root / "snaps").is_dir():
-            return False
-        try:
-            raw = json.loads(legacy.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
-            raise RegisterError(f"{legacy} is not valid JSON: {exc}") from exc
-
-        for name, record in (raw.get("snaps") or {}).items():
-            snap = Snap.from_dict(record)
-            snap.name = snap.name or name
-            snap.store_root = self.root
-            self._write(snap)
-        legacy.rename(legacy.with_suffix(".json.migrated"))
         return True
 
     # -- writing -------------------------------------------------------------
