@@ -98,7 +98,8 @@ sudo snap install --dangerous --classic snapkit_1.0.0_amd64.snap
 ```
 
 The version is spelled in `snap/snapcraft.yaml` and `snapforge/__init__.py`,
-and a test holds the two together; `pyproject.toml` reads the package's. `NEEDS` in
+and a test in `tests/imports.py` holds the two together; `pyproject.toml`
+reads the package's. `NEEDS` in
 `snapforge/build.py` is separate: it is the oldest snapkit a `pack.py`
 written against today's `Build` runs on, and every published project with a
 `pack.py` carries it. Raise it with the version whenever `Build` gains a
@@ -107,7 +108,9 @@ project at build time instead of being told at pull time.
 
 It is a classic snap because building a snap means running snapcraft and
 writing project directories wherever you keep them, and a confined snap can
-do neither.
+do neither. No interpreter is staged: the launcher runs the base's own
+python3, which is always installed beside the snap, and falls back to the
+host's where the host's libc is too old to run it.
 
 ## Caveats
 

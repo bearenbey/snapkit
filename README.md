@@ -77,7 +77,8 @@ $ snapkit create aristocratos/btop
 
 ## Installation
 
-snapkit needs Python 3.10.12 or newer and `snapcraft` to do the building.
+Run from source, snapkit needs Python 3.10.12 or newer; the snap runs on its
+base's. Either way `snapcraft` does the building.
 
 ```sh
 git clone https://github.com/bearenbey/snapkit

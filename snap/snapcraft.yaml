@@ -57,8 +57,14 @@ apps:
   snapkit:
     command: bin/snapkit
 
+# dpkg-deb runs on the host's libraries, as a classic snap's binaries do.
+lint:
+  ignore:
+    - classic
+
 parts:
-  # No interpreter: a relocated CPython cannot find its own standard library.
+  # No interpreter staged: a relocated CPython cannot find its own standard
+  # library, so the launcher runs the base's, or the host's on an older host.
   snapkit:
     plugin: dump
     source: .
@@ -68,6 +74,8 @@ parts:
       launcher: bin/snapkit
     stage:
       - lib/snapforge
+      # Whatever python last ran the tests, not something to ship.
+      - -lib/snapforge/__pycache__
       - lib/snapkit.py
       - bin/snapkit
       - usr

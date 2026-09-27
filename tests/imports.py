@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import ast
+import re
 import snapforge
 
 from .harness import check
@@ -65,3 +66,13 @@ def _():
     for name, edges in sorted(graph.items()):
         for other in sorted(edges):
             assert other in graph, f"{name} imports a missing .{other}"
+
+
+@check("snap/snapcraft.yaml spells the version the package does")
+def _():
+    # pyproject.toml reads the package's; the recipe is kept by hand.
+    yaml = (root.parent / "snap" / "snapcraft.yaml").read_text(encoding="utf-8")
+    found = re.search(r"(?m)^version:\s*'?([^'\n]+?)'?\s*$", yaml)
+    assert found, "no top-level version: in snap/snapcraft.yaml"
+    assert found.group(1) == snapforge.__version__, \
+        f"the recipe says {found.group(1)}, the package {snapforge.__version__}"
