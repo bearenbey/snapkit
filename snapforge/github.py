@@ -118,7 +118,7 @@ def _description(repo):
         found = re.search(r'<meta[^>]+name="description"[^>]+content="([^"]*)"', page)
     if not found:
         return ""
-    return _BOILERPLATE.sub("", _unescape(found.group(1))).strip()
+    return _BOILERPLATE.sub("", html.unescape(found.group(1))).strip()
 
 
 def licence_of(repo):
@@ -200,7 +200,3 @@ def version_of(tag):
 def _unquote(text):
     # A tag is percent-encoded UTF-8, so decoding a byte at a time mangles it.
     return urllib.parse.unquote(text)
-
-
-def _unescape(text):
-    return html.unescape(text)

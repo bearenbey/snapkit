@@ -277,19 +277,14 @@ def source_only(root):
 
 def rank_binaries(binaries, wanted):
     """Order candidates so the application comes first."""
+    target = (wanted or "").lower()
+
     def key(relative):
-        path = Path(relative)
-        stem = path.name.lower()
-        target = (wanted or "").lower()
-        exact = stem != target
-        similar = not (target and target in stem)
-        for index, directory in enumerate(BIN_DIRS):
-            if relative.startswith(directory + "/"):
-                place = index
-                break
-        else:
-            place = len(BIN_DIRS)
-        return (exact, similar, place, len(path.parts), relative)
+        stem = Path(relative).name.lower()
+        place = next((index for index, directory in enumerate(BIN_DIRS)
+                      if relative.startswith(directory + "/")), len(BIN_DIRS))
+        return (stem != target, not (target and target in stem), place,
+                relative.count("/"), relative)
     return sorted(binaries, key=key)
 
 
@@ -300,10 +295,11 @@ def find_desktop(root, wanted=""):
     if not entries:
         return ""
     target = (wanted or "").lower()
-    entries.sort(key=lambda r: (Path(r).stem.lower() != target,
-                                target not in Path(r).stem.lower(),
-                                len(Path(r).parts), r))
-    return entries[0]
+
+    def key(relative):
+        stem = Path(relative).stem.lower()
+        return stem != target, target not in stem, relative.count("/"), relative
+    return min(entries, key=key)
 
 
 def _desktop_text(root, desktop):
@@ -350,12 +346,11 @@ def find_icon(root, wanted="", named=""):
         where = path.as_posix().lower()
         return "/apps/" not in where and "/mimetypes/" in where
 
-    icons.sort(key=lambda p: (not (named and p.stem.lower() == named),
-                              not_an_app_icon(p),
-                              p.stem.lower() != target,
-                              target not in p.stem.lower(),
-                              -size_of(p)))
-    return icons[0].relative_to(root).as_posix()
+    def key(path):
+        stem = path.stem.lower()
+        return (not (named and stem == named), not_an_app_icon(path),
+                stem != target, target not in stem, -size_of(path))
+    return min(icons, key=key).relative_to(root).as_posix()
 
 
 # The toolkit decides what has to be plugged in for it to draw anything.

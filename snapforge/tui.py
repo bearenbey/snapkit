@@ -127,12 +127,8 @@ class Dashboard:
         self.keyboard = None
         self.live = None           # rich's Live, once run_dashboard has one
         self.reload()
-        for record, why in getattr(self.db, "problems", []):
-            self.say(f"{record.name} could not be read and was left out: {why}",
-                     "bold red")
-        for name, was, live in getattr(self.db, "resynced", []):
-            self.say(f"{name} was recorded at {was}, but its project says "
-                     f"{live} -- the record now says so too", "yellow")
+        for level, text in self.db.notices():
+            self.say(text, "bold red" if level == "warn" else "yellow")
         self.status = (f"{len(self.known)} registered -- press n to make "
                        f"one from a github repository" if self.known else
                        "nothing registered yet -- press n and paste a github url")
@@ -267,10 +263,9 @@ class Dashboard:
             is_file = local.looks_like_path(text)
             known, where = project.registered(self.db, text, is_file)
             if known:
-                self.say(f"{where} is {known.name} -- select it and press u "
-                         f"to pick up what is in there" if is_file else
-                         f"{where} is already registered as {known.name} -- "
-                         f"select it and press u to update it", "yellow")
+                how = "pick up what is in there" if is_file else "update it"
+                self.say(f"{where} is already registered as {known.name} -- "
+                         f"select it and press u to {how}", "yellow")
                 self.select(known.name)
                 self.idle()
                 return
@@ -303,15 +298,19 @@ class Dashboard:
         self.put(self, picking=made, pick_cursor=0,
                  status="which file should this be built from?")
         try:
-            while not self.picked.wait(0.1):
-                if self.cancel.is_set():
-                    raise Cancelled()
-            if self.pick_cursor < 0:
+            if not self._wait(self.picked) or self.pick_cursor < 0:
                 raise Cancelled()
             return made.candidates[self.pick_cursor]
         finally:
             self.put(self, picking=None)
             self.idle()
+
+    def _wait(self, event):
+        """Block the worker until a person answers, or a cancel comes first."""
+        while not event.wait(0.1):
+            if self.cancel.is_set():
+                return False
+        return True
 
     def pull_database(self):
         """Offer to write every snap the database has and this does not."""
@@ -391,10 +390,7 @@ class Dashboard:
         self.answered.clear()
         self.put(self, asking=question, asking_title=title, asking_note=note)
         try:
-            while not self.answered.wait(0.1):
-                if self.cancel.is_set():
-                    return False
-            return self.answer
+            return self._wait(self.answered) and self.answer
         finally:
             self.put(self, asking="")
 
@@ -413,9 +409,9 @@ class Dashboard:
     def package(self, snap):
         """Build something already registered, without going upstream."""
         def work():
-            reporter = DashboardReporter(self, self.row_for(snap.name))
-            self.select(snap.name)
             row = self.row_for(snap.name)
+            reporter = DashboardReporter(self, row)
+            self.select(snap.name)
             if row:
                 row.state = "working"
             self.status = f"packaging {snap.name} from the register"

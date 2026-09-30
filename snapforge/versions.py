@@ -9,13 +9,8 @@ from .net import NetworkError, get_text
 
 def version_key(text):
     """Order versions the way `sort -V` does."""
-    parts = []
-    for token in re.findall(r"\d+|\D+", text):
-        if token.isdigit():
-            parts.append((1, int(token), ""))
-        else:
-            parts.append((0, 0, token))
-    return parts
+    return [(1, int(token), "") if token.isdigit() else (0, 0, token)
+            for token in re.findall(r"\d+|\D+", text)]
 
 
 def newest(versions):
@@ -131,29 +126,27 @@ def from_name(source, artifact):
     return ""
 
 
+def _stanzas(text):
+    """Each blank-line-separated block of an index, as the fields it names."""
+    for block in re.split(r"\n\s*\n", text):
+        fields = {}
+        for line in block.splitlines():
+            if ": " in line and not line.startswith(" "):
+                key, value = line.split(": ", 1)
+                fields[key] = value.strip()
+        if fields:
+            yield fields
+
+
 def apt_stanza(index_url, package, want="", want_arch=""):
     """One package out of an apt Packages index."""
-    rows = []
-    fields = {}
     # `all` is a package with no architecture in it, which installs anywhere.
     architectures = {want_arch or arch.host(), "all"}
-
-    def flush():
-        if (fields.get("Package") == package
-                and fields.get("Architecture") in architectures
-                and all(fields.get(k) for k in ("Version", "Filename", "SHA256"))):
-            rows.append((fields["Version"], fields["Filename"], fields["SHA256"]))
-        fields.clear()
-
-    for line in get_text(index_url).splitlines():
-        if not line.strip():
-            flush()
-            continue
-        if ": " in line and not line.startswith(" "):
-            key, value = line.split(": ", 1)
-            fields[key] = value.strip()
-    flush()
-
+    rows = [(fields["Version"], fields["Filename"], fields["SHA256"])
+            for fields in _stanzas(get_text(index_url))
+            if fields.get("Package") == package
+            and fields.get("Architecture") in architectures
+            and all(fields.get(k) for k in ("Version", "Filename", "SHA256"))]
     if not rows:
         raise NetworkError(f"no {package} stanza for "
                            f"{' or '.join(sorted(architectures))} "

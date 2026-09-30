@@ -1,5 +1,6 @@
 """Drawing the dashboard."""
 
+from collections import Counter
 from datetime import datetime, timezone
 
 from rich import box
@@ -119,6 +120,7 @@ class Screen:
         self.frame = 0
         self.window = 1         # rows that fit; the first render works it out
         self.height = 30        # ... and the whole screen, for a full-page view
+        self.width = 100
         self.page_lines = 0     # how long the full-screen view being drawn is
         self.offset = 0
 
@@ -126,9 +128,9 @@ class Screen:
         """One frame."""
         self.frame += 1
         console = self.board.live.console if self.board.live else None
-        height = console.size.height if console else 30
-        width = console.size.width if console else 100
-        self.height = height
+        if console:
+            self.height, self.width = console.size.height, console.size.width
+        height, width = self.height, self.width
         self.window = max(1, height - self._header_height() - LOG_HEIGHT - 4)
 
         # Off the one list of modes the keys are dispatched through.
@@ -147,7 +149,7 @@ class Screen:
 
         layout = Layout()
         layout.split_column(
-            Layout(self._header(width), size=self._header_height()),
+            Layout(self._header(), size=self._header_height()),
             body,
             Layout(self._log(), size=LOG_HEIGHT),
             Layout(self._footer(width), size=1))
@@ -155,42 +157,36 @@ class Screen:
 
     def _header_height(self):
         """Tall enough for what the header has to say."""
-        if self.board.asking or self.board.confirm:
-            return 3
-        if self.board.tracking:
-            return 2 + 1 + len(_TRACK_HINTS)
-        if not self.board.prompting:
-            return 3
-        return 2 + 1 + min(len(self.board.matches), MATCHES_SHOWN) + 1
+        mode = self.board.mode
+        if mode == "tracking":
+            return 3 + len(_TRACK_HINTS)
+        if mode == "prompting":
+            return 4 + min(len(self.board.matches), MATCHES_SHOWN)
+        return 3
 
-    def _header(self, width=100):
-        if self.board.asking:
-            return self._asking_header()
-        if self.board.confirm:
-            return self._confirm_header()
-        if self.board.tracking:
-            return self._track_header(width)
-        if self.board.prompting:
-            return self._prompt_header()
+    def _header(self):
+        """Whatever the mode puts across the top, or the masthead."""
+        drawn = HEADERS.get(self.board.mode)
+        if drawn:
+            return drawn(self)
         # No box: a rule reads as a heads-up display, not a fourth container.
-        return Group(Text(""), self._masthead(width), self._rule(width))
+        return Group(Text(""), self._masthead(), self._rule())
 
-    def _rule(self, width=100):
+    def _rule(self):
         """A hairline under the masthead, bright at the left and fading out."""
-        room = max(4, width - 2)
+        room = max(4, self.width - 2)
         rule = Text("  ")
         for index in range(room):
             share = index / max(room - 1, 1)
             rule.append("─", style=_fade(share))
         return rule
 
-    def _masthead(self, width=100):
+    def _masthead(self):
         """The wordmark, the shape of the register, and what it is doing."""
+        width = self.width
         # Of the register, not of what a filter happens to be showing.
-        counts = {}
-        for row in self.board.known:
-            counts[row.state] = counts.get(row.state, 0) + 1
-        busy = sum(counts.get(s, 0) for s in ("queued", "working", "checking"))
+        counts = Counter(row.state for row in self.board.known)
+        busy = sum(counts[s] for s in ("queued", "working", "checking"))
 
         line = Text("  ")
         # Letter-spaced where there is room for it: a wordmark, not a word.
@@ -202,11 +198,11 @@ class Screen:
         line.append("   ")
         line.append(str(len(self.board.known)), style="bold")
         line.append(" registered", style="dim")
-        for glyph, count, style in (("●", counts.get("current", 0), "green"),
-                                    ("▲", counts.get("behind", 0), "yellow"),
+        for glyph, count, style in (("●", counts["current"], "green"),
+                                    ("▲", counts["behind"], "yellow"),
                                     (_spinner(self.frame), busy, ACCENT),
-                                    ("✕", counts.get("failed", 0)
-                                     + counts.get("error", 0), "red")):
+                                    ("✕", counts["failed"] + counts["error"],
+                                     "red")):
             if count:
                 line.append("   ")
                 line.append_text(_chip(glyph, count, style))
@@ -238,8 +234,9 @@ class Screen:
         """The blink at the end of whatever is being typed."""
         return shown if self.frame // 6 % 2 else hidden
 
-    def _track_header(self, width=100):
+    def _track_header(self):
         """Typing where one snap's releases should be looked for."""
+        width = self.width
         caret = self._caret()
         # One line whatever is typed: a wrapped header is the wrong height.
         room = max(20, width - len(self.board.tracking) - 10)
@@ -518,7 +515,15 @@ class Screen:
             box=box.ROUNDED, border_style=ACCENT, padding=(0, 1))
 
 
-# The modes that take the whole screen, by the name tui.MODES gives them.
+# The modes that put a box across the top, by the name tui.MODES gives them.
+HEADERS = {
+    "asking": Screen._asking_header,
+    "confirm": Screen._confirm_header,
+    "tracking": Screen._track_header,
+    "prompting": Screen._prompt_header,
+}
+
+# And the ones that take the whole screen.
 FULL_SCREEN = {
     "detail": Screen._details,
     "picking": Screen._picker,

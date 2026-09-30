@@ -87,18 +87,15 @@ class File:
 
     path: Path                    # the file, or the folder it was found in
     version: str
-
-    url = ""
-    description = ""
-    license = ""
+    # A file names no repository, and nothing describes it but itself.
+    repo: str = ""
+    url: str = ""
+    description: str = ""
+    license: str = ""
 
     @property
     def title(self):
         return str(self.path)
-
-    @property
-    def repo(self):
-        return ""
 
     def obtain(self, chosen, scratch, reporter):
         """Nothing to fetch -- read what is there and check it is intact."""
@@ -422,20 +419,26 @@ def write(snap, reporter):
         readme.write_text(_readme(snap), encoding="utf-8")
 
     _restore_launcher(snap, directory, reporter)
-
-    # The icon path is relative, so it has to come back with the directory.
-    if snap.icon and not (directory / snap.icon).is_file():
-        kept = snap.kept_icon
-        if kept:
-            target = directory / snap.icon
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(kept, target)
-            reporter.detail(f"restored {snap.icon}")
-        else:
-            reporter.warn(f"{snap.icon} is named by the recipe but no copy of "
-                          f"it was kept; remove the icon: line or recreate")
+    _restore_icon(snap, directory, reporter)
     reporter.step(f"wrote {yaml_path}")
     return directory
+
+
+def _restore_icon(snap, directory, reporter):
+    """Put the register's copy of the icon back where the recipe names it."""
+    # The icon path is relative, so it has to come back with the directory.
+    if not snap.icon or (directory / snap.icon).is_file():
+        return False
+    kept = snap.kept_icon
+    if kept is None:
+        reporter.warn(f"{snap.icon} is named by the recipe but no copy of "
+                      f"it was kept; remove the icon: line or recreate")
+        return False
+    target = directory / snap.icon
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(kept, target)
+    reporter.detail(f"restored {snap.icon}")
+    return True
 
 
 def _restore_launcher(snap, directory, reporter):
@@ -536,11 +539,9 @@ def build(snap, reporter, extra=()):
         _run_command(snap, directory, reporter, extra)
 
     if built is None:
-        built = _newest(p for p in directory.glob("*.snap")
-                        if p.name not in before)
-    if built is None and builds(snap):
-        # A rebuild of the same version overwrites rather than adds.
-        built = builds(snap)[-1]
+        # New this run, or a rebuild of the same version written over the old.
+        added = [p for p in directory.glob("*.snap") if p.name not in before]
+        built = buildlib.newest(added or builds(snap))
     if built is None:
         raise ForgeError("snapcraft finished but produced no .snap")
     reporter.result(f"built {built.name} "
@@ -622,27 +623,17 @@ def _run_command(snap, directory, reporter, extra):
 
 def _say_lint(reporter):
     """Repeat what the linters found, which otherwise scrolls past."""
-    findings = buildlib.lint_findings()
-    if not findings:
-        return
-    seen = set()
-    for kind, detail in findings:
+    grouped = {}
+    for kind, detail in buildlib.lint_findings():
         which = _advice(kind, detail)
-        if not which or which in seen:
-            continue
-        seen.add(which)
+        if which:
+            grouped.setdefault(which, []).append(detail)
+    for which, same in grouped.items():
         how, why = LINT_ADVICE[which]
-        same = [d for k, d in findings if _advice(k, d) == which]
         getattr(reporter, how)(f"snapcraft's linter: {len(same)} {which} "
                                f"({why})")
         for one in same[:4]:
             reporter.detail(f"  {one}")
-
-
-def _newest(paths):
-    """The most recently written of these files, or None if there are none."""
-    found = sorted(paths, key=lambda p: p.stat().st_mtime)
-    return found[-1] if found else None
 
 
 def _readme(snap):

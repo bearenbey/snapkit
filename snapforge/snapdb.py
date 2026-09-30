@@ -206,16 +206,13 @@ def unmet_sources(directory, kept, artifact=""):
     # Upstream's name for the file, and the one it is saved as here.
     names = {artifact} if isinstance(artifact, str) else set(artifact)
     names |= {".", ""}
-    unmet = []
-    for source in local_sources((directory / recipe.SNAPCRAFT_YAML).read_text()):
-        if source in names:
-            continue
-        if source in published:
-            continue
-        if any(k.startswith(source.rstrip("/") + "/") for k in published):
-            continue
-        unmet.append(source)
-    return unmet
+
+    def arrives(source):
+        """Whether a pulled project has this: a file, or a folder of them."""
+        return (source in names or source in published
+                or any(k.startswith(source.rstrip("/") + "/") for k in published))
+    recipe_text = (directory / recipe.SNAPCRAFT_YAML).read_text()
+    return [source for source in local_sources(recipe_text) if not arrives(source)]
 
 
 def fingerprint(files):

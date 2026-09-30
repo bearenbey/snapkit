@@ -1,6 +1,7 @@
 """Taking a snap project that already exists into the register."""
 
 import re
+from collections import Counter
 from pathlib import Path
 
 from . import classify, recipe, sources, versions
@@ -29,24 +30,21 @@ def find_recipe(directory):
 
 def find_repo(directory, text):
     """The GitHub repository this project packages, if it says anywhere."""
-    sources = [text]
+    texts = [text]
     readme = directory / "README.md"
     if readme.is_file():
-        sources.append(readme.read_text(encoding="utf-8", errors="replace"))
+        texts.append(readme.read_text(encoding="utf-8", errors="replace"))
 
-    counted = {}
-    for source in sources:
+    counted = Counter()
+    for source in texts:
         for owner, name in re.findall(
                 r"github\.com/([A-Za-z0-9._-]+)/([A-Za-z0-9._-]+)", source):
             # rstrip takes characters: "irssi/irssi".rstrip(".git") loses an i.
             name = name.removesuffix(".git")
-            if not name or name in ("releases", "issues", "blob", "tree", "raw"):
-                continue
-            repo = f"{owner}/{name}"
-            counted[repo] = counted.get(repo, 0) + 1
-    if not counted:
-        return ""
-    return max(counted, key=counted.get)
+            if name and name not in ("releases", "issues", "blob", "tree", "raw"):
+                counted[f"{owner}/{name}"] += 1
+    # The one named most often; between equals, the one named first.
+    return counted.most_common(1)[0][0] if counted else ""
 
 
 def find_artifact(directory, text):

@@ -144,13 +144,9 @@ def main(argv=None):
         db = Database()
     except (RegisterError, OSError) as exc:
         die(str(exc))
-    for record, why in db.problems:
-        # Loud and on every command: one record short beats failing to open.
-        reporter.warn(f"{record} could not be read and was left out: {why}")
-    for name, was, live in db.resynced:
-        # Not a warning: the register was put right, and that has to be said.
-        reporter.detail(f"{name} was recorded at {was}, but its project says "
-                        f"{live} -- the record now says so too")
+    # Loud and on every command: a record left out, or one put right.
+    for level, text in db.notices():
+        getattr(reporter, level)(text)
 
     interactive = can_ask(args) and not args.command
     if interactive:
@@ -329,6 +325,13 @@ def cmd_package(db, args, reporter):
     return 0
 
 
+def _named(db, args, command):
+    """The snap the first word names, for a command that takes one."""
+    if not args.rest:
+        die(f"{command} needs a name")
+    return _one_of(db, args.rest[0])
+
+
 def _one_of(db, text):
     """The single registered snap `text` refers to, or a helpful refusal."""
     if text in db:
@@ -428,9 +431,7 @@ def upstream_of(snap):
 
 
 def cmd_show(db, args, reporter):
-    if not args.rest:
-        die("show needs a name")
-    snap = _one_of(db, args.rest[0])
+    snap = _named(db, args, "show")
     for key, value in snap.to_dict().items():
         if key == "snapcraft_yaml":
             continue
@@ -458,7 +459,7 @@ def cmd_check(db, args, reporter):
     findings = update.situations(targets)
     print(f"{'NAME':<20} {'BUILT':<16} {'UPSTREAM':<16} STATUS")
     for snap, found in zip(targets, findings):
-        upstream = found.latest or {"untracked": "-"}.get(found.state, "?")
+        upstream = found.latest or ("-" if found.state == "untracked" else "?")
         status = found.words
         if found.behind:
             status += f" ({found.asset.name})"
@@ -621,9 +622,7 @@ def print_kinds():
 
 
 def cmd_build(db, args, reporter):
-    if not args.rest:
-        die("build needs a name")
-    snap = _one_of(db, args.rest[0])
+    snap = _named(db, args, "build")
     project.build_recorded(db, snap, reporter, build_flags(args))
     return 0
 
@@ -661,9 +660,7 @@ def db_list(db, snaps, reporter):
     """What the database has, against what is registered here."""
     reporter.detail(f"{snapdb.base_url()}")
     width = max((len(n) for n in snaps), default=4)
-    drifted, unpublished = [], []
-
-    behind = []
+    drifted, unpublished, behind = [], [], []
     for name in sorted(snaps):
         published = snaps[name]
         mark = _drift_mark(db.snaps.get(name), published)
@@ -770,35 +767,30 @@ def cmd_install(db, args, reporter):
 
 def cmd_prune(db, args, reporter):
     """Delete the builds and files a project no longer needs."""
-    stale = [(snap, update.prunable(snap)) for snap in targets_of(db, args)]
-    stale = [(snap, files) for snap, files in stale if files]
+    stale = [(snap, path) for snap in targets_of(db, args)
+             for path in update.prunable(snap)]
     if not stale:
         print("nothing to prune")
         return 0
     total = 0
-    for snap, files in stale:
-        for path in files:
-            size = path.stat().st_size
-            total += size
-            print(f"  {snap.name}: {path.name} ({size / 1e6:.0f} MB)")
-    count = sum(len(files) for _, files in stale)
+    for snap, path in stale:
+        size = path.stat().st_size
+        total += size
+        print(f"  {snap.name}: {path.name} ({size / 1e6:.0f} MB)")
     if not args.yes:
-        print(f"This deletes {count} file{'s' if count != 1 else ''} "
+        print(f"This deletes {len(stale)} file{'s' if len(stale) != 1 else ''} "
               f"({total / 1e6:.0f} MB). Each project keeps its newest build.")
         if not ask_yes_no("Delete them?"):
             print("left alone")
             return 1
-    for _, files in stale:
-        for path in files:
-            path.unlink()
+    for _, path in stale:
+        path.unlink()
     print(f"freed {total / 1e6:.0f} MB")
     return 0
 
 
 def cmd_remove(db, args, reporter):
-    if not args.rest:
-        die("remove needs a name")
-    snap = _one_of(db, args.rest[0])
+    snap = _named(db, args, "remove")
     if not args.yes:
         print(f"This forgets {snap.name} ({snap.repo}) and the snapcraft.yaml "
               f"stored with it.")

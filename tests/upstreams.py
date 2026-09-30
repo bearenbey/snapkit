@@ -83,8 +83,10 @@ def _():
     same(github._unquote("v1.0-%C3%A4"), "v1.0-\u00e4")
     same(github._unquote("v1.0%20final"), "v1.0 final")
     # A description carries more entities than the six that were listed.
-    same(github._unescape("Tom&#x27;s tool &amp; more &#8212; nice"),
-         "Tom\u0027s tool & more \u2014 nice")
+    page = ('<meta property="og:description" '
+            'content="Tom&#x27;s tool &amp; more &#8212; nice">')
+    with patched(github, get_text=lambda url: page):
+        same(github._description("a/b"), "Tom\u0027s tool & more \u2014 nice")
 
 
 @check("classify keeps x86_64 and drops everything else")

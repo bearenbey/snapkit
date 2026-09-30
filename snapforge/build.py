@@ -43,15 +43,20 @@ def file_source_parts(yaml_path):
             if (directory / value).is_file()]
 
 
+def newest(paths):
+    """The most recently written of these files, or None when there are none."""
+    return max(paths, key=lambda path: path.stat().st_mtime, default=None)
+
+
 def stale_parts(directory):
     """The parts whose file was replaced since the last snap was packed."""
     directory = Path(directory)
-    packed = [path.stat().st_mtime for path in directory.glob("*.snap")]
-    if not packed:
+    packed = newest(directory.glob("*.snap"))
+    if packed is None:
         return []
     return [name for name, source
             in file_source_parts(directory / recipe.SNAPCRAFT_YAML)
-            if source.stat().st_mtime > max(packed)]
+            if source.stat().st_mtime > packed.stat().st_mtime]
 
 
 class BuildError(Exception):
@@ -207,12 +212,11 @@ class Build:
 
     def packed(self):
         """The snap on disk for the recipe's version, whatever its arch."""
-        made = sorted(self.directory.glob(f"{self.app}_{self.version}_*.snap"),
-                      key=lambda path: path.stat().st_mtime)
-        if not made:
+        made = newest(self.directory.glob(f"{self.app}_{self.version}_*.snap"))
+        if made is None:
             die(f"build finished but no {self.app}_{self.version}_*.snap "
                 f"was produced")
-        return made[-1]
+        return made
 
     @contextlib.contextmanager
     def unpacked(self, snap):
@@ -438,9 +442,8 @@ LINT_LINE = re.compile(r"^- (\w+): (.+?)\s*(?:\(http\S+\))?$")
 def _newest_log(logs=None):
     """snapcraft's most recent log, or None when there is none to read."""
     try:
-        return max(Path(logs or SNAPCRAFT_LOGS).glob("*.log"),
-                   key=lambda p: p.stat().st_mtime)
-    except (OSError, ValueError):
+        return newest(Path(logs or SNAPCRAFT_LOGS).glob("*.log"))
+    except OSError:
         return None
 
 

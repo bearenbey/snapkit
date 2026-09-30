@@ -206,6 +206,19 @@ class Database:
             self._resync(snap)
         return self
 
+    def notices(self):
+        """What loading had to say, as (level, text) for a reporter.
+
+        A record that could not be read is a warning: one short beats
+        failing to open. A record put back in line with its project is
+        only a detail, but one that has to be said.
+        """
+        for record, why in self.problems:
+            yield "warn", f"{record} could not be read and was left out: {why}"
+        for name, was, live in self.resynced:
+            yield "detail", (f"{name} was recorded at {was}, but its project "
+                             f"says {live} -- the record now says so too")
+
     def _resync(self, snap):
         """Put a record's version back in line with the project it describes."""
         if not snap.directory or not Path(snap.directory).is_dir():

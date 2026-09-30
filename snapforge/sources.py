@@ -102,18 +102,18 @@ def _local(config, want, directory):
     if directory is None:
         raise NetworkError("a local upstream is relative to a project "
                            "directory, and this record names none")
+    glob = config.get("glob")
     if want:
-        wanted = [f for f in local.find(directory, config.get("glob"))
-                  if f.version == want]
-        if not wanted:
+        found = next((f for f in local.find(directory, glob)
+                      if f.version == want), None)
+        if found is None:
             raise NetworkError(f"no {want} in {directory}")
-        found = wanted[0]
     else:
-        found = local.newest(directory, config.get("glob"))
-    if found is None:
-        pattern = config.get("glob") or "a package"
-        raise NetworkError(f"no {pattern} in {directory} -- put one there, or "
-                           f"`snapkit create` it from wherever it is")
+        found = local.newest(directory, glob)
+        if found is None:
+            raise NetworkError(f"no {glob or 'a package'} in {directory} -- put "
+                               f"one there, or `snapkit create` it from "
+                               f"wherever it is")
     return _release(config, found.version or "0", found.name,
                     found.path.resolve().as_uri(),
                     path=str(found.path))
