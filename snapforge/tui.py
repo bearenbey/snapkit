@@ -217,14 +217,8 @@ class Dashboard:
         if self.cancel.is_set():
             row.state = "unknown"
             return
-        try:
-            # Skipping on `repo` missed every non-GitHub upstream.
-            found = update.situation(row.snap)
-        except Exception as exc:
-            # One unreadable record must not take the other twenty-four down.
-            self.put(row, state="error", note=f"{type(exc).__name__}: {exc}")
-            self.say(f"{row.name}: {row.note}", "red")
-            return
+        # Every kind of upstream, and a bad record comes back as an error.
+        found = update.situation(row.snap)
         self.put(row, **row.take(found))
         if found.note:
             self.say(f"{row.name}: {found.note}", "yellow")
@@ -871,6 +865,7 @@ def run_dashboard(db):
         with Live(dashboard.render(), screen=True, refresh_per_second=REFRESH,
                   redirect_stdout=False, redirect_stderr=False) as live:
             dashboard.live = live
+            interrupted = False
             try:
                 while not dashboard.quit:
                     for key in keyboard.keys(1 / REFRESH):
@@ -879,6 +874,9 @@ def run_dashboard(db):
                         if dashboard.quit:
                             break
                     live.update(dashboard.render())
+            except KeyboardInterrupt:
+                # Torn down like a quit, so the worker is told and waited for.
+                interrupted = True
             finally:
                 with dashboard.lock:
                     dashboard.closing = True
@@ -887,4 +885,4 @@ def run_dashboard(db):
         dashboard.cancel.set()
         print("finishing what is in flight ...", flush=True)
         dashboard.worker.join(timeout=15)
-    return 0
+    return 130 if interrupted else 0

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from snapforge import db, project, update
 
-from .harness import check, same, Quiet, patched, raises, make_deb
+from .harness import check, same, Quiet, patched, raises, make_deb, _raise
 
 
 @check("a matching version is up to date even with no tag recorded")
@@ -107,6 +107,29 @@ def _():
     same(found.behind, False)
     same(found.latest, "")
     assert found.problem, "it should say why"
+
+
+@check("a record edited by hand to lack a setting is refused by name")
+def _():
+    # config["base"] raised a bare KeyError, which main printed as "base".
+    from snapforge import sources
+    snap = db.Snap(name="demo", upstream={"kind": "apt", "package": "demo"})
+    with raises(sources.BadUpstream, "it read the record anyway"):
+        sources.resolve(snap.upstream)
+    found = update.situation(snap)
+    same(found.state, "error")
+    assert "base" in found.problem and "KeyError" not in found.problem, \
+        found.problem
+
+
+@check("whatever one record raises, the check of it is an answer")
+def _():
+    # The dashboard caught this itself; the terminal's check just died.
+    snap = db.Snap(name="demo", repo="a/b", asset_pattern="^x$")
+    with patched(update, resolve=_raise(RuntimeError("deliberate"))):
+        found = update.situation(snap)
+    same(found.state, "error")
+    same(found.problem, "RuntimeError: deliberate")
 
 
 @check("an upstream that is not a repository is still checked")

@@ -160,7 +160,8 @@ def main(argv=None):
     try:
         return handler(db, args, reporter)
     except (project.ForgeError, NetworkError, github.NotFound,
-            snapdb.SnapDbError, RegisterError, ValueError) as exc:
+            snapdb.SnapDbError, RegisterError, ValueError, OSError) as exc:
+        # OSError too: a full disk or a permission is a sentence, not a trace.
         die(str(exc))
     except KeyError as exc:
         die(exc.args[0])
@@ -357,7 +358,7 @@ def cmd_import(db, args, reporter):
         try:
             snap, recipe, is_snapcraft, confirmed = adopt.read(
                 directory, repo=args.repo)
-        except adopt.NotAProject as exc:
+        except (adopt.NotAProject, OSError) as exc:
             reporter.warn(str(exc))
             skipped += 1
             continue

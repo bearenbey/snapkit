@@ -253,6 +253,11 @@ def shape_of(kind):
 def resolve(config, want=None, directory=None):
     """What this upstream offers now. Raises NetworkError if it cannot say."""
     shape = shape_of(config.get("kind", ""))
+    # A record can be edited by hand, so it is checked the way `track` was:
+    # a missing setting is a refusal that names it, not a KeyError.
+    _check_required(shape, config)
+    _check_patterns(shape, config)
+    _check_templates(shape, config)
     return shape.resolve(config, want, directory)
 
 
@@ -273,15 +278,7 @@ def configure(kind, values):
             # {arch} is left standing: the record must work on any machine.
             config[key] = template.format_map(_Partial(config))
 
-    # Name what was asked for outright before what is derived from it.
-    blank = [key for key in shape.required if not config.get(key)]
-    missing = [key for key in blank if key not in shape.defaults] or blank
-    if missing:
-        raise BadUpstream(
-            f"{kind} needs {', '.join(missing)}\n"
-            + "\n".join(f"           {key} is {known[key]}" for key in missing)
-            + f"\n\n           {shape.example}")
-
+    _check_required(shape, config)
     _check_patterns(shape, config)
     _check_templates(shape, config)
     order = ("kind", *shape.keys, *COMMON)
@@ -291,6 +288,18 @@ def configure(kind, values):
 def _given(config, keys):
     """The settings out of `keys` that were actually given something."""
     return [(key, config[key]) for key in keys if config.get(key)]
+
+
+def _check_required(shape, config):
+    """A required setting left blank, named, with what it is for."""
+    blank = [key for key in shape.required if not config.get(key)]
+    # Name what was asked for outright before what is derived from it.
+    missing = [key for key in blank if key not in shape.defaults] or blank
+    if missing:
+        raise BadUpstream(
+            f"{shape.kind} needs {', '.join(missing)}\n"
+            + "\n".join(f"           {key} is {shape.keys[key]}" for key in missing)
+            + f"\n\n           {shape.example}")
 
 
 def _check_patterns(shape, config):
@@ -401,7 +410,10 @@ def _gpg(config, path, release, url):
 
 def _tar_member(config, path, release, url):
     """Check that a file that must be in this tarball is in it."""
-    member = _fill(config["member"], version=release.version, tag=release.tag)
+    member = _fill(config.get("member", ""), version=release.version,
+                   tag=release.tag)
+    if not member:
+        raise NetworkError("the tar-member check names no member to look for")
     try:
         with tarfile.open(path) as tar:
             tar.getmember(member)

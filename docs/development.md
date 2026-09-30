@@ -88,6 +88,11 @@ Several exist because of bugs that were in here:
   after the connection opened was a bare traceback
 - `extractfile` raises for a name the tar does not have, so the fallback to a
   control file stored without `./` never ran and the .deb read as versionless
+- a record edited by hand to lack an upstream setting raised a bare
+  `KeyError` out of `check`, which the terminal printed as one word; a
+  record is now checked at resolve time the way `track` checked it when it
+  was written, and whatever else one record raises is that snap's answer
+  rather than the end of everyone's check
 
 ## Building this
 

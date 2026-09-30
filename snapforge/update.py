@@ -59,6 +59,10 @@ def situation(snap, force=False, timeout=net.CHECK_TIMEOUT):
         return Situation("untracked", problem=str(exc))
     except (NetworkError, ForgeError, sources.BadUpstream) as exc:
         return Situation("error", problem=str(exc))
+    except Exception as exc:
+        # A record edited by hand can raise anything, and one must not take
+        # the check of every other snap down with it.
+        return Situation("error", problem=f"{type(exc).__name__}: {exc}")
     return Situation("behind" if asset is not None else "current",
                      release=release, asset=asset, note=note)
 
@@ -274,10 +278,14 @@ def _dressed(snap, release, asset):
         return asset
     sha = ""
     if snap.checksums:
+        manifest = snap.checksums.get("url")
+        if not manifest:
+            raise ForgeError(f"{snap.name}'s checksums setting names no url "
+                             f"to read the manifest from")
         base = f"https://github.com/{snap.repo}/releases/download/{release.tag}"
         sha = sources.manifest_sha(
-            snap.checksums["url"].format(base=base, tag=release.tag,
-                                         version=release.version, asset=asset.name),
+            manifest.format(base=base, tag=release.tag, version=release.version,
+                            asset=asset.name),
             asset.name, required=snap.checksums.get("required", True))
     return github.Asset(name=asset.name, url=asset.url, local=snap.local_asset,
                         sha=sha, glob=snap.asset_glob)

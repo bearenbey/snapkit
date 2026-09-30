@@ -488,3 +488,14 @@ def _():
     with raises(Stop, "should have raised"):
         buildlib.stream(["bash", "-c", "echo go; sleep 30"], Stopper())
     assert time.time() - started < 5, "the child was waited on, not killed"
+
+
+@check("a log directory that cannot be read means no findings, not a crash")
+def _():
+    # After a successful build, an unreadable log turned into a traceback.
+    from snapforge import build as buildlib
+    with tempfile.TemporaryDirectory() as home:
+        not_a_directory = Path(home) / "log"
+        not_a_directory.write_text("")
+        same(buildlib.lint_findings(not_a_directory), [])
+        same(buildlib.lint_findings(Path(home) / "missing"), [])

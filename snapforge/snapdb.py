@@ -309,9 +309,10 @@ def index(url=None):
         found = json.loads(text)
     except ValueError as exc:
         raise SnapDbError(f"{url} is not the index: {exc}") from exc
-    if found.get("schema") != SCHEMA:
-        raise SnapDbError(f"the database is schema {found.get('schema')} and "
-                            f"this snapkit reads {SCHEMA} -- upgrade snapkit")
+    if not isinstance(found, dict) or found.get("schema") != SCHEMA:
+        schema = found.get("schema") if isinstance(found, dict) else "unknown"
+        raise SnapDbError(f"the database is schema {schema} and this snapkit "
+                          f"reads {SCHEMA} -- upgrade snapkit")
     return found
 
 

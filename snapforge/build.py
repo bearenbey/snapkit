@@ -429,31 +429,25 @@ def run_pack(app, directory, filename="pack.py", reporter=None,
 
 SNAPCRAFT_LOGS = Path.home() / ".local/state/snapcraft/log"
 
-# An interrupted run leaves a container LXD will not re-attach craft-state to.
-STALE_INSTANCE = "Failed to add disk to instance"
-
-
 # snapcraft's log carries every line it printed, behind a timestamp.
 LOGGED = re.compile(r"^::\s+[\d-]+\s+[\d:.]+\s+(.*)$")
 LINT_HEADING = "Lint warnings:"
 LINT_LINE = re.compile(r"^- (\w+): (.+?)\s*(?:\(http\S+\))?$")
 
 
-def _newest_log(logs=None):
-    """snapcraft's most recent log, or None when there is none to read."""
+def _log_text(logs=None):
+    """snapcraft's most recent log, or "" when there is none to be read."""
     try:
-        return newest(Path(logs or SNAPCRAFT_LOGS).glob("*.log"))
+        latest = newest(Path(logs or SNAPCRAFT_LOGS).glob("*.log"))
+        return latest.read_text(errors="replace") if latest else ""
     except OSError:
-        return None
+        return ""
 
 
 def lint_findings(logs=None):
     """What snapcraft's own linters said about the snap it has just packed."""
-    newest = _newest_log(logs)
-    if newest is None:
-        return []
     found, reading = [], False
-    for line in newest.read_text(errors="replace").splitlines():
+    for line in _log_text(logs).splitlines():
         logged = LOGGED.match(line)
         text = logged.group(1) if logged else line
         if text.strip() == LINT_HEADING:
@@ -472,13 +466,8 @@ def lint_findings(logs=None):
 
 def stale_instance():
     """The container a wedged run left behind, read from snapcraft's log."""
-    newest = _newest_log()
-    if newest is None:
-        return ""
-    text = newest.read_text(errors="replace")
-    if STALE_INSTANCE not in text:
-        return ""
-    found = re.search(r"Failed to add disk to instance '([^']+)'", text)
+    # An interrupted run leaves a container LXD will not re-attach state to.
+    found = re.search(r"Failed to add disk to instance '([^']+)'", _log_text())
     return found.group(1) if found else ""
 
 
