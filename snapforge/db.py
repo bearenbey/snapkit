@@ -113,8 +113,17 @@ class Snap:
 
     @classmethod
     def from_dict(cls, data):
-        known = {f.name for f in fields(cls)}
+        """A record as read off disk. Raises ValueError for a field of the
+        wrong shape, which a hand edit can leave and the code cannot use."""
+        known = {f.name: f.type for f in fields(cls)}
         taken = {k: v for k, v in data.items() if k in known}
+        for key, value in taken.items():
+            # Only the plain shapes: what is written down is one of these.
+            shape = known[key]
+            if shape in (str, dict, list, bool, int) \
+                    and not isinstance(value, shape):
+                raise ValueError(f"{key} should be a {shape.__name__}, not "
+                                 f"{type(value).__name__}")
         # The single-file register kept the recipe inline under its old name.
         if "snapcraft_yaml" in data and "recipe_text" not in data:
             taken["recipe_text"] = data["snapcraft_yaml"]
@@ -196,7 +205,11 @@ class Database:
             if not isinstance(data, dict):
                 self.problems.append((record, "not a record"))
                 continue
-            snap = Snap.from_dict(data)
+            try:
+                snap = Snap.from_dict(data)
+            except ValueError as exc:
+                self.problems.append((record, str(exc)))
+                continue
             snap.store_root = self.root
             snap.record_file = str(record)
             if not snap.name:

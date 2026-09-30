@@ -133,6 +133,13 @@ def _():
         fresh = db.Database(root)
         same(len(fresh.problems), 2, "the nameless one was not reported")
         assert "s3" not in fresh.snaps
+        # and one whose field is the wrong shape is refused by that field
+        (root / "snaps" / "s4.json").write_text(
+            '{"name": "s4", "upstream": "apt base=x", "plugs": "home"}')
+        fresh = db.Database(root)
+        same(len(fresh.problems), 3, "the misshapen one was not reported")
+        assert "upstream" in fresh.problems[2][1], fresh.problems[2]
+        assert "s4" not in fresh.snaps
 
 
 @check("a record does not grow without bound as it is rebuilt")

@@ -541,7 +541,12 @@ class Dashboard:
         if row is None or self.busy:
             return
         name = row.name
-        self.db.remove(name)
+        try:
+            self.db.remove(name)
+        except OSError as exc:
+            # The register is files, and a file can refuse to go.
+            self.say(f"{name} could not be removed: {exc}", "red")
+            return
         self.reload()
         self.say(f"removed {name} from the register, and its recipe with it",
                  "yellow")
