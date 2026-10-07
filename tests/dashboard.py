@@ -26,6 +26,19 @@ def _():
             board.screen.render()
 
 
+@check("a scroll key that lands in the same read as the page key is fine")
+def _():
+    # Keyboard.keys() hands back a whole batch, and page_max was only set
+    # by a render: l then j in one read was an AttributeError.
+    with tempfile.TemporaryDirectory() as home:
+        board = Dashboard(db=db.Database(Path(home) / "snapkit.json"))
+        for first in ("l", "enter"):
+            for key in (first, "j", "k", "pagedown", "pageup", "home", "end",
+                        "escape"):
+                board.handle(key)
+        same(board.mode, "", "the keys did not come back out")
+
+
 @check("the picker blocks the worker until something is chosen")
 def _():
     from snapforge.tui import Cancelled, Dashboard

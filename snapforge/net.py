@@ -147,6 +147,10 @@ def download(url, dest, sha="", on_progress=None):
         part.unlink(missing_ok=True)
         raise
 
+    # A server that hangs up early ends the read like a complete one would.
+    if total and done != total:
+        part.unlink(missing_ok=True)
+        raise NetworkError(f"{dest.name}: got {done} of {total} bytes")
     got = digest.hexdigest()
     if sha and got != sha:
         part.unlink(missing_ok=True)

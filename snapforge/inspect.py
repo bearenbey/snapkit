@@ -9,6 +9,7 @@ import stat
 import subprocess
 import tarfile
 import zipfile
+import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -73,7 +74,31 @@ def unpack(archive, destination, kind):
         _unpack_appimage(archive, destination)
     else:
         _unpack_archive(archive, destination)
+    _tame_links(destination)
     return destination
+
+
+def _tame_links(destination):
+    """Point every symlink inside the tree, or remove it.
+
+    dpkg-deb and an AppImage extract links as they are, and a payload that
+    links its icon to /etc/passwd would otherwise have that read and copied.
+    """
+    root = os.path.realpath(destination)
+    for folder, dirs, files in os.walk(root):
+        for name in dirs + files:
+            path = os.path.join(folder, name)
+            if not os.path.islink(path):
+                continue
+            target = os.readlink(path)
+            if os.path.isabs(target):
+                target = os.path.relpath(os.path.join(root, target.lstrip("/")),
+                                         folder)
+                os.unlink(path)
+                os.symlink(target, path)
+            real = os.path.realpath(os.path.join(folder, target))
+            if os.path.commonpath([real, root]) != root:
+                os.unlink(path)
 
 
 def _deb_member(path, prefix):
@@ -90,6 +115,9 @@ def _deb_member(path, prefix):
                 size = int(header[48:58].decode("ascii", "replace").strip())
             except ValueError as exc:
                 raise InspectionError(f"{path.name}: damaged ar header") from exc
+            if size < 0:
+                # seek() would go backwards and read the same header for ever.
+                raise InspectionError(f"{path.name}: damaged ar header")
             if name.startswith(prefix):
                 return name, handle.read(size)
             handle.seek(size + (size % 2), 1)
@@ -99,10 +127,45 @@ def _tar_bytes(blob):
     return tarfile.open(fileobj=io.BytesIO(blob), mode="r:*")
 
 
+# What extracting a tar raises besides TarError: OSError for a file where a
+# directory was promised, KeyError for a hard link to a member that is not there.
+TAR_FAILURES = (tarfile.TarError, OSError, KeyError)
+
+
 def _extract_all(tar, destination):
     """extractall, refusing a member that would land outside `destination`."""
     # filter= is why the floor is 3.10.12: it is where the keyword arrived.
-    tar.extractall(destination, filter="tar")
+    tar.extractall(destination, filter=_inside)
+
+
+def _inside(member, destination):
+    """The "tar" filter, with links kept inside the destination as well.
+
+    "tar" checks where a member lands but not where a link points, and a
+    hard link to /etc/passwd is the host's file. "data" refuses absolute
+    targets outright, and a .deb's /usr/bin/code -> /usr/share/code/bin/code
+    is one; here that means the tree it is unpacked into.
+    """
+    member = tarfile.tar_filter(member, destination)
+    if not (member.issym() or member.islnk()):
+        return member
+    root = os.path.realpath(destination)
+    target = member.linkname
+    if member.islnk():
+        # A hard link names another member, so an absolute one names nothing.
+        if os.path.isabs(target):
+            return None
+        here = ""
+    else:
+        here = os.path.dirname(member.name.rstrip("/"))
+        if os.path.isabs(target):
+            target = os.path.relpath(os.path.join(root, target.lstrip("/")),
+                                     os.path.join(root, here))
+            member = member.replace(linkname=target)
+    real = os.path.realpath(os.path.join(root, here, target))
+    if os.path.commonpath([real, root]) != root:
+        return None
+    return member
 
 
 def _unpack_deb(archive, destination):
@@ -126,29 +189,66 @@ def _unpack_deb(archive, destination):
     try:
         with _tar_bytes(blob) as tar:
             _extract_all(tar, destination)
-    except tarfile.TarError as exc:
+    except TAR_FAILURES as exc:
         raise InspectionError(f"{archive.name}: {exc}") from exc
 
 
 def _unpack_archive(archive, destination):
     if zipfile.is_zipfile(archive):
-        with zipfile.ZipFile(archive) as zipped:
-            zipped.extractall(destination)
-            # ZipFile drops the exec bit, so put it back or nothing will run.
-            for info in zipped.infolist():
-                mode = info.external_attr >> 16
-                if not mode & stat.S_IXUSR:
-                    continue
-                # Where extractall put it, not what the entry called itself.
-                target = _extracted_as(destination, info.filename)
-                if target is not None and target.is_file():
-                    target.chmod(target.stat().st_mode | 0o111)
+        try:
+            _unpack_zip(archive, destination)
+        except (zipfile.BadZipFile, NotImplementedError, RuntimeError,
+                zlib.error, OSError) as exc:
+            # is_zipfile only reads the end; a bad CRC, an encrypted entry
+            # or a compression Python has no reader for turn up in here.
+            raise InspectionError(f"{archive.name}: {exc}") from exc
         return
     try:
         with tarfile.open(archive, mode="r:*") as tar:
             _extract_all(tar, destination)
-    except tarfile.TarError as exc:
+    except tarfile.ReadError as exc:
+        if archive.name.endswith((".zst", ".tzst")):
+            _unpack_zstd_tar(archive, destination)
+            return
         raise InspectionError(f"{archive.name}: {exc}") from exc
+    except TAR_FAILURES as exc:
+        raise InspectionError(f"{archive.name}: {exc}") from exc
+
+
+def _unpack_zip(archive, destination):
+    with zipfile.ZipFile(archive) as zipped:
+        zipped.extractall(destination)
+        # ZipFile drops the exec bit, so put it back or nothing will run.
+        for info in zipped.infolist():
+            mode = info.external_attr >> 16
+            if not mode & stat.S_IXUSR:
+                continue
+            # Where extractall put it, not what the entry called itself.
+            target = _extracted_as(destination, info.filename)
+            if target is not None and target.is_file():
+                target.chmod(target.stat().st_mode | 0o111)
+
+
+def _unpack_zstd_tar(archive, destination):
+    """A .tar.zst on a Python without a zstd reader, through the zstd tool."""
+    if not shutil.which("zstd"):
+        raise InspectionError(
+            f"{archive.name} is zstd-compressed and zstd is not installed: "
+            f"sudo apt install zstd")
+    with subprocess.Popen(["zstd", "-dc", str(archive)], stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE) as proc:
+        try:
+            with tarfile.open(fileobj=proc.stdout, mode="r|") as tar:
+                _extract_all(tar, destination)
+            # Past the end-of-archive marker, or closing the pipe kills zstd.
+            for _ in iter(lambda: proc.stdout.read(1 << 20), b""):
+                pass
+        except TAR_FAILURES as exc:
+            proc.kill()
+            raise InspectionError(f"{archive.name}: {exc}") from exc
+        error = proc.stderr.read().decode("utf-8", "replace").strip()
+    if proc.returncode != 0:
+        raise InspectionError(f"{archive.name} would not unpack: {error[:200]}")
 
 
 def _extracted_as(destination, name):

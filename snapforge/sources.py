@@ -387,8 +387,11 @@ def _gpg(config, path, release, url):
     signature = Path(str(path) + suffix)
     try:
         download(url + suffix, signature)
-    except NetworkError:
-        return "gpg: upstream published no signature for this release"
+    except NetworkError as exc:
+        # The record asks for a signature; a missing one is not a pass.
+        raise NetworkError(f"gpg: no signature to check {Path(path).name} "
+                           f"against ({exc}) -- the record's `verify` asks "
+                           f"for one") from None
     try:
         # A keyring set to fetch keys would go to the network here.
         done = subprocess.run(

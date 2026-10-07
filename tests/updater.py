@@ -211,6 +211,20 @@ def _():
         same(len([line for c in changes for line in c.lines]), 3)
 
 
+@check("a new version that starts with the old is not rewritten twice")
+def _():
+    # The asset was renamed first, then the version pass found 2.0 in 2.0-1.
+    with tempfile.TemporaryDirectory() as home:
+        here = Path(home)
+        (here / "README.md").write_text(
+            "demo-2.0.tar.gz is v2.0\x0cpage\r\nno newline at end")
+        rewrite.rewrite_versions(here, "2.0", "2.0-1",
+                                 "demo-2.0.tar.gz", "demo-2.0-1.tar.gz")
+        # And the form feed, the \r and the missing final newline all stay.
+        same((here / "README.md").read_bytes(),
+             b"demo-2.0-1.tar.gz is v2.0-1\x0cpage\r\nno newline at end")
+
+
 @check("only the anchored source: line is repointed, not the other one")
 def _():
     with tempfile.TemporaryDirectory() as home:

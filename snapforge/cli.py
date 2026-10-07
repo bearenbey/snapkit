@@ -115,7 +115,7 @@ def parse_args(argv):
     parser.add_argument("--no-build", action="store_true",
                         help="write the project but do not run snapcraft")
     parser.add_argument("--yes", action="store_true",
-                        help="do not ask before removing or pruning")
+                        help="do not ask before removing, pruning or installing")
     parser.add_argument("--force", action="store_true",
                         help="on update, redo a project that is already "
                              "current; on track, record an upstream that did "
@@ -286,7 +286,7 @@ def _read_choice(found):
         low = answer.lower()
         if low in ("q", "quit", ""):
             raise SystemExit(0)
-        if answer.isdigit() and 1 <= int(answer) <= min(len(found), CHOICES):
+        if answer.isdecimal() and 1 <= int(answer) <= min(len(found), CHOICES):
             return str(found[int(answer) - 1].path)
         again = {"r": "repository", "repo": "repository",
                  "repository": "repository", "p": "path", "path": "path",
@@ -754,12 +754,13 @@ def cmd_install(db, args, reporter):
         return 0
 
     built = project.build_recorded(db, snap, reporter, build_flags(args))
-    if not can_ask(args):
-        reporter.detail(f"install it with: sudo snap install --dangerous {built}")
-        return 0
-    if not ask_yes_no(f"install {built.name}?"):
-        reporter.detail(f"built {built.name}, not installed")
-        return 0
+    if not args.yes:
+        if not can_ask(args):
+            reporter.detail(f"install it with: sudo snap install --dangerous {built}")
+            return 0
+        if not ask_yes_no(f"install {built.name}?"):
+            reporter.detail(f"built {built.name}, not installed")
+            return 0
 
     command = project.install_command(snap, built)
     reporter.step(" ".join(command))
@@ -793,8 +794,8 @@ def cmd_prune(db, args, reporter):
 def cmd_remove(db, args, reporter):
     snap = _named(db, args, "remove")
     if not args.yes:
-        print(f"This forgets {snap.name} ({snap.repo}) and the snapcraft.yaml "
-              f"stored with it.")
+        print(f"This forgets {snap.name} ({upstream_of(snap)}) and the "
+              f"snapcraft.yaml stored with it.")
         print(f"The project directory {snap.path} is left alone.")
         if not ask_yes_no("Remove it?"):
             print("left alone")

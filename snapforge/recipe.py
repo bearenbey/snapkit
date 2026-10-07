@@ -80,7 +80,8 @@ def sources(text):
     """
     found, name, in_parts = [], "", False
     for line in text.splitlines():
-        if line.strip() and not line.startswith(" "):
+        # A comment at column 0 is not a new section, so it does not end one.
+        if line.strip() and not line.startswith((" ", "#")):
             in_parts, name = line.startswith("parts:"), ""
             continue
         if not in_parts:
@@ -135,7 +136,8 @@ def snap_name(text):
 
 def _scalar(text):
     """A one-line value, quoted only when YAML would read it as something else."""
-    plain = re.fullmatch(r"[A-Za-z0-9_(][^#:\"\\\[\]{}&*!|>%@`]*", text)
+    # A leading digit is quoted outright: 2048 is an int, 1.0 a float.
+    plain = re.fullmatch(r"[A-Za-z_(][^#:\"\\\[\]{}&*!|>%@`]*", text)
     if plain and not text.endswith(" ") and text.lower() not in _YAML_WORDS:
         return text
     return json.dumps(text, ensure_ascii=False)

@@ -734,7 +734,7 @@ class Dashboard:
             self.pick_cursor = min(self.pick_cursor + 1, total - 1)
         elif key in ("k", "up"):
             self.pick_cursor = max(self.pick_cursor - 1, 0)
-        elif key.isdigit() and 1 <= int(key) <= total:
+        elif key.isdecimal() and 1 <= int(key) <= total:
             self.pick_cursor = int(key) - 1
             self._picked()
         elif key == "enter":

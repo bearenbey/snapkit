@@ -160,8 +160,13 @@ class SnapDbError(Exception):
 
 def base_url():
     """Where the database is read from, or SNAPKIT_DB_URL when it is set."""
-    return os.environ.get("SNAPKIT_DB_URL") or RAW.format(
-        repo=REPO, branch=BRANCH, folder=FOLDER)
+    given = os.environ.get("SNAPKIT_DB_URL")
+    if not given:
+        return RAW.format(repo=REPO, branch=BRANCH, folder=FOLDER)
+    # A checkout on disk can be named as the folder it is.
+    if "://" not in given:
+        return Path(given).expanduser().resolve().as_uri()
+    return given.rstrip("/")
 
 
 # -- what belongs in the database ---------------------------------------------

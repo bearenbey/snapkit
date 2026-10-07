@@ -43,7 +43,7 @@ source-code: https://github.com/bearenbey/snapkit
 issues: https://github.com/bearenbey/snapkit/issues
 contact: https://github.com/bearenbey/snapkit/issues
 
-# Pure python and two stage-packages that exist on every port, so this snap
+# Pure python and stage-packages that exist on every port, so this snap
 # is not tied to one architecture. snapcraft builds the one it is run on.
 platforms:
   amd64:
@@ -84,3 +84,5 @@ parts:
       - python3-rich
       # dpkg-deb is the .deb reader's only fallback, for zstd payloads.
       - dpkg
+      # And zstd itself for a .tar.zst, which core24's python cannot read.
+      - zstd

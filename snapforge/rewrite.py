@@ -1,5 +1,6 @@
 """Replacing a version wherever it is spelled out, and saying what changed."""
 
+import functools
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,8 +24,22 @@ def replace_version(text, old, new):
                   lambda found: found.group(1) + new, text)
 
 
+def _read_lines(path):
+    """Lines split on newlines only, so \\r and a form feed stay in them."""
+    with path.open(encoding="utf-8", errors="replace", newline="") as handle:
+        return handle.read().split("\n")
+
+
 def _write_lines(path, lines):
-    path.write_text("".join(line + "\n" for line in lines), encoding="utf-8")
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        handle.write("\n".join(lines))
+
+
+def _outside(line, keep, swap):
+    """`swap` applied to the parts of a line that are not `keep`."""
+    if not keep or keep not in line:
+        return swap(line)
+    return keep.join(swap(part) for part in line.split(keep))
 
 
 def _changed(before, after):
@@ -41,7 +56,7 @@ def rewrite_versions(directory, old, new, old_asset="", new_asset=""):
         path = Path(directory) / name
         if not path.is_file():
             continue
-        before = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        before = _read_lines(path)
         after = list(before)
 
         if old_asset and old_asset != new_asset:
@@ -52,7 +67,10 @@ def rewrite_versions(directory, old, new, old_asset="", new_asset=""):
         if old and "-" in old:
             spellings.append((old.replace("-", "_"), new.replace("-", "_")))
         for was, now in spellings:
-            after = [replace_version(line, was, now) for line in after]
+            # Not inside the asset's new name, which already carries the
+            # new version and may start with the old: 2.0 in 2.0-1.
+            swap = functools.partial(replace_version, old=was, new=now)
+            after = [_outside(line, new_asset, swap) for line in after]
 
         lines = _changed(before, after)
         if lines:
@@ -90,7 +108,7 @@ def repoint_lines(lines, url, sha="", version="", anchor="", old_url="",
 def repoint_yaml(path, anchor, url, sha, version=""):
     """Point a snapcraft part on disk at a new source tarball and checksum."""
     path = Path(path)
-    before = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    before = _read_lines(path)
     after = repoint_lines(before, url, sha, version, anchor=anchor)
 
     lines = _changed(before, after)

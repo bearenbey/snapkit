@@ -93,6 +93,22 @@ Several exist because of bugs that were in here:
   record is now checked at resolve time the way `track` checked it when it
   was written, and whatever else one record raises is that snap's answer
   rather than the end of everyone's check
+- the `tar` extraction filter checks where a member lands but not where a
+  link points, and the icon finder follows links, so a payload with
+  `app.png -> /etc/hostname` had the host's file copied into the project;
+  links are now re-rooted inside the tree or dropped, and a tree dpkg-deb or
+  an AppImage left behind is walked the same way
+- `read()` returns nothing when the server hangs up, exactly as it does at
+  the end, so a download cut short was accepted and its sha written into the
+  recipe as if upstream had published it
+- the asset was renamed before the version pass, which then found `2.0`
+  inside `2.0-1` and wrote `2.0-1-1`
+- the keyboard reads a whole batch at once and the page's scroll limit was
+  only set by a render, so `l` then `j` in one read was an `AttributeError`
+- `--name foo/bar` went straight through, landed in `snaps/foo/bar.json`,
+  and was never loaded again; the register refuses a name snapd would
+- `title: 2048` and `summary: 1.0` were written bare, which YAML reads as
+  numbers
 
 ## Building this
 

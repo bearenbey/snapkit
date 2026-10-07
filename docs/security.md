@@ -15,9 +15,11 @@ to unpack itself, so `create` marks it executable and runs it with
 
 **A checksum is not a signature.** Downloads are checked against the sha256
 the same host published, which catches corruption and a broken mirror, not a
-host that has been taken over. `track ... verify` adds a gpg check on top: a
-signature gpg reads and calls bad now aborts the update and deletes the file,
-but a release key you do not hold cannot say either way and only warns.
+host that has been taken over. A record's `verify` adds a gpg check on top: a
+signature gpg reads and calls bad aborts the update and deletes the file, and
+so does a signature that cannot be fetched at all, since a mirror that drops
+the `.sig` is the case the check exists for. A release key you do not hold
+cannot say either way and only warns.
 
 **The snap is classic.** It builds snaps and writes project directories
 wherever you keep them, and neither is something a confined snap can do, so

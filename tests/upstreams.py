@@ -178,9 +178,12 @@ def _():
     for name, wanted in (("clamui_0.4.0_all.deb", "clamui"),
                          ("clamui-privileged-helper_0.4.0_all.deb",
                           "clamui-privileged-helper"),
-                         ("shotcut-linux-x86_64-26.8.1.txz",
-                          "shotcut-linux-x86"),
-                         ("nvim-linux-x86_64.tar.gz", "nvim-linux-x86"),
+                         # The architecture has digits too, and is not the version.
+                         ("shotcut-linux-x86_64-26.8.1.txz", "shotcut-linux"),
+                         ("nvim-linux-x86_64.tar.gz", "nvim-linux"),
+                         ("btop-x86_64-unknown-linux-musl.tar.gz",
+                          "btop-unknown-linux-musl"),
+                         ("app-x86_64-1.2.3.tar.gz", "app"),
                          ("lutris_0.5.22_all.deb", "lutris")):
         same(classify.leading_name(name), wanted, name)
 
@@ -203,3 +206,28 @@ def _():
     message = project._nothing_usable("a/b", OnlyForeign())
     assert "app-arm64.deb -- built for arm64" in message, message
     assert "app.exe" in message, message
+
+
+@check("a download the server cut short is not accepted as complete")
+def _():
+    # read() returns b"" when the server hangs up, the same as at the end.
+    from snapforge import net
+
+    @contextlib.contextmanager
+    def _open(opener, url, **kw):
+        class Response:
+            headers = {"Content-Length": "1000"}
+            sent = False
+
+            def read(self, *a):
+                if self.sent:
+                    return b""
+                self.sent = True
+                return b"x" * 100
+        yield Response()
+
+    with tempfile.TemporaryDirectory() as here:
+        with patched(net, _open=_open):
+            with raises(net.NetworkError, "100 of 1000 bytes was accepted"):
+                net.download("https://h/x", Path(here) / "x")
+        assert not list(Path(here).iterdir()), "a short file was left"

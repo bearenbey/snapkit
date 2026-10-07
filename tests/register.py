@@ -51,6 +51,22 @@ def _():
         assert not recipe.exists(), "the recipe outlived the record"
 
 
+@check("a name snapd would refuse is refused here, before anything is written")
+def _():
+    # --name foo/bar went straight through, landed in snaps/foo/bar.json,
+    # and load() never saw it again.
+    with tempfile.TemporaryDirectory() as home:
+        store = db.Database(Path(home) / "snapkit.json")
+        for bad in ("foo/bar", "Foo", "a--b", "-a", "a-", "123", "", "x" * 41):
+            with raises(db.RegisterError, f"{bad!r} was taken"):
+                store.add(db.Snap(name=bad, repo="a/b"))
+            with raises(db.RegisterError, f"{bad!r} was claimed"):
+                store.claim(bad, "a/b")
+        for good in ("btop", "0ad", "a-b-c", "x" * 40):
+            store.add(db.Snap(name=good, repo="a/b"))
+        same(sorted(store.names()), sorted(["btop", "0ad", "a-b-c", "x" * 40]))
+
+
 @check("a recipe is not read until something asks for it")
 def _():
     with tempfile.TemporaryDirectory() as home:

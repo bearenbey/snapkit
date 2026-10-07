@@ -28,6 +28,8 @@ def _():
                           ("[WIP] thing", 'summary: "[WIP] thing"'),
                           ("hello # world", 'summary: "hello # world"'),
                           ("it's fine", "summary: it's fine"),
+                          ("2048 in the terminal", 'summary: "2048 in the terminal"'),
+                          ("1.0", 'summary: "1.0"'),
                           ("yes", 'summary: "yes"')):
         text = recipe.build(name="d", version="1", summary=summary,
                             description="b", license_id="", kind="archive",
@@ -50,6 +52,9 @@ def _():
     same(recipe.sources(text), [("demo", "https://h/demo.deb")])
     # `source:` only counts inside parts:, and only under a part name.
     same(recipe.sources("source: x\nparts:\n  source: y\n"), [])
+    # A comment at column 0 is not a new section, so parts: carries on.
+    same(recipe.sources("parts:\n# note\n  demo:\n    source: z\n"),
+         [("demo", "z")])
 
 
 @check("metadata_file prefers the overlay's snap.yaml, and is_classic reads it")

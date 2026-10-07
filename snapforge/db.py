@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import shutil
 import tempfile
 from dataclasses import asdict, dataclass, field, fields
@@ -13,6 +14,19 @@ from .recipe import SNAPCRAFT_YAML
 
 # How many builds of one snap to keep the detail of.
 HISTORY_KEPT = 20
+
+# What snapd accepts: lowercase, digits and single hyphens, with a letter in it.
+SNAP_NAME = re.compile(r"[a-z0-9](?:-?[a-z0-9])*")
+
+
+def check_name(name):
+    """Refuse a name snapd would, or one the register could not file."""
+    if not name:
+        raise RegisterError("a snap needs a name")
+    if (len(name) > 40 or not SNAP_NAME.fullmatch(name)
+            or not any(c.isalpha() for c in name)):
+        raise RegisterError(f"{name!r} is not a snap name: lowercase letters, "
+                            f"digits and single hyphens, 40 at most")
 
 
 def home():
@@ -255,20 +269,19 @@ class Database:
         elif snap.recipe_text == "":
             snap.recipe_path.unlink(missing_ok=True)
 
-        # Clear the old file too, or one snap ends up with two of them.
+        # The new file lands before the old one goes, so neither moment loses it.
         canonical = self.record_path(snap.name)
+        _atomic_write(canonical,
+                      json.dumps(snap.to_dict(), indent=2, ensure_ascii=False) + "\n")
         if snap.record_file and Path(snap.record_file) != canonical:
             Path(snap.record_file).unlink(missing_ok=True)
         snap.record_file = str(canonical)
-        _atomic_write(canonical,
-                      json.dumps(snap.to_dict(), indent=2, ensure_ascii=False) + "\n")
 
     # -- the snaps in it -----------------------------------------------------
 
     def add(self, snap, replace=False):
         """Register a snap, or update the record of one already registered."""
-        if not snap.name:
-            raise RegisterError("a snap needs a name")
+        check_name(snap.name)
         existing = self.snaps.get(snap.name)
         if existing is not None and existing is not snap and not replace:
             self.claim(snap.name, snap.repo)
@@ -284,6 +297,7 @@ class Database:
 
     def claim(self, name, repo=""):
         """Refuse a name that a snap made from somewhere else already holds."""
+        check_name(name)
         existing = self.snaps.get(name)
         if existing is None:
             return

@@ -168,8 +168,12 @@ def strip_suffix(name):
 def leading_name(name):
     """The part of a filename before the version starts."""
     stem = strip_suffix(name)
+    # Architectures carry digits of their own: x86_64 is not a version.
+    for spelled in (wanted_arch(), other_arch()):
+        stem = spelled.sub("", stem)
+    stem = re.sub(r"[-_.]{2,}", "-", stem)
     found = re.search(r"[-_.](?:v?\d)", stem)
-    return (stem[:found.start()] if found else stem).lower()
+    return (stem[:found.start()] if found else stem).lower().rstrip("-_.")
 
 
 def distro_release(name):

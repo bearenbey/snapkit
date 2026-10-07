@@ -122,6 +122,7 @@ class Screen:
         self.height = 30        # ... and the whole screen, for a full-page view
         self.width = 100
         self.page_lines = 0     # how long the full-screen view being drawn is
+        self.page_max = 0       # how far down it scrolls; a render sets it
         self.offset = 0
 
     def render(self):

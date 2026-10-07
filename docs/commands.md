@@ -54,8 +54,9 @@ to pin a release, `--asset` to build from a different file in it (both also
 apply to `track <name> repo`), `--name` to
 call the snap something other than the repository, `--dir` to put the project
 somewhere specific (`db pull` and `install` write there too), `--yes` to
-skip the questions `prune` and `install` ask, `--local` to take what `create` was given as a file or a
-folder and never a repository, `--repo owner/name` to confirm an upstream on
+skip the questions `remove`, `prune` and `install` ask, `--local` to take
+what `create` was given as a file or a folder and never a repository,
+`--repo owner/name` to confirm an upstream on
 `import`, `--plain` to keep the dashboard from opening, and
 `--destructive-mode` to let snapcraft build on this host rather than in a
 container.

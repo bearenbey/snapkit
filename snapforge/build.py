@@ -473,8 +473,16 @@ def stale_instance():
 
 def drop_instance(name):
     """Delete a build container, so the next build starts from a clean one."""
-    return subprocess.run(["lxc", "--project", "snapcraft", "delete", "-f", name],
-                          capture_output=True).returncode == 0
+    return _lxc("--project", "snapcraft", "delete", "-f", name)
+
+
+def _lxc(*words, seconds=30):
+    """Whether an lxc command succeeded; a daemon that hangs did not."""
+    try:
+        return subprocess.run(["lxc", *words], capture_output=True,
+                              timeout=seconds).returncode == 0
+    except subprocess.TimeoutExpired:
+        return False
 
 
 def snapcraft_preflight(destructive=False, reporter=None):
@@ -483,8 +491,7 @@ def snapcraft_preflight(destructive=False, reporter=None):
         die("snapcraft is not installed: sudo snap install snapcraft --classic")
     if destructive:
         return
-    lxd = shutil.which("lxc") and subprocess.run(
-        ["lxc", "list"], capture_output=True).returncode == 0
+    lxd = shutil.which("lxc") and _lxc("list")
     if not lxd:
         (reporter or PlainReporter()).warn(
             "LXD is not answering, and it is snapcraft's default backend:\n"

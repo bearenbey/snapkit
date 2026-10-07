@@ -94,9 +94,14 @@ def prunable(snap):
     stale = builds(snap)[:-1]
     if snap.style == "artifact" and snap.asset_glob and snap.asset:
         # Saved under its own name where the record renames the download.
-        kept = snap.local_asset or snap.asset
+        kept = {snap.local_asset or snap.asset}
+        if snap.upstream.get("kind") == "local":
+            # The file check reads, which the record may copy under another name.
+            newest = local.newest(snap.path, snap.asset_glob)
+            if newest is not None:
+                kept.add(newest.name)
         stale += sorted(p for p in snap.path.glob(snap.asset_glob)
-                        if p.is_file() and p.name != kept)
+                        if p.is_file() and p.name not in kept)
     return stale
 
 
@@ -359,9 +364,11 @@ def _update_artifact(snap, release, asset, reporter):
         raise ForgeError(f"no project at {directory} -- {snap.name} builds from "
                          f"a file in its own directory, so there has to be one")
 
-    superseded = sorted(p for p in directory.glob(asset.glob)
-                        if p.name != asset.filename) if asset.glob else []
     fetched = directory / asset.filename
+    # Not the file it is copied in from: a local upstream lives in this folder.
+    keep = {fetched.resolve()} | ({Path(asset.path).resolve()} if asset.path else set())
+    superseded = sorted(p for p in directory.glob(asset.glob)
+                        if p.resolve() not in keep) if asset.glob else []
 
     if asset.path and Path(asset.path).resolve() == fetched.resolve():
         # Somebody put it there: nothing to fetch, nothing to check it against.
