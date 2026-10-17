@@ -457,7 +457,9 @@ def find_icon(root, wanted="", named=""):
 SIGNS = (
     ("electron", ("chrome-sandbox", "libffmpeg.so", "resources/app.asar",
                   "chrome_crashpad_handler", "libEGL.so")),
-    ("qt", ("libQt5Core.so", "libQt6Core.so", "qt.conf")),
+    # A bundled Qt is usually the versioned file alone, with no bare .so.
+    ("qt", ("libQt5Core.so", "libQt6Core.so", "libQt5Core.so.5",
+            "libQt6Core.so.6", "qt.conf")),
     ("gtk", ("libgtk-3.so", "libgtk-4.so", "libgdk-3.so")),
 )
 

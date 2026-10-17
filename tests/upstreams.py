@@ -231,3 +231,57 @@ def _():
             with raises(net.NetworkError, "100 of 1000 bytes was accepted"):
                 net.download("https://h/x", Path(here) / "x")
         assert not list(Path(here).iterdir()), "a short file was left"
+
+
+@check("a server saying too many requests is a sentence, and a short wait is waited")
+def _():
+    import email.message
+    import urllib.error
+    from snapforge import net
+
+    def http_error(code, **headers):
+        message = email.message.Message()
+        for name, value in headers.items():
+            message[name.replace("_", "-")] = value
+        return urllib.error.HTTPError("https://h/x", code, "nope", message, None)
+
+    def refusing(exc):
+        def _open(opener, url, **kw):
+            raise exc
+        return _open
+
+    with patched(net, _open=refusing(http_error(429, Retry_After="90"))):
+        try:
+            net.get_text("https://h/x")
+            assert False, "a 429 was not raised"
+        except net.NetworkError as exc:
+            assert "too many requests" in str(exc), str(exc)
+            assert "90 s" in str(exc), str(exc)
+    # GitHub's spelling of the same thing is a 403 with a reset time.
+    import time
+    gh = http_error(403, X_RateLimit_Remaining="0",
+                    X_RateLimit_Reset=str(int(time.time()) + 60))
+    assert net.throttled(gh) and 55 <= net.retry_after(gh) <= 60
+    assert not net.throttled(http_error(403)), "a plain 403 is a refusal"
+    assert not net.throttled(http_error(404))
+
+    # A Retry-After the deadline can afford is slept through, once.
+    calls = []
+
+    class Opener:
+        def open(self, request, timeout=None):
+            calls.append(timeout)
+            if len(calls) == 1:
+                raise http_error(429, Retry_After="0")
+            return "fine"
+
+    with patched(net.time, sleep=lambda seconds: calls.append(("slept", seconds))):
+        same(net._open(Opener(), "https://h/x", retries=1), "fine")
+    assert ("slept", 0) in calls, calls
+
+    class Stubborn:
+        def open(self, request, timeout=None):
+            raise http_error(429, Retry_After="600")
+
+    with raises(urllib.error.HTTPError, "a long wait was waited out"):
+        net._open(Stubborn(), "https://h/x", retries=1)

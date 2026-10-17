@@ -12,7 +12,9 @@ python3 -m tests              the same, as the package it is
 
 CI also runs `ruff check`, with the rule set in `pyproject.toml`: pyflakes,
 the syntax checks, and bugbear. It is there for the dead branch and the
-unused name, which are what a review finds after the fact.
+unused name, which are what a review finds after the fact. Run it here too
+before pushing; the release binary dropped into `~/.local/bin` is enough,
+and so is `sudo snap install ruff`.
 
 No framework and no dependencies beyond the tool's own, so it runs anywhere
 the tool does. The offline tests build their own `.deb` rather than

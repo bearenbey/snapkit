@@ -49,6 +49,8 @@ apps:
       - audio-playback
       - opengl
       - removable-media
+      # Where a tray icon's session-bus access lives; see docs/packaging.md.
+      - unity7
 
 slots:
   dbus-clamui:

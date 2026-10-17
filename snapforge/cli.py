@@ -7,7 +7,7 @@ from pathlib import Path
 
 from snapforge import __version__
 
-from . import adopt, github, local, project, snapdb, sources, update
+from . import adopt, github, local, project, recipe, snapdb, sources, update
 from .db import Database, NameTaken, RegisterError
 from .net import NetworkError
 from .report import PlainReporter
@@ -433,6 +433,9 @@ def upstream_of(snap):
 
 def cmd_show(db, args, reporter):
     snap = _named(db, args, "show")
+    # An edit on disk is what builds, so it is what `show` should say.
+    if project.take_recipe(snap):
+        db.add(snap)
     for key, value in snap.to_dict().items():
         if key == "snapcraft_yaml":
             continue
@@ -475,6 +478,10 @@ def cmd_check(db, args, reporter):
         print(f"{snap.name:<20} {built or '-':<16} {upstream:<16} {status}")
         if found.note:
             print(f"{'':<20} note: {found.note}")
+        for plug, why in recipe.behind_defaults(project.current_recipe(snap)):
+            print(f"{'':<20} note: written before {plug} was a default plug, "
+                  f"so {why} will not work -- add `- {plug}` under plugs: "
+                  f"and rebuild")
     return 0
 
 
@@ -753,10 +760,11 @@ def cmd_install(db, args, reporter):
         reporter.result(f"{name} is ready in {snap.path}")
         return 0
 
-    built = project.build_recorded(db, snap, reporter, build_flags(args))
+    built = project.build_recorded(db, snap, reporter, build_flags(args),
+                                   say_how=False)
     if not args.yes:
         if not can_ask(args):
-            reporter.detail(f"install it with: sudo snap install --dangerous {built}")
+            project.say_install(snap, built, reporter)
             return 0
         if not ask_yes_no(f"install {built.name}?"):
             reporter.detail(f"built {built.name}, not installed")
@@ -764,7 +772,28 @@ def cmd_install(db, args, reporter):
 
     command = project.install_command(snap, built)
     reporter.step(" ".join(command))
-    return subprocess.run(command).returncode
+    code = subprocess.run(command).returncode
+    return code or connect_plugs(snap, args, reporter)
+
+
+def connect_plugs(snap, args, reporter):
+    """Connect what a --dangerous install left off, with a question first."""
+    commands = project.connect_commands(snap)
+    if not commands:
+        return 0
+    named = ", ".join(command[-1].split(":", 1)[1] for command in commands)
+    if not args.yes and (not can_ask(args)
+                         or not ask_yes_no(f"connect {named}?", default=True)):
+        reporter.detail("connect them with:")
+        for command in commands:
+            reporter.detail(f"  {' '.join(command)}")
+        return 0
+    for command in commands:
+        reporter.step(" ".join(command))
+        code = subprocess.run(command).returncode
+        if code:
+            return code
+    return 0
 
 
 def cmd_prune(db, args, reporter):

@@ -49,8 +49,9 @@ $ snapkit create aristocratos/btop
 
 - **Works out what to stage.** `DT_NEEDED` is read straight out of the ELF, a
   `.deb`'s own `Depends:` is taken into account, and what the base and the
-  gnome extension already supply is subtracted. A library it cannot trace to a
-  package is reported rather than guessed at.
+  extension already supply is subtracted. A Qt 6 program that does not ship
+  its Qt is written around the kde extension rather than the gnome one. A
+  library it cannot trace to a package is reported rather than guessed at.
 
 - **Knows what it cannot package.** A source tarball is refused with the build
   system it found instead of being copied into a snap full of source, and a

@@ -41,7 +41,7 @@ apps:
 parts:
   sublime-text:
     plugin: dump
-    source: ./sublime-text_build-4200_amd64.deb
+    source: ./sublime-text_build-4215_amd64.deb
     source-type: deb
     override-pull: |
       craftctl default

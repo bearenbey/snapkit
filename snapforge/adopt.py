@@ -139,6 +139,7 @@ def read(directory, repo=None):
         grade=recipe.field(text, "grade") or "stable",
         base=recipe.field(text, "base") or recipe.BASE,
         command=recipe.first_command(text),
+        plugs=recipe.plugs_of(text) if is_snapcraft else [],
         # pack.py takes a Build; build.py is older and run as a program.
         pack="pack.py" if has_pack else "",
         build_with=("./build.py" if (directory / "build.py").is_file()

@@ -151,9 +151,9 @@ rather than guessed:
 - **A `.deb` is asked as well.** Its `Depends:` is the packager's own answer
   and covers things the binary never names, such as a plugin opened later.
 - **What the platform already has is subtracted.** `core24` supplies 287
-  libraries and the gnome extension another 1376. Staging those again is
-  wasted space at best and a fight with the platform snap at worst, which is
-  why no recipe here both uses the extension and stages GTK.
+  libraries, the gnome extension another 1377 and the kde one 3205. Staging
+  those again is wasted space at best and a fight with the platform snap at
+  worst, which is why no recipe here both uses the extension and stages GTK.
 - **noble renamed a hundred packages.** `libasound2` is `libasound2t64` on
   core24, and a recipe that says otherwise stops at "no such package".
 
@@ -165,13 +165,59 @@ gets it right about 40% of the time, which is why it is not relied on: the
 table is built from packages that recipes here already build with.
 
 Two things it cannot see. A library opened by name at runtime appears in no
-header and no `Depends:` -- hardware video decoding and tray icons are usually
-this. And a driver's own libraries come from the host through an interface, so
+header and no `Depends:` -- hardware video decoding is usually this. And a
+driver's own libraries come from the host through an interface, so
 `libcuda.so.1` is reported and never staged, because naming a package for it
 would pin one driver version.
 
+## Tray icons
+
+A tray icon is not a library problem but an interface one. Electron, Qt and
+libappindicator all put the icon on the session bus as a StatusNotifierItem,
+which means owning a bus name of their own and answering menu calls. The
+`desktop` plug the gnome extension brings lets an app register the item and
+nothing more, so the icon is simply never shown and nothing says why. The
+`unity7` interface carries the rest, so every GUI recipe plugs it. It
+auto-connects, and on a desktop with no tray it does nothing.
+
+A recipe written before this plugged `desktop` alone. Add `- unity7` under
+`plugs:` and rebuild.
+
 `tools_platform_gen.py` rebuilds that table from the snaps installed on a
-machine, so it can be refreshed when the base or the extension moves.
+machine, so it can be refreshed when the base or an extension moves.
+
+## Which extension
+
+
+Every GUI recipe is written around an extension, because the alternative is
+staging a desktop's worth of libraries into every snap. The gnome one is the
+default: it supplies GTK, GL, fonts and themes from a platform snap, and an
+Electron or GTK program wants nothing else.
+
+A Qt 6 program is the exception. The gnome platform has no Qt 6, so a program
+that links `libQt6Core.so.6` and does not ship it would have Qt staged
+piecemeal, and the result rarely draws. The `kde-neon-6` extension mounts
+`kf6-core24`, which is Qt 6 and KDE Frameworks and nothing else, so that is
+what such a program is written around, and none of its Qt is staged.
+
+Which one is decided by what the binary links and what the payload brings,
+not by what it looks like. A program that ships its own Qt keeps the gnome
+extension: the kde one puts its Qt's plugins on the path, two Qts in one
+process do not mix, and the result is a crash on start.
+
+## After the build
+
+
+A snap installed with `--dangerous` has no store assertion behind it, so
+snapd connects only the interfaces it would connect for anyone: `home`,
+`network`, the desktop ones, `unity7`. A recipe that asks for `camera`,
+`audio-record`, `removable-media` or `password-manager-service` gets them
+declared and left disconnected, and nothing says so: the app starts, and the
+microphone is dead.
+
+So the build ends by saying what to run, install line and connects both, and
+`snapkit install` asks whether to connect them once the install has gone
+through. The README written beside the recipe carries the same lines.
 
 ## Architectures
 

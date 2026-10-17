@@ -63,6 +63,27 @@ _follow = urllib.request.build_opener()
 _stay = urllib.request.build_opener(_NoRedirect)
 
 
+def retry_after(error):
+    """Seconds a 429 or 403 says to wait, or None when it names none."""
+    headers = error.headers
+    if headers is None:
+        return None
+    value = (headers.get("Retry-After") or "").strip()
+    if value.isdigit():
+        return int(value)
+    # GitHub's spelling: the remaining count hits zero and a reset is named.
+    reset = (headers.get("X-RateLimit-Reset") or "").strip()
+    if headers.get("X-RateLimit-Remaining", "").strip() == "0" and reset.isdigit():
+        return max(0, int(reset) - int(time.time()))
+    return None
+
+
+def throttled(error):
+    """Whether a response is the server saying "too many", not "no"."""
+    return error.code == 429 or (error.code == 403
+                                 and retry_after(error) is not None)
+
+
 def _open(opener, url, method="GET", timeout=META_TIMEOUT, retries=1):
     """Open a URL, retrying on a transient failure."""
     last = None
@@ -71,8 +92,12 @@ def _open(opener, url, method="GET", timeout=META_TIMEOUT, retries=1):
             request = urllib.request.Request(
                 url, method=method, headers={"User-Agent": USER_AGENT})
             return opener.open(request, timeout=_left(timeout, url))
-        except urllib.error.HTTPError:
-            raise
+        except urllib.error.HTTPError as exc:
+            # A short "wait" is worth waiting out; a long one is an answer.
+            wait = retry_after(exc) if throttled(exc) else None
+            if wait is None or wait > 5 or attempt >= retries:
+                raise
+            time.sleep(min(wait, _left(timeout, url)))
         except (urllib.error.URLError, OSError) as exc:
             last = exc
             # _left raises when the deadline is spent, and shortens the rest.
@@ -87,6 +112,11 @@ def _guarded(url):
     try:
         yield
     except urllib.error.HTTPError as exc:
+        if throttled(exc):
+            wait = retry_after(exc)
+            when = f"in {wait} s" if wait else "later"
+            raise NetworkError(f"{url}: HTTP {exc.code}, too many requests "
+                               f"from here -- try again {when}") from exc
         raise NetworkError(f"{url}: HTTP {exc.code}") from exc
     except _READ_ERRORS as exc:
         raise NetworkError(f"{url}: {exc}") from exc

@@ -187,3 +187,38 @@ def _():
     assert "libcuda.so.1" in platform.FROM_THE_HOST
     assert "libcuda.so.1" not in platform.PACKAGE_OF, \
         "staging a package for libcuda pins one driver version"
+
+
+@check("a Qt 6 program that does not ship Qt gets the kde extension")
+def _():
+    # The gnome platform has no Qt 6; kf6-core24 is nothing but Qt 6 and KF6.
+    assert "libQt6Core.so.6" in platform.KDE
+    assert "libQt6Core.so.6" not in platform.GNOME
+    same(depends.extension_for(True, {"libQt6Core.so.6", "libc.so.6"}), "kde-neon-6")
+    same(depends.extension_for(True, {"libgtk-3.so.0"}), "gnome")
+    same(depends.extension_for(False, {"libQt6Core.so.6"}), "")
+    with tempfile.TemporaryDirectory() as home:
+        root = Path(home)
+        (root / "app").write_bytes(elf_needing("libc.so.6", "libQt6Core.so.6",
+                                               "libQt6Widgets.so.6"))
+        needs = depends.resolve(root=root, command="app", gui=True)
+        same(needs.extension, "kde-neon-6")
+        # Qt comes from the platform snap, so it is neither staged nor unknown.
+        assert not any("qt6" in p.lower() for p in needs.packages), needs.packages
+        same(needs.unresolved, [])
+
+
+@check("a program that brings its own Qt keeps the gnome extension")
+def _():
+    # Two Qts in one process do not mix, and the kde one puts its own on the path.
+    with tempfile.TemporaryDirectory() as home:
+        root = Path(home)
+        (root / "lib").mkdir()
+        (root / "lib" / "libQt6Core.so.6").write_bytes(elf_needing("libc.so.6"))
+        (root / "app").write_bytes(elf_needing("libc.so.6", "libQt6Core.so.6"))
+        needs = depends.resolve(root=root, command="app", gui=True)
+        same(needs.extension, "gnome")
+        same(needs.bundled, ["libQt6Core.so.6"])
+        # Named outright, the extension is not second-guessed.
+        same(depends.resolve(root=root, command="app", gui=True,
+                             extension="kde-neon-6").extension, "kde-neon-6")

@@ -3,7 +3,7 @@
 
 name: shotcut
 base: core24
-version: '26.8.1'
+version: '26.9.27'
 summary: cross-platform (Qt), open-source (GPLv3) video editor - mltframework/shotcut
 description: |
   cross-platform (Qt), open-source (GPLv3) video editor - mltframework/shotcut
@@ -51,6 +51,8 @@ apps:
       - camera
       - opengl
       - removable-media
+      # Where a tray icon's session-bus access lives; see docs/packaging.md.
+      - unity7
 
 slots:
   dbus-shotcut:
@@ -63,9 +65,9 @@ parts:
     # A plain archive: snapcraft unpacks it and folds away the single
     # top-level directory, which is why the paths above start below it.
     plugin: dump
-    source: https://github.com/mltframework/shotcut/releases/download/v26.8.1/shotcut-linux-x86_64-26.8.1.txz
+    source: https://github.com/mltframework/shotcut/releases/download/v26.9.27/shotcut-linux-x86_64-26.9.27.txz
     source-type: tar
-    source-checksum: sha256/c4befab2240964389df6139f00aae0b92949f398fd98083b922f3aabd8b7a844
+    source-checksum: sha256/849da6bbd24737f9edd07ba185b46982f2fb330981c05e1752809e85bcbb7e7b
 
 # The icon snapd shows in the launcher. `icon:` is resolved against
 # this project directory, not against the payload, so the one found

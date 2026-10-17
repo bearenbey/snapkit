@@ -13,6 +13,11 @@ NOT_A_LIBRARY = re.compile(r"-(?:bin|dev|doc|utils|tools|dbg|common)$")
 # Not libraries, but a snap that talks to the network or draws text wants them.
 WANTED_ANYWAY = frozenset("ca-certificates fonts-liberation".split())
 
+# The extensions a GUI recipe can be written around, and what each mounts.
+GNOME, KDE = "gnome", "kde-neon-6"
+_SONAMES = {GNOME: platform.GNOME, KDE: platform.KDE}
+_PACKAGES = {GNOME: platform.SUPPLIED_BY_GNOME, KDE: platform.SUPPLIED_BY_KDE}
+
 
 @dataclass
 class Needs:
@@ -23,6 +28,7 @@ class Needs:
     from_host: list = field(default_factory=list)     # a driver interface's
     unresolved: list = field(default_factory=list)    # needed, no package known
     unverified: list = field(default_factory=list)    # named by the deb, unchecked
+    extension: str = ""                               # gnome, kde-neon-6 or none
 
     @property
     def complete(self):
@@ -61,9 +67,25 @@ def noble(package):
     return package + "t64" if package in platform.RENAMED_T64 else package
 
 
-def supplied(gui):
+def extension_for(gui, asked=(), bundled=()):
+    """The extension a payload wants: Qt 6 it links and does not ship is KDE's.
+
+    A payload that brings its own Qt keeps the gnome extension. The kde one
+    puts its Qt's plugins on the path, and two Qts in one process do not mix.
+    """
+    if not gui:
+        return ""
+    qt6 = {name for name in asked if name.startswith("libQt6")}
+    if qt6 and not qt6 & set(bundled):
+        return KDE
+    return GNOME
+
+
+def supplied(gui=False, extension=None):
     """Every soname this snap gets free, which the extension changes."""
-    return platform.BASE | (platform.GNOME if gui else frozenset())
+    if extension is None:
+        extension = GNOME if gui else ""
+    return platform.BASE | _SONAMES.get(extension, frozenset())
 
 
 def bundled_libraries(root):
@@ -91,14 +113,21 @@ def wanted(root, command):
     return elf.reach(start, inside), inside
 
 
-def resolve(root="", command="", gui=False, control=None):
-    """What to stage for this payload, and what could not be accounted for."""
+def resolve(root="", command="", gui=False, control=None, extension=None):
+    """What to stage for this payload, and what could not be accounted for.
+
+    Which extension the recipe uses is decided here too, unless named: what
+    the payload links decides it, and what the extension supplies is then
+    what gets subtracted.
+    """
     control = control or {}
     packages, bundled, host, unknown = set(), set(), set(), set()
     unchecked = set()
-    here = supplied(gui)
 
     asked, inside = wanted(root, command) if root else (set(), {})
+    if extension is None:
+        extension = extension_for(gui, asked, inside)
+    here = supplied(extension=extension)
     for soname in sorted(asked):
         if soname in here:
             continue
@@ -112,9 +141,7 @@ def resolve(root="", command="", gui=False, control=None):
             unknown.add(soname)
 
     # A packager knows what the binary does not say: a plugin opened later.
-    covered = set(platform.SUPPLIED_BY_BASE)
-    if gui:
-        covered |= platform.SUPPLIED_BY_GNOME
+    covered = set(platform.SUPPLIED_BY_BASE) | _PACKAGES.get(extension, set())
     lowered = {name.lower() for name in here}
     # Where the binary and the packaging name one library, the binary wins.
     families = {_family(one) for one in packages}
@@ -132,7 +159,7 @@ def resolve(root="", command="", gui=False, control=None):
 
     return Needs(packages=sorted(packages), bundled=sorted(bundled),
                  from_host=sorted(host), unresolved=sorted(unknown),
-                 unverified=sorted(unchecked))
+                 unverified=sorted(unchecked), extension=extension)
 
 
 def _looks_supplied(package, lowered):
@@ -148,7 +175,8 @@ def _looks_supplied(package, lowered):
 def _verified():
     """Package names something has actually seen, as opposed to been told."""
     return frozenset(set(platform.PACKAGE_OF.values())
-                     | platform.SUPPLIED_BY_BASE | platform.SUPPLIED_BY_GNOME)
+                     | platform.SUPPLIED_BY_BASE | platform.SUPPLIED_BY_GNOME
+                     | platform.SUPPLIED_BY_KDE)
 
 
 def _is_library(package):

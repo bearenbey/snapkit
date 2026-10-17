@@ -57,10 +57,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "3fe3b98a23ad5c65bad751467d3e5879ddbd2177e0b0bbd916adf0d503b137c4"
+          "sha256": "80d2f8d668d9ce7a72d53fc06bfbee75f8b1a1a580b62624ba58ea534f954f6a"
         }
       },
-      "fingerprint": "efd6f0c8af7df699f835780be60d97d3abccf32d8ee4a9d637c19e299aa172e3",
+      "fingerprint": "569a0835f85ff4788a440e73cf1d36de808a9ea486892d14831012a95519a081",
       "name": "clamui",
       "needs": "0.3.0",
       "pack": "pack.py",
@@ -86,7 +86,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "278233e2842bb7718bf03cd0df2472f886e598226a99f37f4582caf7f5dc75f8"
+          "sha256": "773fc02ec005377ba9d13fd8f9be31bf8594417382f6a9f418ade9ee3ce269d7"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -102,10 +102,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "457c33b9cd50f3562dd93a8ac5239fe86f25f64d11453bae6e47f01f880eaa8c"
+          "sha256": "9279aeb4878b8da91393713b3b911e1f32547fc3d85e8c5e9ab84c93f1caef49"
         }
       },
-      "fingerprint": "65f926ce4593156a888054565952297c56bb44d9917cd336b8b87bae932ecc1b",
+      "fingerprint": "69ef3064eb53cf9f236028eca4a4e1f2484517c901e7be02d7d0933bf9c8ab48",
       "name": "defold",
       "needs": "0.3.0",
       "pack": "pack.py",
@@ -118,19 +118,20 @@
         "repo": "defold/defold",
         "style": "artifact",
         "summary": "Cross-platform game engine for 2D and 3D games",
+        "tag": "1.13.2",
         "url": "https://github.com/defold/defold",
-        "version": "1.13.1",
+        "version": "1.13.2",
         "write_version": false
       },
       "summary": "Cross-platform game engine for 2D and 3D games",
       "upstream": "defold/defold",
-      "version": "1.13.1"
+      "version": "1.13.2"
     },
     "discord": {
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "6b1812e7453a26d9f530fa39d4b67f480bdda62252f36a72f9f2db49767971d4"
+          "sha256": "a032344037da36be1e2b1db2b060a6e7b648b1a089ae3d4ef960eefe6c70703a"
         },
         "launcher/discord-launch": {
           "exec": true,
@@ -146,14 +147,14 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "74f3e736ef126034eebf9c420173126c57c694e5d5789449d81c9122ddd38193"
+          "sha256": "3336f1e6c3eff2fcb2f7613e235f8f59c827d123dc6d9d77b8c9fdc379ded3ab"
         }
       },
-      "fingerprint": "da74fc33237c524efd7b86715b4cbb04f8ef709f7afae433fd80448df1217dac",
+      "fingerprint": "14042850ab4191c0f471d4c7f4f27621d7d8ffbf5507a7f85ea867ca561698a8",
       "name": "discord",
       "pack": "",
       "record": {
-        "asset": "discord-1.0.158.deb",
+        "asset": "discord-1.0.161.deb",
         "asset_glob": "discord-*.deb",
         "kind": "deb",
         "style": "artifact",
@@ -165,12 +166,12 @@
           "pattern": "/apps/linux/([^/]+)/",
           "url": "https://discord.com/api/download?platform=linux&format=deb"
         },
-        "version": "1.0.158",
+        "version": "1.0.161",
         "write_version": false
       },
       "summary": "Chat for Communities and Friends",
       "upstream": "redirect",
-      "version": "1.0.158"
+      "version": "1.0.161"
     },
     "emacs": {
       "files": {
@@ -225,14 +226,14 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "657aec0b070b0aa072067fdf9c21e3564ff382f4cc06b78ea959adaa5c28e9a2"
+          "sha256": "b0141bbd63c0c9bdb05b6e8741848abccf9c79649df9ec3a24bc2cd7414bb2d3"
         }
       },
-      "fingerprint": "a62ccbd1ae669583eae5718b852f3d22c87ad70b7d32520eff21a6170063a715",
+      "fingerprint": "72413337f4f58485081334fe820cf3f16d43bab0cc3fd141b1bb0d5ea52fe169",
       "name": "ffmpeg",
       "pack": "",
       "record": {
-        "asset": "ffmpeg-9.0.1.tar.xz",
+        "asset": "ffmpeg-9.0.2.tar.xz",
         "kind": "archive",
         "source_anchor": "^(\\s*source:\\s*).*/ffmpeg-.*\\.tar\\.xz\\s*$",
         "style": "recipe",
@@ -247,12 +248,12 @@
           "kind": "gpg",
           "suffix": ".asc"
         },
-        "version": "9.0.1",
+        "version": "9.0.2",
         "write_version": false
       },
       "summary": "Cross-platform tools to record, convert and stream audio and video",
       "upstream": "index",
-      "version": "9.0.1"
+      "version": "9.0.2"
     },
     "firefox-esr": {
       "files": {
@@ -459,7 +460,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "1a778ec1c6ed989dbf99ad8365b1b583ed8c02121310e8e5070ca2b75acff5ef"
+          "sha256": "e3b0ada018fd97e79d3c816d97beac3ca9928605a610cee65437a581094af201"
         },
         "pack.py": {
           "exec": false,
@@ -479,15 +480,15 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "da33e03cfe6834faee6729e713101d83ebdbbabbf51eea9fafbf7f21ddf0c282"
+          "sha256": "f40d9501efb8ffd2b7e2eedba439983956ef26f9f599e696dc94dc01414eeb59"
         }
       },
-      "fingerprint": "ff881293ea8d41de8c2ca008cc6d3bb62c9d3957252100fa30b4a7e135f0cdef",
+      "fingerprint": "452c346e99c7ae5968db26753ba26fd228754f9055782737243e15b833e37fa9",
       "name": "helium",
       "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
-        "asset": "helium-bin_0.17.0.1-1_amd64.deb",
+        "asset": "helium-bin_0.19.2.1-1_amd64.deb",
         "asset_glob": "helium-bin_*_amd64.deb",
         "asset_pattern": "^helium\\-bin_[0-9][0-9A-Za-z.+~_-]*\\-1_amd64\\.deb$",
         "kind": "deb",
@@ -495,14 +496,14 @@
         "repo": "imputnet/helium-linux",
         "style": "artifact",
         "summary": "Private, fast, and honest web browser",
-        "tag": "0.17.0.1",
+        "tag": "0.19.2.1",
         "url": "https://github.com/imputnet/helium-linux",
-        "version": "0.17.0.1",
+        "version": "0.19.2.1",
         "write_version": false
       },
       "summary": "Private, fast, and honest web browser",
       "upstream": "imputnet/helium-linux",
-      "version": "0.17.0.1"
+      "version": "0.19.2.1"
     },
     "irssi": {
       "files": {
@@ -647,10 +648,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "3757fd7e5edb35e8171fc028823dceb94bb787cd5a076e835db82fb483a3de65"
+          "sha256": "4138a8c30c2db8832d4c0869d33f0784ff4f2e77e8c368dc50bee81885450ae7"
         }
       },
-      "fingerprint": "98d03a6fd02512e176181fd7aa7e97447c888d726f1d7a83d975575f93c5bc6f",
+      "fingerprint": "ed77cf01c07e8d245af543a99d2e9fa8a51a8c16ce0349feaa558c785a20d89f",
       "name": "lutris",
       "needs": "0.3.0",
       "pack": "pack.py",
@@ -688,10 +689,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "550041fa76b79037690cbaf37b5e99ecc22f96b0d453e138c3efc7a6df381542"
+          "sha256": "a18370d229fe50d70eecc2d5ab49f5d44208692b74007d9c5848365aff39401c"
         }
       },
-      "fingerprint": "ed60ef456c4bb019f75822565bf02e77c1f52f3f696a2fc50feaeec471628624",
+      "fingerprint": "4a643f3db9fbed66093ef9fbd70a6a499b29a5611709a0e3cdaeee9b8deaba60",
       "name": "min",
       "pack": "",
       "record": {
@@ -758,7 +759,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "dafa4d6a3ad55ed5a1bf13700712fb1538a3f64aaef943ed769ef8338786ffa4"
+          "sha256": "17213a697418a72aa46fb4af3cedb3e56b5f9916c980af37118ff459818ca01c"
         },
         "pack.py": {
           "exec": false,
@@ -766,10 +767,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "297d7806c2cbe3a98c6e443f414549f408d47c1052611825073d5e146e1a1e1c"
+          "sha256": "e4bc454d43dfc57de8d2dbcbac008c25f1f9dfbe2ca9b8b360db1a696f5fbd2e"
         }
       },
-      "fingerprint": "0cc46df4fcf94a086e3f25ef3ebf5b5afefcef4a32ec2181fbe0a62a971e2b7a",
+      "fingerprint": "e74c73fada02cdd5fdb8597d3c92f4204b3859fcf54e833d8012b65c386b6a0b",
       "name": "nvim",
       "needs": "0.3.0",
       "pack": "pack.py",
@@ -782,13 +783,14 @@
         "repo": "neovim/neovim",
         "style": "artifact",
         "summary": "Hyperextensible Vim-based text editor",
+        "tag": "v0.12.6",
         "url": "https://github.com/neovim/neovim",
-        "version": "0.12.5",
+        "version": "0.12.6",
         "write_version": false
       },
       "summary": "Hyperextensible Vim-based text editor",
       "upstream": "neovim/neovim",
-      "version": "0.12.5"
+      "version": "0.12.6"
     },
     "ollama": {
       "files": {
@@ -806,10 +808,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "7f192c03e1dfb6224d572b2e52e813a465e8200d1cda71588cba3a69517adaf6"
+          "sha256": "350508a7f40052db26e44b2b00e803b943feb7839fdb7ffa40c3ec03b31d2375"
         }
       },
-      "fingerprint": "a3889a4681c12d27463fa8f9e6e0b361f017a0aed63f95abfbd30e869889684d",
+      "fingerprint": "da40abe537d2d3ea683cfff0b59c2eafcbf1a923b9a24048753c9a56781378af",
       "name": "ollama",
       "pack": "",
       "record": {
@@ -823,14 +825,14 @@
         "source_anchor": "^(\\s*source:\\s*).*/ollama-linux-amd64\\.tar\\.zst\\s*$",
         "style": "recipe",
         "summary": "Get up and running with large language models",
-        "tag": "v0.34.1",
+        "tag": "v0.40.2",
         "url": "https://github.com/ollama/ollama",
-        "version": "0.34.1",
+        "version": "0.40.2",
         "write_version": false
       },
       "summary": "Get up and running with large language models",
       "upstream": "ollama/ollama",
-      "version": "0.34.1"
+      "version": "0.40.2"
     },
     "pear": {
       "files": {
@@ -848,10 +850,10 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "402b7291e0db9043da9eef3bc88817c3a0456e0e61833ff42fab6fa4490671bd"
+          "sha256": "1dbf7e305509c40636b9df863e824aeb3aead98f3709d3585c5eac128de6424b"
         }
       },
-      "fingerprint": "3bde7ba1462f88bbb99e3b93a15aacc1dc6c5c846f96e8e3f59e48a757757f14",
+      "fingerprint": "9e5fe1367ea0ac2b6e5071447105555b40f2e08499457db129be300c9c27ab62",
       "name": "pear",
       "pack": "",
       "record": {
@@ -938,15 +940,15 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "46059b6f4a92fb474a9a90749891bbaaf3e647f585d876e0be98bc8d2600609f"
+          "sha256": "1f6e37d5983a59c3b38f56facdddfeb572f5f9aecf6e0adca5cd01f9f8c3cc52"
         }
       },
-      "fingerprint": "b45606d2de0e0a5296ceece8a1878d5ab7e312493fe270d9ee635562ffdadfbf",
+      "fingerprint": "004b51b9d0ac08519c2d6b2ca9420e7d4e760e9a74608cb44e71dd4dd216aa61",
       "name": "shotcut",
       "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
-        "asset": "shotcut-linux-x86_64-26.8.1.txz",
+        "asset": "shotcut-linux-x86_64-26.9.27.txz",
         "asset_pattern": "^shotcut\\-linux\\-x86_64\\-[0-9][0-9A-Za-z.+~_-]*\\.txz$",
         "icon": "snap/gui/shotcut.png",
         "kind": "archive",
@@ -954,14 +956,14 @@
         "repo": "mltframework/shotcut",
         "style": "recipe",
         "summary": "cross-platform (Qt), open-source (GPLv3) video editor - mltframework/shotcut",
-        "tag": "v26.8.1",
+        "tag": "v26.9.27",
         "url": "https://github.com/mltframework/shotcut",
-        "version": "26.8.1",
+        "version": "26.9.27",
         "write_version": false
       },
       "summary": "cross-platform (Qt), open-source (GPLv3) video editor - mltframework/shotcut",
       "upstream": "mltframework/shotcut",
-      "version": "26.8.1"
+      "version": "26.9.27"
     },
     "signal-desktop": {
       "files": {
@@ -979,14 +981,14 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "d75e8df1ed865cc675667abbc4ed952b0894300d7903be661a7f239a2b0ce1d8"
+          "sha256": "bab9637e41421dd1909964c0258d410a89c0d4a38080e2c1c22cb58b4258824b"
         }
       },
-      "fingerprint": "8ab5fdf9517d3978f67178d90c89fff141bde2d352070b1e09c5a702bd0c6c7b",
+      "fingerprint": "0076a111dfad8e685e651661db21cc7bb511537e9c0cc37ccd340bf69206cbc0",
       "name": "signal-desktop",
       "pack": "",
       "record": {
-        "asset": "signal-desktop_8.27.0_amd64.deb",
+        "asset": "signal-desktop_8.30.0_amd64.deb",
         "kind": "deb",
         "repo": "signalapp/Signal-Desktop",
         "source_anchor": "^(\\s*source:\\s*).*/signal-desktop_.*\\.deb\\s*$",
@@ -999,12 +1001,12 @@
           "package": "signal-desktop"
         },
         "url": "https://github.com/signalapp/Signal-Desktop",
-        "version": "8.27.0",
+        "version": "8.30.0",
         "write_version": true
       },
       "summary": "Private messaging from your desktop",
       "upstream": "signalapp/Signal-Desktop",
-      "version": "8.27.0"
+      "version": "8.30.0"
     },
     "spotube": {
       "files": {
@@ -1044,7 +1046,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "e25154ef6950d736a2f3d917427ccc79eee6cb20cfff0e2ba9939ee47896e33f"
+          "sha256": "dc077932870bcadb91022a2e1056725c4ef41b1f9dfcdf2c7c64bb1f22fe9447"
         },
         "snap/gui/sublime-text.desktop": {
           "exec": false,
@@ -1056,14 +1058,14 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "69435b4d65ae351bf01edccb3c025797f2db72b4267cded631866cb6fdce424a"
+          "sha256": "ad6a0a9fb12f28abca384d3a6002fc2ff641f5b7e4a486c4b0cd87cc391e7a7d"
         }
       },
-      "fingerprint": "f8256d1035e49c3a27bd624f38bdbe5565311d6e5954e9eb8c647d427d5eef7c",
+      "fingerprint": "34600ceee3ce8ac0e1832767e99221b7eb94e671e824c6b11868b9b354ef4841",
       "name": "sublime-text",
       "pack": "",
       "record": {
-        "asset": "sublime-text_build-4200_amd64.deb",
+        "asset": "sublime-text_build-4215_amd64.deb",
         "asset_glob": "sublime-text_build-*_amd64.deb",
         "kind": "deb",
         "style": "artifact",
@@ -1074,12 +1076,12 @@
           "kind": "apt",
           "package": "sublime-text"
         },
-        "version": "4200",
+        "version": "4215",
         "write_version": false
       },
       "summary": "Sophisticated text editor for code, markup and prose",
       "upstream": "apt",
-      "version": "4200"
+      "version": "4215"
     },
     "transmission": {
       "files": {
@@ -1178,7 +1180,7 @@
       "files": {
         "README.md": {
           "exec": false,
-          "sha256": "681773b45f882045b3dd95661f87d6b38d90d67803d0d1d2ab31884f541d06ff"
+          "sha256": "9810a7640880919a85244fbb50a51862f4bc05c01a879eeced24d07fbd743665"
         },
         "overlay/bin/launcher": {
           "exec": true,
@@ -1190,15 +1192,15 @@
         },
         "snap/snapcraft.yaml": {
           "exec": false,
-          "sha256": "99b1934b185d84c1f933501ae1eff695c28fa6d33c3671a25a044ae5c198bc33"
+          "sha256": "b1805060bec6944726a7e2ae419fbb47a0e2b4f65bcb2ffa3c0f657f1f08b829"
         }
       },
-      "fingerprint": "1226e7fa5489712920d531a54d5d406044c5d951513dfb5edfe88cba7df347de",
+      "fingerprint": "ad52279023add5dc50823dd36f324c23fc2df4be5b60ef7c034c8882e0a27a04",
       "name": "unityhub",
       "needs": "0.3.0",
       "pack": "pack.py",
       "record": {
-        "asset": "UnityHubSetup-3.21.2-amd64.deb",
+        "asset": "UnityHubSetup-3.22.2-amd64.deb",
         "asset_glob": "UnityHubSetup-amd64.deb",
         "kind": "deb",
         "local_asset": "UnityHubSetup-amd64.deb",
@@ -1211,12 +1213,12 @@
           "kind": "apt",
           "package": "unityhub"
         },
-        "version": "3.21.2",
+        "version": "3.22.2",
         "write_version": false
       },
       "summary": "The official Unity Hub",
       "upstream": "apt",
-      "version": "3.21.2"
+      "version": "3.22.2"
     },
     "waterfox": {
       "files": {

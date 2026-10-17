@@ -72,9 +72,9 @@ parts:
   ollama:
     plugin: nil
     # `snapkit update ollama` bumps both the URL and the checksum.
-    source: https://github.com/ollama/ollama/releases/download/v0.34.1/ollama-linux-amd64.tar.zst
+    source: https://github.com/ollama/ollama/releases/download/v0.40.2/ollama-linux-amd64.tar.zst
     source-type: file
-    source-checksum: sha256/f361dc3992ec07e4ad429f4bb2d10d4663ba2c295f9a9a688c7d52f4ba650034
+    source-checksum: sha256/726bee78706c281b0eeef00746efe51a044d71c592c3f0b195820707f31fdf04
     build-packages:
       - zstd
     override-build: |

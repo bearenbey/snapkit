@@ -17,9 +17,30 @@ META_YAML = "overlay/meta/snap.yaml"
 # Kept short: an interface is easier to add later than to justify now.
 PLUGS = {
     "cli": ["home", "network", "removable-media"],
-    "gui": ["home", "network", "audio-playback", "opengl", "removable-media"],
+    # unity7 is the session-bus access a tray icon needs; desktop alone is not.
+    "gui": ["home", "network", "audio-playback", "opengl", "removable-media",
+            "unity7"],
     "electron": ["browser-support", "audio-record", "camera",
                  "password-manager-service"],
+}
+
+# snapd does not connect these on its own, so a --dangerous install leaves
+# them off until somebody runs `snap connect`.
+NOT_AUTO_CONNECTED = frozenset("""
+audio-record camera cups-control gpg-keys hardware-observe joystick kvm
+mount-observe network-control password-manager-service process-control
+raw-usb removable-media ssh-keys ssh-public-keys system-observe u2f-devices
+""".split())
+
+# Plugs that became defaults after some recipes were written, and what for.
+DEFAULTS_ADDED = {"unity7": "a tray icon"}
+
+# Why a recipe uses the extension it does, said above the line.
+EXTENSION_NOTES = {
+    "gnome": ("    # The gnome extension wires up the desktop, fonts, themes and",
+              "    # GTK/GL stack from the platform snap rather than bundling them."),
+    "kde-neon-6": ("    # The program links Qt 6 and does not ship it, so the kde",
+                   "    # extension supplies Qt and KDE Frameworks from its platform snap."),
 }
 
 MAX_NAME = 40
@@ -70,6 +91,55 @@ def first_command(text):
     """The first app's `command:`, which is the program the snap runs."""
     found = re.search(r"(?m)^\s{4}command:\s*(\S+)", text)
     return found.group(1) if found else ""
+
+
+def _section(text, name):
+    """The lines under one top-level key, up to the next one."""
+    found = re.search(rf"(?ms)^{re.escape(name)}:\s*\n(.*?)(?=^[^\s#]|\Z)", text)
+    return found.group(1) if found else ""
+
+
+def plugs_of(text):
+    """The first app's `plugs:`, in either form YAML allows, or [] with none.
+
+    Read off the recipe rather than the record: the recipe is what gets
+    built, and a hand edit lands there first.
+    """
+    apps = _section(text, "apps")
+    inline = re.search(r"(?m)^\s{4}plugs:\s*\[(.*?)\]\s*$", apps)
+    if inline:
+        return [p.strip().strip("'\"") for p in inline.group(1).split(",")
+                if p.strip()]
+    head = re.search(r"(?m)^\s{4}plugs:\s*$", apps)
+    if not head:
+        return []
+    plugs = []
+    for line in apps[head.end():].splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        item = re.match(r"^\s{6}-\s*(\S+)", line)
+        if not item:
+            break
+        plugs.append(item.group(1).strip("'\""))
+    return plugs
+
+
+def manual_plugs(text):
+    """The plugs a recipe asks for that a --dangerous install leaves off."""
+    return [plug for plug in plugs_of(text) if plug in NOT_AUTO_CONNECTED]
+
+
+def behind_defaults(text):
+    """Default plugs a GUI recipe this tool wrote lacks, and what each is for.
+
+    Only the plugs that became defaults later are named, so a plug somebody
+    took out on purpose is not nagged about.
+    """
+    if "Written by snapkit" not in text or "extensions:" not in _section(text, "apps"):
+        return []
+    have = set(plugs_of(text))
+    return [(plug, why) for plug, why in DEFAULTS_ADDED.items() if plug not in have]
 
 
 def sources(text):
@@ -275,7 +345,7 @@ def part_for(kind, name, url, sha="", packages=()):
 def build(*, name, version, summary, description, license_id, kind, url,
           command, desktop="", icon="", traits=(), sha="", repo_url="",
           title="", confinement="strict", grade="stable", base=BASE, plugs=None,
-          packages=()):
+          packages=(), extension="gnome"):
     """The whole snapcraft.yaml, as text."""
     traits = set(traits or ())
     plugs = plugs if plugs is not None else plugs_for(traits)
@@ -313,9 +383,8 @@ def build(*, name, version, summary, description, license_id, kind, url,
             f"    command: bin/{name}-launch" if wrapped
             else f"    command: {command}"]
     if gui:
-        out.append("    # The gnome extension wires up the desktop, fonts, themes and")
-        out.append("    # GTK/GL stack from the platform snap rather than bundling them.")
-        out.append("    extensions: [gnome]")
+        out += EXTENSION_NOTES.get(extension, ())
+        out.append(f"    extensions: [{extension}]")
     if desktop:
         out.append(f"    desktop: {desktop}")
     if plugs:
@@ -343,7 +412,7 @@ def build(*, name, version, summary, description, license_id, kind, url,
 
 
 def from_record(snap, payload, url, sha="", description="", icon="",
-                packages=()):
+                packages=(), extension="gnome"):
     """The recipe for a record and the payload it was made from."""
     repo_url = f"https://github.com/{snap.repo}" if snap.repo else ""
     summary = summarise(payload.summary or description,
@@ -368,6 +437,7 @@ def from_record(snap, payload, url, sha="", description="", icon="",
         grade=snap.grade,
         base=snap.base,
         packages=packages,
+        extension=extension,
     )
 
 

@@ -1,7 +1,7 @@
 name: defold
 title: Defold
 base: core24
-version: '1.13.1'
+version: '1.13.2'
 summary: Cross-platform game engine for 2D and 3D games
 description: |
   Defold is a cross-platform game engine with a full-featured editor for

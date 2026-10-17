@@ -202,3 +202,106 @@ def _():
             ("https://github.com/irssi/irssi/releases/download/1.4.5/irssi-1.4.5.tar.xz", "1.4.5"),
             ("./sublime-text_build-4200_amd64.deb", "4200")):
         same(from_name(source, ""), want, source)
+
+
+@check("the plugs follow the recipe: a hand edit reaches the record and show")
+def _():
+    from snapforge import recipe
+    with tempfile.TemporaryDirectory() as work:
+        directory = Path(work) / "demo-snap"
+        snap = db.Snap(name="demo", kind="deb", version="1.0",
+                       directory=str(directory), plugs=["home", "network"])
+        text = recipe.build(name="demo", version="1.0", summary="s",
+                            description="b", license_id="", kind="deb",
+                            url="u", command="usr/bin/demo", traits={"gui"})
+        snap.snapcraft_yaml = text
+        edited = text.replace("      - home\n", "      - home\n      - joystick\n")
+        (directory / "snap").mkdir(parents=True)
+        (directory / "snap/snapcraft.yaml").write_text(edited)
+        assert project.take_recipe(snap), "an edit on disk was not noticed"
+        assert "joystick" in snap.plugs, snap.plugs
+        same(snap.plugs, recipe.plugs_of(edited))
+        same(project.take_recipe(snap), False, "nothing moved the second time")
+        # A record whose text is current but whose plugs are not still moves.
+        snap.plugs = ["home"]
+        assert project.take_recipe(snap), "stale plugs under a current recipe"
+        same(snap.plugs, recipe.plugs_of(edited))
+        # And what to connect afterwards is read off the same recipe.
+        same(project.connect_commands(snap),
+             [["sudo", "snap", "connect", "demo:joystick"],
+              ["sudo", "snap", "connect", "demo:removable-media"]])
+        # Classic confinement has nothing to connect.
+        (directory / "snap/snapcraft.yaml").write_text(
+            edited.replace("confinement: strict", "confinement: classic"))
+        same(project.connect_commands(snap), [])
+
+
+@check("an imported project records the plugs its recipe names")
+def _():
+    from snapforge import adopt
+    with tempfile.TemporaryDirectory() as work:
+        directory = Path(work) / "demo-snap"
+        (directory / "snap").mkdir(parents=True)
+        (directory / "snap/snapcraft.yaml").write_text(
+            "name: demo\nbase: core24\nversion: '1.0'\napps:\n  demo:\n"
+            "    command: bin/demo\n    plugs:\n      - home\n      - camera\n"
+            "parts:\n  demo:\n    plugin: nil\n")
+        snap, _, _, _ = adopt.read(directory)
+        same(snap.plugs, ["home", "camera"])
+
+
+@check("after a build, the install line names what does not connect on its own")
+def _():
+    from snapforge import recipe
+
+    class Noted(Reporter):
+        def __init__(self):
+            self.lines = []
+
+        def detail(self, text):
+            self.lines.append(text)
+
+    with tempfile.TemporaryDirectory() as work:
+        directory = Path(work) / "demo-snap"
+        (directory / "snap").mkdir(parents=True)
+        text = recipe.build(name="demo", version="1.0", summary="s",
+                            description="b", license_id="", kind="deb",
+                            url="u", command="opt/Demo/demo",
+                            traits={"gui", "electron"})
+        (directory / "snap/snapcraft.yaml").write_text(text)
+        snap = db.Snap(name="demo", kind="deb", version="1.0",
+                       directory=str(directory))
+        said = Noted()
+        project.say_install(snap, directory / "demo_1.0_amd64.snap", said)
+        assert said.lines[0].startswith("install it with: sudo snap install "
+                                        "--dangerous"), said.lines
+        joined = "\n".join(said.lines)
+        for plug in ("camera", "audio-record", "password-manager-service"):
+            assert f"sudo snap connect demo:{plug}" in joined, joined
+        assert "demo:home" not in joined, "home auto-connects"
+        # The README written beside the recipe says the same.
+        assert "sudo snap connect demo:camera" in project._readme(snap)
+
+
+@check("check names a recipe written before unity7 was a default plug")
+def _():
+    from snapforge import cli, recipe, update
+    with tempfile.TemporaryDirectory() as home, env("SNAPKIT_HOME", home):
+        store = db.Database()
+        directory = Path(home) / "demo-snap"
+        (directory / "snap").mkdir(parents=True)
+        text = recipe.build(name="demo", version="1.0", summary="s",
+                            description="b", license_id="", kind="deb",
+                            url="https://x/demo.deb", command="usr/bin/demo",
+                            traits={"gui"}).replace("      - unity7\n", "")
+        (directory / "snap/snapcraft.yaml").write_text(text)
+        store.add(db.Snap(name="demo", kind="deb", version="1.0",
+                          directory=str(directory)))
+        quiet = update.Situation("untracked", problem="not tracked")
+        with patched(update, situations=lambda snaps: [quiet] * len(snaps)):
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                cli.cmd_check(store, cli.parse_args(["check"]), Reporter())
+        said = buffer.getvalue()
+        assert "unity7" in said and "a tray icon" in said, said
+        assert "add `- unity7` under plugs:" in said, said

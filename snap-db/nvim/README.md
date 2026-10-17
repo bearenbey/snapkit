@@ -1,7 +1,7 @@
 # Neovim snap (repack of the official release tarball)
 
 Turns `nvim-linux-x86_64.tar.gz` into a classically confined snap
-(`nvim_0.12.5_amd64.snap`). snapcraft builds it from `snap/snapcraft.yaml`;
+(`nvim_0.12.6_amd64.snap`). snapcraft builds it from `snap/snapcraft.yaml`;
 `pack.py` adds the checks a recipe cannot express and then runs it. This snap
 is not published or endorsed by the upstream project.
 
@@ -23,7 +23,7 @@ tarball without bumping the metadata fails loudly.
 ## Install / run
 
 ```sh
-sudo snap install --dangerous --classic nvim_0.12.5_amd64.snap
+sudo snap install --dangerous --classic nvim_0.12.6_amd64.snap
 nvim
 ```
 

@@ -2,7 +2,7 @@
 
 Sophisticated text editor for code, markup and prose
 
-Packaged by snapkit from the release asset `sublime-text_build-4200_amd64.deb`,
+Packaged by snapkit from the release asset `sublime-text_build-4215_amd64.deb`,
 tracked against `apt: sublime-text`.
 This snap is not published or endorsed by the upstream project.
 
@@ -13,7 +13,7 @@ This snap is not published or endorsed by the upstream project.
 
 ## Installing what you built
 
-    sudo snap install --dangerous sublime-text_4200_amd64.snap
+    sudo snap install --dangerous sublime-text_4215_amd64.snap
 
 ## Updating
 

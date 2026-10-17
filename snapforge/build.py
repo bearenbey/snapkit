@@ -239,11 +239,17 @@ class Build:
             shutil.rmtree(holding, ignore_errors=True)
 
     def finish(self, built, *connect):
-        """Say how to install what was built, and hand it back."""
+        """Say how to install what was built, and hand it back.
+
+        The plugs to connect afterwards are read off the recipe unless the
+        pack.py names its own.
+        """
         install = "sudo snap install --dangerous"
         if self.classic:
             install += " --classic"
         lines = [f"{install} {Path(built).name}"]
+        if not connect and not self.classic:
+            connect = recipe.manual_plugs(self.yaml.read_text(encoding="utf-8"))
         # Named because none of these auto-connect for a --dangerous install.
         lines += [f"sudo snap connect {self.app}:{plug}" for plug in connect]
         self.note("install it with:\n" +

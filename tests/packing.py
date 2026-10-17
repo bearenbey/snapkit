@@ -139,6 +139,14 @@ def _():
              "      sudo snap install --dangerous demo_1.0_amd64.snap\n"
              "      sudo snap connect demo:camera")
 
+        # Nothing named: the recipe's own plugs say what to connect.
+        plugged = a_build(here, "name: demo\nversion: '1.0'\napps:\n  demo:\n"
+                                "    command: demo\n    plugs:\n      - home\n"
+                                "      - camera\n", reporter=said)
+        plugged.finish(here / "demo_1.0_amd64.snap")
+        assert said.notes[-1].endswith("sudo snap connect demo:camera"), said.notes[-1]
+        assert "demo:home" not in said.notes[-1], "home auto-connects"
+
         classic = a_build(here, "name: demo\nversion: '1.0'\n"
                                 "confinement: classic\n", reporter=said)
         assert classic.classic

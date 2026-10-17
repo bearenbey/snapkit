@@ -28,7 +28,12 @@
 | `snapkit db pull [name ...]` | write those projects here and register them, or all of them |
 | `snapkit db <name>` | the same as `db pull <name>` |
 | `snapkit db publish <dir>` | write the database out of the projects here |
-| `snapkit install <name>` | fetch it, build it, and offer to install it |
+| `snapkit install <name>` | fetch it, build it, offer to install it, then to connect what snapd leaves off |
+
+Every build ends with the install line and, under it, a `snap connect` for
+each plug a `--dangerous` install leaves disconnected. `check` also notes a
+recipe snapkit wrote before a plug became a default, and says which line to
+add; `unity7`, which tray icons need, is the one so far.
 
 Removing asks first, in both the dashboard and the terminal. It forgets the
 record and the recipe stored with it; the project directory is left where it

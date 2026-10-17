@@ -95,13 +95,24 @@ def _():
     for needed in ("name: demo", "version: '1.0'", "license: MIT",
                    "platforms:", "extensions: [gnome]", "source-type: deb",
                    "source-checksum: sha256/abc", "icon: snap/gui/demo.png",
-                   "- browser-support"):
+                   "- browser-support", "- unity7"):
         assert needed in text, needed
     # A terminal program gets neither the extension nor the desktop plugs.
     plain = recipe.build(name="d", version="1", summary="s", description="b",
                          license_id="", kind="archive", url="u",
                          command="bin/d", traits={"terminal"})
     assert "extensions" not in plain and "audio-playback" not in plain
+    assert "unity7" not in plain
+
+
+@check("a GUI recipe plugs unity7, which is where a tray icon's bus access lives")
+def _():
+    # The gnome extension's `desktop` plug lets an app register a status
+    # notifier item but not own its bus name, so the icon never appears.
+    for traits in ({"gui"}, {"gui", "qt"}, {"gui", "electron"}):
+        assert "unity7" in recipe.plugs_for(traits), traits
+    assert "unity7" not in recipe.plugs_for({"terminal"})
+    assert "unity7" not in recipe.plugs_for(set())
 
 
 @check("a desktop entry's app id becomes the bus name the snap may own")
@@ -185,3 +196,78 @@ def _():
     for needed in ("confinement: classic", "grade: devel", "base: core22",
                    "license: MIT", "- joystick"):
         assert needed in text, f"{needed} did not reach the recipe"
+
+
+@check("plugs_of reads the app's plugs off the recipe, in either YAML form")
+def _():
+    text = recipe.build(name="d", version="1", summary="s", description="b",
+                        license_id="", kind="deb", url="u", command="usr/bin/d",
+                        traits={"gui", "electron"})
+    same(recipe.plugs_of(text), recipe.plugs_for({"gui", "electron"}))
+    # A hand-written recipe may write them on one line, quoted or not.
+    inline = ("name: e\napps:\n  e:\n    command: e\n"
+              "    plugs: [home, 'network', \"camera\"]\nparts:\n  e:\n"
+              "    plugin: nil\n")
+    same(recipe.plugs_of(inline), ["home", "network", "camera"])
+    # A comment and a blank line inside the block do not end it.
+    spaced = text.replace("      - opengl\n",
+                          "      # the GPU\n\n      - opengl\n")
+    same(recipe.plugs_of(spaced), recipe.plugs_of(text))
+    # A top-level plugs: section declares plugs; it does not list the app's.
+    declared = "name: f\nplugs:\n  gtk-3-themes:\n    interface: content\n"
+    same(recipe.plugs_of(declared), [])
+    same(recipe.plugs_of(""), [])
+
+
+@check("the plugs a --dangerous install leaves off are the ones named to connect")
+def _():
+    text = recipe.build(name="d", version="1", summary="s", description="b",
+                        license_id="", kind="deb", url="u", command="usr/bin/d",
+                        traits={"gui", "electron"})
+    manual = recipe.manual_plugs(text)
+    for plug in ("audio-record", "camera", "password-manager-service",
+                 "removable-media"):
+        assert plug in manual, f"{plug} does not auto-connect, and was not named"
+    for plug in ("home", "network", "unity7", "browser-support", "opengl"):
+        assert plug not in manual, f"{plug} auto-connects, and was named anyway"
+    same(recipe.manual_plugs(recipe.build(
+        name="d", version="1", summary="s", description="b", license_id="",
+        kind="archive", url="u", command="bin/d", traits={"terminal"})),
+        ["removable-media"])
+
+
+@check("a GUI recipe written before unity7 was a default is told, and only that one")
+def _():
+    text = recipe.build(name="d", version="1", summary="s", description="b",
+                        license_id="", kind="deb", url="u", command="usr/bin/d",
+                        traits={"gui"})
+    same(recipe.behind_defaults(text), [])
+    older = text.replace("      - unity7\n", "")
+    same(recipe.behind_defaults(older), [("unity7", "a tray icon")])
+    # A plug somebody took out on purpose is not nagged about.
+    trimmed = text.replace("      - removable-media\n", "")
+    same(recipe.behind_defaults(trimmed), [])
+    # A terminal program never had the plug, and a hand-written recipe is
+    # nobody's business but its author's.
+    plain = recipe.build(name="d", version="1", summary="s", description="b",
+                         license_id="", kind="archive", url="u",
+                         command="bin/d", traits={"terminal"})
+    same(recipe.behind_defaults(plain), [])
+    same(recipe.behind_defaults(older.replace("# Written by snapkit", "#")), [])
+
+
+@check("a recipe can be written around the kde extension, said and spelled")
+def _():
+    text = recipe.build(name="d", version="1", summary="s", description="b",
+                        license_id="", kind="archive", url="u",
+                        command="bin/d", traits={"gui", "qt"},
+                        extension="kde-neon-6")
+    assert "extensions: [kde-neon-6]" in text, text
+    assert "links Qt 6" in text, "the why is missing"
+    assert "gnome" not in text.split("parts:")[0], text
+    # unity7 is listed even so: snapcraft folds the extension's copy into it.
+    assert "- unity7" in text
+    default = recipe.build(name="d", version="1", summary="s", description="b",
+                           license_id="", kind="archive", url="u",
+                           command="bin/d", traits={"gui"})
+    assert "extensions: [gnome]" in default

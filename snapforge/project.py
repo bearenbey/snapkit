@@ -291,7 +291,7 @@ def create(plan_, reporter, directory=None):
         snap.snapcraft_yaml = recipe.from_record(
             snap, payload, source, sha=checksum,
             description=origin.description, icon=snap.icon,
-            packages=needs.packages)
+            packages=needs.packages, extension=needs.extension or "gnome")
 
     write(snap, reporter)
     return snap
@@ -344,6 +344,9 @@ def _what_it_needs(archive, plan_, payload, reporter):
     needs = depends.resolve(root=payload.root, command=payload.command,
                             gui="gui" in payload.traits, control=control)
     reporter.step("working out what it needs at runtime")
+    if needs.extension == depends.KDE:
+        reporter.detail("links Qt 6 and does not ship it, so the kde-neon-6 "
+                        "extension supplies Qt rather than stage-packages")
     if needs.packages:
         reporter.detail(f"staging {len(needs.packages)}: "
                         f"{' '.join(needs.packages)}")
@@ -465,17 +468,40 @@ def builds(snap):
                   key=lambda p: p.stat().st_mtime)
 
 
+def current_recipe(snap):
+    """The recipe as it is now: the project's copy, or the register's."""
+    yaml_path = snap.project_recipe
+    try:
+        return yaml_path.read_text(encoding="utf-8")
+    except OSError:
+        return snap.snapcraft_yaml
+
+
 def take_recipe(snap, reporter=None):
-    """Take an edited snapcraft.yaml on disk back into the record."""
+    """Take an edited snapcraft.yaml on disk back into the record.
+
+    True when the record moved: the text, or the plugs read off it.
+    """
     yaml_path = snap.project_recipe
     if not yaml_path.is_file():
         return False
     text = yaml_path.read_text(encoding="utf-8")
-    if text == snap.snapcraft_yaml:
-        return False
+    changed = text != snap.snapcraft_yaml
     snap.snapcraft_yaml = text
-    if reporter:
+    if changed and reporter:
         reporter.detail("took the edited snapcraft.yaml back into the register")
+    return follow_plugs(snap) or changed
+
+
+def follow_plugs(snap):
+    """The record's plugs follow its recipe; True when that moved them."""
+    text = snap.snapcraft_yaml
+    if "plugs:" not in text:
+        return False
+    found = recipe.plugs_of(text)
+    if found == snap.plugs:
+        return False
+    snap.plugs = found
     return True
 
 
@@ -483,6 +509,26 @@ def install_command(snap, built):
     """What to run to install a snap that was just built here."""
     return ["sudo", "snap", "install", "--dangerous",
             *(["--classic"] if recipe.is_classic(snap.path) else []), str(built)]
+
+
+def connect_commands(snap):
+    """What to run after a --dangerous install, for the plugs snapd leaves off."""
+    if snap.confinement == "classic" or recipe.is_classic(snap.path):
+        return []
+    text = current_recipe(snap)
+    plugs = recipe.manual_plugs(text) if "plugs:" in text else \
+        [plug for plug in snap.plugs if plug in recipe.NOT_AUTO_CONNECTED]
+    return [["sudo", "snap", "connect", f"{snap.name}:{plug}"] for plug in plugs]
+
+
+def say_install(snap, built, reporter):
+    """How to install what was built, and what to connect once it is in."""
+    reporter.detail(f"install it with: {' '.join(install_command(snap, built))}")
+    connects = connect_commands(snap)
+    if connects:
+        reporter.detail("then connect what a --dangerous install leaves off:")
+        for command in connects:
+            reporter.detail(f"  {' '.join(command)}")
 
 
 def package(snap, reporter, build_it=True, extra=()):
@@ -521,8 +567,12 @@ def clean_stale_parts(directory, reporter, extra=()):
     run_reported(["snapcraft", "clean", *replaced, *extra], reporter, directory)
 
 
-def build(snap, reporter, extra=()):
-    """Build the project, and find what it produced."""
+def build(snap, reporter, extra=(), say_how=True):
+    """Build the project, and find what it produced.
+
+    `say_how` is the install line and the connects after it; a caller that
+    goes on to install leaves it out.
+    """
     directory = snap.path
     if not directory.is_dir():
         raise ForgeError(f"no project at {directory} -- write it out first")
@@ -547,13 +597,16 @@ def build(snap, reporter, extra=()):
     reporter.result(f"built {built.name} "
                     f"({built.stat().st_size / 1e6:.0f} MB)")
     _say_lint(reporter)
+    # A pack.py says this itself, through Build.finish.
+    if say_how and not snap.pack:
+        say_install(snap, built, reporter)
     snap.record_build(snap.version)
     return built
 
 
-def build_recorded(db, snap, reporter, extra=()):
+def build_recorded(db, snap, reporter, extra=(), say_how=True):
     """Build a snap and put what that did into the register."""
-    built = build(snap, reporter, extra)
+    built = build(snap, reporter, extra, say_how=say_how)
     db.add(snap)
     return built
 
@@ -640,6 +693,11 @@ def _readme(snap):
     # Not every upstream is a repository with a page to link to.
     origin = sources.label(snap) or "upstream"
     linked = f"[{snap.repo}]({snap.url})" if snap.repo else f"`{origin}`"
+    connects = "".join(f"    {' '.join(command)}\n"
+                       for command in connect_commands(snap))
+    if connects:
+        connects = ("\nA `--dangerous` install connects nothing snapd would not "
+                    "on its own, so then:\n\n" + connects)
     return f"""# {snap.name}
 
 {snap.summary}
@@ -656,7 +714,7 @@ This snap is not published or endorsed by the upstream project.
 ## Installing what you built
 
     sudo snap install --dangerous {snap.name}_{snap.version}_{arch.host()}.snap
-
+{connects}
 ## Updating
 
 `snapkit` checks that upstream for a newer release and rewrites
